@@ -1,0 +1,79 @@
+plugins {
+	id 'fabric-loom' version '1.4.1'
+	id 'maven-publish'
+	id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+archivesBaseName = project.archives_base_name
+version = project.mod_version
+group = project.maven_group
+
+configurations {
+	shadow
+	implementation.extendsFrom shadow
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:1.20.1"
+	mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
+	modImplementation "net.fabricmc:fabric-loader:0.14.22"
+
+	modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.2+1.20.1"
+
+	shadow files('lib/vboxjws.jar')
+}
+
+shadowJar {
+	configurations = [project.configurations.shadow]
+	archiveBaseName = "${project.archives_base_name}"
+	archiveClassifier = 'dev-shadow'
+	archiveVersion = "${project.mod_version}"
+}
+
+remapJar {
+	dependsOn shadowJar
+	inputFile = shadowJar.archiveFile
+	archiveClassifier = ''
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = "UTF-8"
+	options.release = 17
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+	archiveClassifier = "sources"
+	from sourceSets.main.allSource
+}
+
+jar {
+	from "LICENSE"
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifact(remapJar) {
+				builtBy remapJar
+			}
+			artifact(sourcesJar) {
+				builtBy remapSourcesJar
+			}
+		}
+	}
+
+	repositories {
+		// mavenLocal()
+	}
+}

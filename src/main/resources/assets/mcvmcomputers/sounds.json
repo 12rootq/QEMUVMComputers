@@ -1,0 +1,27 @@
+{
+	"radar": {
+		"sounds": [
+			"mcvmcomputers:radar"
+		]
+	},
+	"shopintro": {
+		"sounds":[
+			"mcvmcomputers:shopintro"
+		]
+	},
+	"shopoutro": {
+		"sounds":[
+			"mcvmcomputers:shopoutro"
+		]
+	},
+	"shopmusic": {
+		"sounds":[
+			"mcvmcomputers:shopmusic"
+		]
+	},
+	"rocket": {
+		"sounds":[
+			"mcvmcomputers:rocket"
+		]
+	}
+}
