@@ -1,0 +1,27 @@
+{
+	"radar": {
+		"sounds": [
+			"newvmcomputers:radar"
+		]
+	},
+	"shopintro": {
+		"sounds":[
+			"newvmcomputers:shopintro"
+		]
+	},
+	"shopoutro": {
+		"sounds":[
+			"newvmcomputers:shopoutro"
+		]
+	},
+	"shopmusic": {
+		"sounds":[
+			"newvmcomputers:shopmusic"
+		]
+	},
+	"rocket": {
+		"sounds":[
+			"newvmcomputers:rocket"
+		]
+	}
+}

@@ -4,10 +4,18 @@ plugins {
 	id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-sourceCompatibility = JavaVersion.VERSION_17
-targetCompatibility = JavaVersion.VERSION_17
+java {
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+	withSourcesJar()
+}
 
-archivesBaseName = project.archives_base_name
+tasks.withType(JavaCompile).configureEach {
+	options.release = 17
+}
+base {
+	archivesName = project.archives_base_name
+}
 version = project.mod_version
 group = project.maven_group
 
@@ -19,13 +27,36 @@ configurations {
 dependencies {
 	minecraft "com.mojang:minecraft:1.20.1"
 	mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
-	modImplementation "net.fabricmc:fabric-loader:0.14.22"
+	modImplementation "net.fabricmc:fabric-loader:0.18.4"
 
-	modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.2+1.20.1"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.7+1.20.1"
 
 	shadow files('lib/vboxjws.jar')
-}
+	implementation files("libs/vboxjws.jar")
+	
+	include files("libs/vboxjws.jar")
 
+	
+	implementation "com.sun.xml.ws:jaxws-rt:2.3.7"
+	include "com.sun.xml.ws:jaxws-rt:2.3.7"
+	include "javax.xml.ws:jaxws-api:2.3.1"
+	include "javax.xml.bind:jaxb-api:2.3.1"
+	include "javax.jws:javax.jws-api:1.1"
+	include "com.sun.istack:istack-commons-runtime:3.0.12"
+	include "org.jvnet.staxex:stax-ex:1.8.3"
+	include "com.sun.xml.fastinfoset:FastInfoset:1.2.18"
+	include "org.jvnet.mimepull:mimepull:1.9.15"
+	include "com.sun.xml.messaging.saaj:saaj-impl:1.5.3"
+	include "jakarta.xml.soap:jakarta.xml.soap-api:1.4.2"
+	include "com.sun.xml.stream.buffer:streambuffer:2.0.1"
+	include "com.sun.xml.ws:policy:2.7.10"
+	include "org.glassfish.gmbal:gmbal-api-only:4.0.3"
+	include "org.glassfish.ha:ha-api:3.1.13"
+	include "org.glassfish.external:management-api:3.2.3"
+	include "org.glassfish.jaxb:jaxb-runtime:2.3.7"
+	include "org.glassfish.jaxb:txw2:2.3.7"
+	include "com.sun.activation:jakarta.activation:1.2.2"
+}
 shadowJar {
 	configurations = [project.configurations.shadow]
 	archiveBaseName = "${project.archives_base_name}"
@@ -52,11 +83,6 @@ tasks.withType(JavaCompile).configureEach {
 	options.release = 17
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-	archiveClassifier = "sources"
-	from sourceSets.main.allSource
-}
-
 jar {
 	from "LICENSE"
 }
@@ -74,6 +100,6 @@ publishing {
 	}
 
 	repositories {
-		// mavenLocal()
+		
 	}
 }

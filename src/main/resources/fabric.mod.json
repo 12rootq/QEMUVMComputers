@@ -1,32 +1,33 @@
 {
   "schemaVersion": 1,
-  "id": "mcvmcomputers",
+  "id": "newvmcomputers",
   "version": "${version}",
 
-  "name": "VM Computers",
-  "description": "Build computers that actually work using the VirtualBox API!",
+  "name": "*NEW* VM Computers",
+  "description": "Build computers that actually work using the VirtualBox API! Now on 1.20.1!",
   "authors": [
-    "DeltaTwoForce"
+    "DeltaTwoForce",
+    "FB527"
   ],
   "contact": {
     "homepage": "https://www.curseforge.com/minecraft/mc-mods/vm-computers",
-    "sources": "https://github.com/Delta2Force/MCVmComputers"
+    "sources": "https://github.com/Delta2Force/newvmcomputers"
   },
 
   "license": "CC0-1.0",
-  "icon": "assets/mcvmcomputers/icon.png",
+  "icon": "assets/newvmcomputers/icon.png",
 
   "environment": "*",
   "entrypoints": {
     "main": [
-      "mcvmcomputers.MainMod"
+      "newvmcomputers.MainMod"
     ],
     "client": [
-      "mcvmcomputers.client.ClientMod"
+      "newvmcomputers.client.ClientMod"
     ]
   },
   "mixins": [
-    "mcvmcomputers.mixins.json"
+    "newvmcomputers.mixins.json"
   ],
 
   "depends": {

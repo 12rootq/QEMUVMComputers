@@ -1,5 +1,7 @@
 Stuff to implement
 
+Main goal: port this mod to other versions and modloaders
+Other things to implement:
 -> Ability to pick up built computers	[done] for 1.4
 -> Big TV for many people to watch 	[done] for 1.4
 -> Trash can to throw items into	[    ]
@@ -8,3 +10,14 @@ Stuff to implement
 -> World interaction			[    ]
 -> Mouse pad				[    ]
 -> Chairs				[    ]
+
+I, FB527 will make another fork of the vm computers and put most of new stuff there:
+-> Trash can to throw items into	[    ]
+-> More parts (for authentiity)     [    ]
+-> Allow ordering pizza			[    ]
+-> Various drinks, cans			[    ]
+-> World interaction			[    ]
+-> Mouse pad				[    ]
+-> Chairs				[    ]
+-> Portable PC    [    ]
+And even more!
