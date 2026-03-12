@@ -153,7 +153,7 @@ public class GameloopMixin {
 					}
 				}
 
-				if(tabletOut != tabletOS.tabletOn) {
+				if(tabletOS != null && tabletOut != tabletOS.tabletOn) {
 					tabletOS.tabletOn = tabletOut;
 
 					if(tabletOut) {
