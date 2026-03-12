@@ -117,5 +117,9 @@
     "key.newvmcomputers.unfocuskey1": "Unfocus key combination: Key 1",
     "key.newvmcomputers.unfocuskey2": "Unfocus key combination: Key 2",
     "key.newvmcomputers.unfocuskey3": "Unfocus key combination: Key 3",
-    "key.newvmcomputers.unfocuskey4": "Unfocus key combination: Key 4"
+    "key.newvmcomputers.unfocuskey4": "Unfocus key combination: Key 4",
+    "newvmcomputers.setup.use_vmware": "Use VMware",
+    "newvmcomputers.setup.vmware_dir": "VMware folder",
+    "newvmcomputers.input_dir_notvmware": "This doesn't look like a VMware folder",
+    "newvmcomputers.input_dir_yesvmware": "VMware folder detected"
 }

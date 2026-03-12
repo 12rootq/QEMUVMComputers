@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.virtualbox_6_1.AccessMode;
 import org.virtualbox_6_1.DeviceType;
@@ -27,6 +28,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Language;
 
 public class GuiCreateHarddrive extends Screen {
@@ -69,15 +71,21 @@ public class GuiCreateHarddrive extends Screen {
 			hddSize = new TextFieldWidget(this.textRenderer, this.width/2-150, this.height/2-10, 300, 20, Text.empty());
 			hddSize.setText(s);
 			hddSize.setChangedListener(this::hddSizeUpdate);
-			this.addSelectableChild(hddSize); 
+			this.addSelectableChild(hddSize);
 			this.hddSizeUpdate(hddSize.getText());
 
 			AA = this.addDrawableChild(ButtonWidget.builder(Text.literal("vdi"), (btn) -> extset(Ext.vdi))
 					.dimensions(this.width/2-150, this.height/2+25, 50, 20).build());
-			AA.active = false;
 
 			BB = this.addDrawableChild(ButtonWidget.builder(Text.literal("vmdk"), (btn) -> extset(Ext.vmdk))
 					.dimensions(this.width/2-96, this.height/2+25, 50, 20).build());
+
+			// Если используем VMware, принудительно выбираем VMDK и блокируем кнопки
+			if (ClientMod.useVmware) {
+				extset(Ext.vmdk);
+			} else {
+				extset(Ext.vdi);
+			}
 
 			int newvhdWidth = textRenderer.getWidth(translation("newvmcomputers.vhd_setup.newvhd"))+40;
 			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("newvmcomputers.vhd_setup.newvhd")), (btn) -> createNew())
@@ -125,13 +133,20 @@ public class GuiCreateHarddrive extends Screen {
 	}
 
 	private void extset(Ext ext){
+		if (ClientMod.useVmware) {
+			extension = Ext.vmdk;
+			if(AA != null) AA.active = false;
+			if(BB != null) BB.active = false;
+			return;
+		}
+
 		extension=ext;
 		if (extension==Ext.vdi){
-			AA.active=false;
-			BB.active=true;
+			if(AA != null) AA.active=false;
+			if(BB != null) BB.active=true;
 		}else if (extension==Ext.vmdk){
-			BB.active=false;
-			AA.active=true;
+			if(BB != null) BB.active=false;
+			if(AA != null) AA.active=true;
 		}
 	}
 
@@ -142,7 +157,6 @@ public class GuiCreateHarddrive extends Screen {
 	}
 
 	private void selectOld(ButtonWidget wdgt) {
-		
 		String fileName = wdgt.getMessage().getString().split(Pattern.quote(" | "))[0];
 		PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
 		pb.writeString(fileName);
@@ -152,23 +166,67 @@ public class GuiCreateHarddrive extends Screen {
 
 	private void createNew() {
 		if(status != null && !status.startsWith(COLOR_CHAR + "c")) {
-			long size = Long.parseLong(hddSize.getText())*1024L*1024L;
+			long sizeMB = Long.parseLong(hddSize.getText());
+			long sizeBytes = sizeMB * 1024L * 1024L;
 			int i = ClientMod.latestVHDNum;
 			File vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "."+extension);
-			IMedium hdd = null;
 
-			if(extension == Ext.vdi){
-				hdd = ClientMod.vb.createMedium("vdi", vhd.getPath(), AccessMode.ReadWrite, DeviceType.HardDisk);
-			}else if(extension == Ext.vmdk){
-				hdd = ClientMod.vb.createMedium("vmdk", vhd.getPath(), AccessMode.ReadWrite, DeviceType.HardDisk);
-			}
+			if (ClientMod.useVmware) {
+				// -------------------------
+				// БЭКЕНД VMWARE: СОЗДАНИЕ ДИСКА
+				// -------------------------
+				try {
+					String vdiskManager = ClientMod.vmwareDirectory + File.separator + (SystemUtils.IS_OS_WINDOWS ? "vmware-vdiskmanager.exe" : "vmware-vdiskmanager");
 
-			if (hdd != null) {
-				IProgress pr = hdd.createBaseStorage(size, Collections.singletonList(MediumVariant.Standard));
-				pr.waitForCompletion(-1);
+					if (minecraft.player != null) {
+						minecraft.player.sendMessage(Text.literal("Создание диска VMDK... Пожалуйста, подождите.").formatted(Formatting.YELLOW), false);
+					}
+
+					// Вызов команды: vmware-vdiskmanager -c -t 0 -s [размер]MB -a ide [путь_к_файлу.vmdk]
+					ProcessBuilder pb = new ProcessBuilder(
+							vdiskManager,
+							"-c",
+							"-t", "0",
+							"-s", sizeMB + "MB",
+							"-a", "ide",
+							vhd.getAbsolutePath()
+					);
+					Process p = pb.start();
+					p.waitFor();
+
+					if (!vhd.exists()) {
+						System.err.println("VMware-vdiskmanager failed to create file.");
+						if (minecraft.player != null) {
+							minecraft.player.sendMessage(Text.literal("Ошибка: vdiskmanager не смог создать диск. Возможно, его нет в папке VMware.").formatted(Formatting.RED), false);
+						}
+						return;
+					}
+				} catch (Exception e) {
+					System.err.println("Failed to execute vmware-vdiskmanager: " + e.getMessage());
+					if (minecraft.player != null) {
+						minecraft.player.sendMessage(Text.literal("Ошибка выполнения vdiskmanager: " + e.getMessage()).formatted(Formatting.RED), false);
+					}
+					return;
+				}
 			} else {
-				System.err.println("Failed to create virtual hard drive medium.");
-				return;
+				// -------------------------
+				// БЭКЕНД VIRTUALBOX: СОЗДАНИЕ ДИСКА
+				// -------------------------
+				IMedium hdd = null;
+
+				if(extension == Ext.vdi){
+					hdd = ClientMod.vb.createMedium("vdi", vhd.getPath(), AccessMode.ReadWrite, DeviceType.HardDisk);
+				}else if(extension == Ext.vmdk){
+					hdd = ClientMod.vb.createMedium("vmdk", vhd.getPath(), AccessMode.ReadWrite, DeviceType.HardDisk);
+				}
+
+				if (hdd != null) {
+					IProgress pr = hdd.createBaseStorage(sizeBytes, Collections.singletonList(MediumVariant.Standard));
+					pr.waitForCompletion(-1);
+				} else {
+					System.err.println("Failed to create virtual hard drive medium.");
+					return;
+				}
 			}
 
 			try {
@@ -204,7 +262,7 @@ public class GuiCreateHarddrive extends Screen {
 			}
 
 			if(i > 0) {
-				if(i*1024*1024 < 0) { 
+				if(i*1024*1024 < 0) {
 					status = translation("newvmcomputers.input_too_much").replace("%s", ""+Long.MAX_VALUE/1024L/1024L);
 				} else if(i*1024*1024 >= ClientMod.vhdDirectory.getFreeSpace()) {
 					status = translation("newvmcomputers.vhd_setup.space");

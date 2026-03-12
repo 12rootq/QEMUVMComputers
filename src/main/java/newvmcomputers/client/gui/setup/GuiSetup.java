@@ -34,6 +34,8 @@ public class GuiSetup extends Screen {
 	public boolean loadedConfiguration = false;
 	public boolean startVb = false;
 	public String virtualBoxDirectory = "";
+	public boolean useVmware = false;
+	public String vmwareDirectory = "";
 	private Language language = Language.getInstance();
 	private final MinecraftClient minecraft = MinecraftClient.getInstance();
 
@@ -41,8 +43,6 @@ public class GuiSetup extends Screen {
 		super(Text.literal("Setup"));
 	}
 
-	
-	
 	public void addElement(ClickableWidget e) {
 		this.addDrawableChild(e);
 	}
@@ -95,13 +95,12 @@ public class GuiSetup extends Screen {
 	public void init() {
 		language = Language.getInstance();
 
-		
 		if(!initialized) {
 			File setupFile = new File(minecraft.runDirectory, "vm_computers/setup.json");
 
 			if(setupFile.exists()) {
 				VMSettings set = null;
-				try (java.io.FileReader fr = new java.io.FileReader(setupFile)) {
+				try (FileReader fr = new FileReader(setupFile)) {
 					set = new Gson().fromJson(fr, VMSettings.class);
 				} catch (Exception e) {
 					System.err.println("Failed to load setup.json: " + e.getMessage());
@@ -118,6 +117,9 @@ public class GuiSetup extends Screen {
 						ClientMod.isoDirectory = new File(set.vmComputersDirectory, "isos");
 						ClientMod.vhdDirectory = new File(set.vmComputersDirectory, "vhds");
 					}
+
+					useVmware = set.useVmware;
+					vmwareDirectory = set.vmwareDirectory == null ? "" : set.vmwareDirectory;
 
 					ClientMod.glfwUnfocusKey1 = set.unfocusKey1;
 					ClientMod.glfwUnfocusKey2 = set.unfocusKey2;
@@ -155,7 +157,7 @@ public class GuiSetup extends Screen {
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		this.renderBackground(context); 
+		this.renderBackground(context);
 		String title = translation("newvmcomputers.setup.title");
 		context.drawText(this.textRenderer, title, this.width/2 - this.textRenderer.getWidth(title)/2, 20, -1, false);
 
@@ -165,14 +167,11 @@ public class GuiSetup extends Screen {
 		currentSetupPage.render(context, mouseX, mouseY, delta);
 		super.render(context, mouseX, mouseY, delta);
 	}
+
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		
 		if (this.currentSetupPage instanceof newvmcomputers.client.gui.setup.pages.SetupPageUnfocusBinding) {
-			
 			if (newvmcomputers.client.gui.setup.pages.SetupPageUnfocusBinding.changeBinding) {
-
-				
 				switch (newvmcomputers.client.gui.setup.pages.SetupPageUnfocusBinding.bindingToBeChangedNum) {
 					case 1: ClientMod.glfwUnfocusKey1 = keyCode; break;
 					case 2: ClientMod.glfwUnfocusKey2 = keyCode; break;
@@ -180,15 +179,12 @@ public class GuiSetup extends Screen {
 					case 4: ClientMod.glfwUnfocusKey4 = keyCode; break;
 				}
 
-				
 				newvmcomputers.client.gui.setup.pages.SetupPageUnfocusBinding.changeBinding = false;
 				newvmcomputers.client.gui.setup.pages.SetupPageUnfocusBinding.bindingJustChanged = true;
 
-				return true; 
+				return true;
 			}
 		}
-
-		
 		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 }

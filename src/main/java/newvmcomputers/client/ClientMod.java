@@ -2,6 +2,7 @@ package newvmcomputers.client;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,6 +16,8 @@ import java.util.UUID;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
+
+import com.google.gson.Gson; // <-- Добавлен импорт для чтения JSON
 
 import newvmcomputers.client.entities.model.DeliveryChestModel;
 import newvmcomputers.client.entities.model.OrderingTabletModel;
@@ -44,6 +47,7 @@ import newvmcomputers.client.gui.GuiCreateHarddrive;
 import newvmcomputers.client.gui.GuiFocus;
 import newvmcomputers.client.gui.GuiPCEditing;
 import newvmcomputers.client.tablet.TabletOS;
+import newvmcomputers.client.utils.VMSettings; // <-- Добавлен импорт настроек
 import newvmcomputers.entities.EntityDeliveryChest;
 import newvmcomputers.entities.EntityItemPreview;
 import newvmcomputers.entities.EntityList;
@@ -62,10 +66,8 @@ import net.minecraft.util.Identifier;
 
 public class ClientMod implements ClientModInitializer {
 
-	
 	public static final EntityModelLayer DELIVERY_CHEST_LAYER = new EntityModelLayer(new Identifier("newvmcomputers", "delivery_chest"), "main");
 	public static final EntityModelLayer ORDERING_TABLET_LAYER = new EntityModelLayer(new Identifier("newvmcomputers", "ordering_tablet"), "main");
-	
 
 	public static final OutputStream discardAllBytes = new OutputStream() { @Override public void write(int b) throws IOException {} };
 	public static Map<UUID, Identifier> vmScreenTextures;
@@ -88,7 +90,8 @@ public class ClientMod implements ClientModInitializer {
 	public static byte[] vmTextureBytes;
 	public static int vmTextureBytesSize;
 	public static boolean failedSend;
-
+	public static boolean useVmware = false; // По умолчанию false
+	public static String vmwareDirectory = "";
 	public static double mouseLastX = 0;
 	public static double mouseLastY = 0;
 	public static double mouseCurX = 0;
@@ -138,7 +141,6 @@ public class ClientMod implements ClientModInitializer {
 			return "None";
 		}
 
-		
 		switch(key) {
 			case org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE: return "Space";
 			case org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE: return "Escape";
@@ -156,15 +158,10 @@ public class ClientMod implements ClientModInitializer {
 			case org.lwjgl.glfw.GLFW.GLFW_KEY_CAPS_LOCK: return "Caps Lock";
 		}
 
-		
 		String name = net.minecraft.client.util.InputUtil.fromKeyCode(key, 0).getLocalizedText().getString();
-
-		
 		if (name == null || name.isEmpty() || name.contains("key.keyboard.unknown")) {
 			return "Key " + key;
 		}
-
-		
 		return name.substring(0, 1).toUpperCase() + name.substring(1);
 	}
 
@@ -208,13 +205,11 @@ public class ClientMod implements ClientModInitializer {
 
 			if(sz > 32766) {
 				if(!failedSend){
-					
 					mcc.player.sendMessage(Text.translatable("newvmcomputers.screen_too_big_mp").formatted(Formatting.RED), false);
 					failedSend = true;
 				}
 			} else {
 				if(failedSend) {
-					
 					mcc.player.sendMessage(Text.translatable("newvmcomputers.screen_ok_mp").formatted(Formatting.GREEN), false);
 					failedSend = false;
 				}
@@ -224,7 +219,6 @@ public class ClientMod implements ClientModInitializer {
 				p.writeInt(sz);
 				p.writeInt(vmTextureBytesSize);
 
-				
 				ClientPlayNetworking.send(PacketList.C2S_SCREEN, p);
 			}
 
@@ -252,9 +246,7 @@ public class ClientMod implements ClientModInitializer {
 	}
 
 	public static void registerClientPackets() {
-		
 		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_SCREEN, (client, handler, buf, responseSender) -> {
-			
 			byte[] screen = buf.readByteArray();
 			int compressedDataSize = buf.readInt();
 			int dataSize = buf.readInt();
@@ -267,7 +259,7 @@ public class ClientMod implements ClientModInitializer {
 				if(!pcOwner.equals(mcc.player.getUuid())) {
 					if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
 						mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
-						vmScreenTextures.remove(mcc.player.getUuid()); 
+						vmScreenTextures.remove(mcc.player.getUuid());
 					}
 					if(ClientMod.vmScreenTextureNI.containsKey(pcOwner)) {
 						ClientMod.vmScreenTextureNI.get(pcOwner).close();
@@ -342,7 +334,47 @@ public class ClientMod implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		
+		// ==============================================================
+		// НОВЫЙ БЛОК: Загрузка файла настроек при запуске игры
+		// ==============================================================
+		File setupFile = new File(MinecraftClient.getInstance().runDirectory, "vm_computers/setup.json");
+		if (setupFile.exists()) {
+			try (FileReader fr = new FileReader(setupFile)) {
+				VMSettings set = new Gson().fromJson(fr, VMSettings.class);
+				if (set != null) {
+					ClientMod.useVmware = set.useVmware;
+					ClientMod.vmwareDirectory = set.vmwareDirectory == null ? "" : set.vmwareDirectory;
+					ClientMod.maxRam = set.maxRam;
+					ClientMod.videoMem = set.videoMem;
+					ClientMod.glfwUnfocusKey1 = set.unfocusKey1;
+					ClientMod.glfwUnfocusKey2 = set.unfocusKey2;
+					ClientMod.glfwUnfocusKey3 = set.unfocusKey3;
+					ClientMod.glfwUnfocusKey4 = set.unfocusKey4;
+
+					if (set.vmComputersDirectory != null && !set.vmComputersDirectory.isEmpty()) {
+						ClientMod.isoDirectory = new File(set.vmComputersDirectory, "isos");
+						ClientMod.vhdDirectory = new File(set.vmComputersDirectory, "vhds");
+
+						try {
+							ClientMod.getVHDNum();
+						} catch (Exception e) {
+							System.err.println("VMComputers: Failed to read vhdnum: " + e.getMessage());
+						}
+					}
+					System.out.println("VMComputers: Loaded settings. useVmware=" + ClientMod.useVmware);
+				}
+			} catch (Exception e) {
+				System.err.println("VMComputers: Failed to load setup.json on startup: " + e.getMessage());
+			}
+		} else {
+			System.out.println("VMComputers: setup.json not found, using default paths.");
+			File defaultDir = new File(MinecraftClient.getInstance().runDirectory, "vm_computers");
+			ClientMod.isoDirectory = new File(defaultDir, "isos");
+			ClientMod.vhdDirectory = new File(defaultDir, "vhds");
+		}
+		// ==============================================================
+
+
 		MainMod.pcOpenGui = () -> MinecraftClient.getInstance().setScreen(new GuiPCEditing(currentPC));
 
 		MainMod.hardDriveClick = () -> MinecraftClient.getInstance().setScreen(new GuiCreateHarddrive());
@@ -363,11 +395,9 @@ public class ClientMod implements ClientModInitializer {
 		vmScreenTextureNI = new HashMap<>();
 		vmScreenTextureNIBT = new HashMap<>();
 
-		
 		EntityModelLayerRegistry.registerModelLayer(DELIVERY_CHEST_LAYER, DeliveryChestModel::getTexturedModelData);
 		EntityModelLayerRegistry.registerModelLayer(ORDERING_TABLET_LAYER, OrderingTabletModel::getTexturedModelData);
 
-		
 		EntityRendererRegistry.register(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
 		EntityRendererRegistry.register(EntityList.KEYBOARD, KeyboardRender::new);
 		EntityRendererRegistry.register(EntityList.MOUSE, MouseRender::new);
