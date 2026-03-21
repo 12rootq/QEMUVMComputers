@@ -9,10 +9,6 @@
     "DeltaTwoForce",
     "FB527"
   ],
-  "contact": {
-    "homepage": "https://www.curseforge.com/minecraft/mc-mods/vm-computers",
-    "sources": "https://github.com/Delta2Force/newvmcomputers"
-  },
 
   "license": "CC0-1.0",
   "icon": "assets/newvmcomputers/icon.png",

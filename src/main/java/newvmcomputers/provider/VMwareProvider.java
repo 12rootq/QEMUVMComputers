@@ -15,7 +15,7 @@ public class VMwareProvider implements IVMProvider {
             process.waitFor();
             return process.exitValue() == 0;
         } catch (Exception e) {
-            System.out.println("[VMwareProvider] VMware не найдена или не установлен VIX API / Workstation.");
+            System.out.println("[VMwareProvider] VMware not found or VIX API / Workstation not installed.");
             return false;
         }
     }

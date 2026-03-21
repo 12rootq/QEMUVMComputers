@@ -71,18 +71,13 @@ public class SetupPageMaxValues extends SetupPage{
 	}
 
 	private void confirmButton(ButtonWidget in) {
-		// --- Начало новой логики для VMware ---
 		if (setupGui.useVmware) {
 			status = setupGui.translation("newvmcomputers.setup.startingStatus");
 			onlyStatusMessage = true;
-
-			// ---> ЖЕСТКО ЗАПИСЫВАЕМ В ПАМЯТЬ ИГРЫ ВЫБОР VMWARE <---
 			ClientMod.useVmware = true;
 			ClientMod.vmwareDirectory = setupGui.vmwareDirectory;
-			ClientMod.maxRam = 8192; // VMware пока не требует этого в настройках, ставим дефолт
+			ClientMod.maxRam = 8192;
 			ClientMod.videoMem = 256;
-
-			// Сохраняем настройки перед выходом
 			VMSettings set = new VMSettings();
 			set.vboxDirectory = setupGui.virtualBoxDirectory;
 			set.vmComputersDirectory = ClientMod.vhdDirectory.getParentFile().getAbsolutePath();
@@ -92,8 +87,6 @@ public class SetupPageMaxValues extends SetupPage{
 			set.unfocusKey4 = ClientMod.glfwUnfocusKey4;
 			set.maxRam = ClientMod.maxRam;
 			set.videoMem = ClientMod.videoMem;
-
-			// Самое важное для сохранения в JSON
 			set.useVmware = true;
 			set.vmwareDirectory = setupGui.vmwareDirectory;
 
@@ -109,19 +102,12 @@ public class SetupPageMaxValues extends SetupPage{
 			} catch (Exception e) {
 				System.err.println("Failed to save setup.json: " + e.getMessage());
 			}
-
-			// Завершаем настройку
 			minecraft.execute(() -> minecraft.setScreen(new TitleScreen(false)));
 			return;
 		}
-		// --- Конец новой логики для VMware ---
-
-
-		// ----- Старая логика для VirtualBox -----
 		if(ClientMod.vboxWebSrv != null) {
 			ClientMod.vboxWebSrv.destroy();
 		}
-
 		if(SystemUtils.IS_OS_WINDOWS) {
 			ProcessBuilder vboxConfig = new ProcessBuilder(this.setupGui.virtualBoxDirectory + "\\vboxmanage.exe", "setproperty", "websrvauthlibrary", "null");
 			try {
@@ -165,7 +151,6 @@ public class SetupPageMaxValues extends SetupPage{
 				System.err.println("Failed to start vboxWebSrv: " + e1.getMessage());
 			}
 		}
-
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			if (ClientMod.vboxWebSrv != null) {
 				ClientMod.vboxWebSrv.destroy();
@@ -182,8 +167,6 @@ public class SetupPageMaxValues extends SetupPage{
 		this.setupGui.clearElements();
 		this.setupGui.clearButtons();
 		onlyStatusMessage = true;
-
-		// Если пошли по пути VirtualBox, жестко записываем в память игры
 		ClientMod.useVmware = false;
 		ClientMod.maxRam = Integer.parseInt(maxRam.getText());
 		ClientMod.videoMem = Integer.parseInt(videoMemory.getText());
@@ -203,8 +186,6 @@ public class SetupPageMaxValues extends SetupPage{
 				set.unfocusKey4 = ClientMod.glfwUnfocusKey4;
 				set.maxRam = ClientMod.maxRam;
 				set.videoMem = ClientMod.videoMem;
-
-				// Сохраняем настройки VIrtualBox в JSON
 				set.useVmware = false;
 				set.vmwareDirectory = "";
 
@@ -252,7 +233,6 @@ public class SetupPageMaxValues extends SetupPage{
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		if(!onlyStatusMessage) {
 			if (setupGui.useVmware) {
-				// Если выбран VMware, скрываем настройки RAM
 				context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.vmware_dir"), setupGui.width/2 - 160, setupGui.height/2 - 55, -1, false);
 				context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.vmrun_help"), setupGui.width/2 - 160, setupGui.height/2 - 40, -1, false);
 				context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.vmrun_note"), setupGui.width/2 - 160, setupGui.height/2 - 28, -1, false);
@@ -261,7 +241,6 @@ public class SetupPageMaxValues extends SetupPage{
 				this.maxRam.visible = false;
 				this.videoMemory.visible = false;
 			} else {
-				// VBox Настройки RAM
 				context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.max_ram_input"), setupGui.width/2 - 160, setupGui.height/2-30, -1, false);
 				context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.vram_input"), setupGui.width/2 + 10, setupGui.height/2-30, -1, false);
 				String s = setupGui.translation("newvmcomputers.setup.ram_input_help");
@@ -272,8 +251,6 @@ public class SetupPageMaxValues extends SetupPage{
 				this.maxRam.visible = true;
 				this.videoMemory.visible = true;
 			}
-
-			// Рендерятся поля ввода, только если они видимы
 			if (this.maxRam.visible) {
 				this.maxRam.render(context, mouseX, mouseY, delta);
 				this.videoMemory.render(context, mouseX, mouseY, delta);

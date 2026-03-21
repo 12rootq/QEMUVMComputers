@@ -26,15 +26,15 @@ public class MouseMixin {
 	@Shadow
 	private boolean rightButtonClicked;
 	
-	@Inject(at = @At("TAIL"), method = "onMouseScroll")
+	/*@Inject(at = @At("TAIL"), method = "onMouseScroll")
 	private void onMouseScroll(CallbackInfo ci) {
 		ClientMod.mouseDeltaScroll = (int) this.eventDeltaWheel;
-	}
+	}*/
 	
-	@Inject(at = @At("TAIL"), method = "onMouseButton")
+	/*@Inject(at = @At("TAIL"), method = "onMouseButton")
 	private void onMouseButton(CallbackInfo ci) {
 		ClientMod.leftMouseButton = leftButtonClicked;
 		ClientMod.middleMouseButton = middleButtonClicked;
 		ClientMod.rightMouseButton = rightButtonClicked;
-	}
+	}*/
 }

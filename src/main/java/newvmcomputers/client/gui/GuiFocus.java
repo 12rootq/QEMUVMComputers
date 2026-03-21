@@ -137,6 +137,9 @@ public class GuiFocus extends Screen {
 	public void removed() {
 		ClientMod.releaseKeys = true;
 		pressedKeys.clear();
+		ClientMod.leftMouseButton = false;
+		ClientMod.middleMouseButton = false;
+		ClientMod.rightMouseButton = false;
 	}
 
 	@Override

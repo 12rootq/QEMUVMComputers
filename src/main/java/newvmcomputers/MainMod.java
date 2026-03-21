@@ -38,7 +38,6 @@ import static newvmcomputers.networking.PacketList.*;
 public class MainMod implements ModInitializer {
 	public static Map<UUID, TabletOrder> orders;
 	public static Map<UUID, EntityPC> computers;
-
 	public static Runnable hardDriveClick = new Runnable() { @Override public void run() {} };
 	public static Runnable deliveryChestSound = new Runnable() { @Override public void run() {} };
 	public static Runnable focus = new Runnable() { @Override public void run() {} };

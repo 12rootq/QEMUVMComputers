@@ -11,8 +11,6 @@ import net.minecraft.client.MinecraftClient;
 public class VMSettings {
 	public String vboxDirectory;
 	public String vmComputersDirectory;
-
-	// Поля для VMware
 	public boolean useVmware = false;
 	public String vmwareDirectory;
 

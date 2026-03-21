@@ -65,7 +65,6 @@ public class GuiPCEditing extends Screen {
 	private static final ItemStack GPU = new ItemStack(ItemList.ITEM_GPU);
 	private static final ItemStack RAM = new ItemStack(ItemList.ITEM_RAM1G);
 	private static final ItemStack HARD_DRIVE = new ItemStack(ItemList.ITEM_HARDDRIVE);
-
 	private final Object vmTurningON = new Object();
 
 	public GuiPCEditing(EntityPC pc_case) {
@@ -73,9 +72,6 @@ public class GuiPCEditing extends Screen {
 		this.pc_case = pc_case;
 		this.minecraft = MinecraftClient.getInstance();
 	}
-
-	// ... (здесь остаются renderBackgroundAndMobo, renderItem, addMotherboard, removeMotherboard и т.д. без изменений)
-	// ЧТОБЫ СОКРАТИТЬ ОТВЕТ, Я ПРОПУСКАЮ МЕТОДЫ РЕНДЕРА И ДОБАВЛЕНИЯ ПРЕДМЕТОВ, ОНИ ОСТАЮТСЯ КАК БЫЛИ
 
 	public void renderBackgroundAndMobo(DrawContext context) {
 		context.fillGradient(0, 0, this.width, this.height, new Color(0f,0f,0f,Math.max(0.5f*introScale,0)).getRGB(), new Color(0f,0f,0f,0.5f*introScale).getRGB());
@@ -451,8 +447,13 @@ public class GuiPCEditing extends Screen {
 					this.addDrawableChild(ButtonWidget.builder(Text.literal(lang.get("newvmcomputers.pc_editing.turn_on")), this::turnOnPC)
 							.dimensions((this.width/2 + 103) - buttonW, this.height / 2 - 80, buttonW, 12).build());
 				}
-
-				// ОБРАБОТКА ДЛЯ VIRTUALBOX: Проверка на извлеченный диск
+				if (ClientMod.useVmware) {
+					String text3D = ClientMod.useVmware3D ? "3D Acceleration: ON" : "3D Acceleration: OFF";
+					int btn3DW = textRenderer.getWidth(text3D) + 8;
+					this.addDrawableChild(ButtonWidget.builder(Text.literal(text3D), (btn) -> {
+						ClientMod.useVmware3D = !ClientMod.useVmware3D;
+					}).dimensions((this.width/2 + 103) - btn3DW, this.height / 2 - 95, btn3DW, 12).build());
+				}
 				if(!ClientMod.useVmware && ClientMod.vmSession != null) {
 					boolean ejected = false;
 					try {
@@ -512,7 +513,6 @@ public class GuiPCEditing extends Screen {
 	}
 
 	private void removeISO() {
-		// ТОЛЬКО ДЛЯ VIRTUALBOX
 		if(!ClientMod.useVmware && (ClientMod.vmTurningOn || ClientMod.vmTurnedOn) && ClientMod.vmEntityID == pc_case.getId()) {
 			try {
 				ClientMod.vmSession.getMachine().unmountMedium("IDE Controller", 1, 0, true);
@@ -524,7 +524,6 @@ public class GuiPCEditing extends Screen {
 	}
 
 	private void insertISO(String name) {
-		// ТОЛЬКО ДЛЯ VIRTUALBOX: монтируем диск на лету
 		if(!ClientMod.useVmware) {
 			if(ClientMod.vmTurnedOn && ClientMod.vmEntityID == pc_case.getId()) {
 				IMedium m = ClientMod.vb.openMedium(new File(ClientMod.isoDirectory, name).getPath(), DeviceType.DVD, AccessMode.ReadOnly, true);
@@ -543,9 +542,8 @@ public class GuiPCEditing extends Screen {
 				}
 			}
 		} else {
-			// ДЛЯ VMWARE: Вывод сообщения, что смена диска на лету пока не работает (или будет работать позже)
 			if (minecraft.player != null && (ClientMod.vmTurnedOn || ClientMod.vmTurningOn)) {
-				minecraft.player.sendMessage(Text.literal("Внимание: Замена ISO диска на лету в VMware пока не поддерживается. Перезапустите ПК.").formatted(Formatting.YELLOW), false);
+				minecraft.player.sendMessage(Text.literal("Note: On-the-fly ISO disk replacement is not yet supported in VMware. Restart your PC.").formatted(Formatting.YELLOW), false);
 			}
 		}
 
@@ -565,18 +563,9 @@ public class GuiPCEditing extends Screen {
 			while(ClientMod.vmTurningOn) { /* wait */ }
 
 			if (ClientMod.useVmware) {
-				// -------------------------
-				// БЭКЕНД VMWARE: ВЫКЛЮЧЕНИЕ
-				// -------------------------
 				try {
-					if (minecraft.player != null) {
-						minecraft.player.sendMessage(Text.literal("Останавливаем VMware (жесткое выключение)...").formatted(Formatting.GRAY), false);
-					}
-
 					File vmxFile = new File(ClientMod.vhdDirectory.getParentFile(), "vmware_vm.vmx");
 					String vmrunPath = ClientMod.vmwareDirectory + File.separator + (SystemUtils.IS_OS_WINDOWS ? "vmrun.exe" : "vmrun");
-
-					// Вызываем vmrun stop hard (жестко обрубает питание)
 					ProcessBuilder pb = new ProcessBuilder(vmrunPath, "-T", "ws", "stop", vmxFile.getAbsolutePath(), "hard");
 					Process p = pb.start();
 					p.waitFor();
@@ -588,9 +577,6 @@ public class GuiPCEditing extends Screen {
 					e.printStackTrace();
 				}
 			} else {
-				// -------------------------
-				// БЭКЕНД VIRTUALBOX: ВЫКЛЮЧЕНИЕ
-				// -------------------------
 				IProgress ip = ClientMod.vmSession.getConsole().powerDown();
 				ip.waitForCompletion(-1);
 
@@ -634,12 +620,9 @@ public class GuiPCEditing extends Screen {
 
 			new Thread(() -> {
 				if (ClientMod.useVmware) {
-					// -------------------------
-					// БЭКЕНД VMWARE: ЗАПУСК
-					// -------------------------
 					try {
 						if (minecraft.player != null) {
-							minecraft.player.sendMessage(Text.literal("Создание файла .vmx и запуск VMware...").formatted(Formatting.GOLD), false);
+							minecraft.player.sendMessage(Text.literal("Creating a .vmx file and running VMware...").formatted(Formatting.GOLD), false);
 						}
 
 						// 1. Создаем текстовый файл конфигурации .vmx
@@ -649,52 +632,51 @@ public class GuiPCEditing extends Screen {
 							fw.write("config.version = \"8\"\n");
 							fw.write("virtualHW.version = \"16\"\n");
 
-							// Битность ОС
 							fw.write("guestOS = \"" + (pc_case.get64Bit() ? "other-64" : "other") + "\"\n");
 
-							// Процессор
 							int cpus = Math.max(1, Runtime.getRuntime().availableProcessors() / pc_case.getCpuDividedBy());
 							fw.write("numvcpus = \"" + cpus + "\"\n");
 
-							// Оперативка
-							long ramMB = pc_case.getGigsOfRamInSlot0() + pc_case.getGigsOfRamInSlot1();
-							fw.write("memsize = \"" + Math.min(ClientMod.maxRam, ramMB) + "\"\n");
+							long ramMB = (pc_case.getGigsOfRamInSlot0() + pc_case.getGigsOfRamInSlot1()) * 1024L;
+							fw.write("memsize = \"" + Math.min((long)ClientMod.maxRam, ramMB) + "\"\n");
 
-							// Видеокарта (Ускорение)
-							fw.write("mks.enable3d = \"TRUE\"\n");
+							if (ClientMod.useVmware3D) {
+								fw.write("mks.enable3d = \"TRUE\"\n");
+							} else {
+								fw.write("mks.enable3d = \"FALSE\"\n");
+							}
 							fw.write("svga.vramSize = \"" + ((long)ClientMod.videoMem * 1024 * 1024) + "\"\n");
-
-							// Жесткий диск
+							fw.write("usb.present = \"TRUE\"\n");
+							fw.write("usb.generic.allowHID = \"TRUE\"\n");
+							fw.write("mouse.vusb.enable = \"TRUE\"\n");
 							if(!pc_case.getHardDriveFileName().isEmpty()) {
 								File hdd = new File(ClientMod.vhdDirectory, pc_case.getHardDriveFileName());
 								fw.write("ide0:0.present = \"TRUE\"\n");
-								// Экранируем слэши для Windows
 								fw.write("ide0:0.fileName = \"" + hdd.getAbsolutePath().replace("\\", "\\\\") + "\"\n");
 							}
-
-							// Установочный диск (ISO)
 							if(!pc_case.getIsoFileName().isEmpty()) {
 								File iso = new File(ClientMod.isoDirectory, pc_case.getIsoFileName());
-								fw.write("ide1:0.present = \"TRUE\"\n");
-								fw.write("ide1:0.fileName = \"" + iso.getAbsolutePath().replace("\\", "\\\\") + "\"\n");
-								fw.write("ide1:0.deviceType = \"cdrom-image\"\n");
-							}
 
-							// Интернет (NAT)
+								fw.write("ide1:0.present = \"TRUE\"\n");
+
+
+								fw.write("ide1:0.fileName = \"" + iso.getAbsolutePath().replace("\\", "/") + "\"\n");
+
+								fw.write("ide1:0.deviceType = \"cdrom-image\"\n");
+								fw.write("ide1:0.startConnected = \"TRUE\"\n");
+								fw.write("bios.bootOrder = \"cdrom,hdd\"\n");
+								fw.write("firmware = \"efi\"\n");
+							}
 							fw.write("ethernet0.present = \"TRUE\"\n");
 							fw.write("ethernet0.connectionType = \"nat\"\n");
 							fw.write("ethernet0.virtualDev = \"e1000\"\n");
-
-							// ВАЖНО: Включаем VNC сервер внутри VMware для трансляции экрана в Майнкрафт!
 							fw.write("RemoteDisplay.vnc.enabled = \"TRUE\"\n");
 							fw.write("RemoteDisplay.vnc.port = \"5900\"\n");
 						}
-
-						// 2. Вызываем vmrun для старта виртуалки без окна (nogui)
 						String vmrunPath = ClientMod.vmwareDirectory + File.separator + (SystemUtils.IS_OS_WINDOWS ? "vmrun.exe" : "vmrun");
 						ProcessBuilder pb = new ProcessBuilder(vmrunPath, "-T", "ws", "start", vmxFile.getAbsolutePath(), "nogui");
 						Process p = pb.start();
-						p.waitFor(); // Ждем завершения команды запуска
+						p.waitFor();
 
 						ClientMod.vmTurningOn = false;
 						ClientMod.vmTurnedOn = true;
@@ -712,9 +694,6 @@ public class GuiPCEditing extends Screen {
 				}
 
 				 else {
-					// -------------------------
-					// БЭКЕНД VIRTUALBOX: ЗАПУСК
-					// -------------------------
 					ArrayList<ISession> usedSessions = new ArrayList<>();
 					try {
 						IMachine found = null;

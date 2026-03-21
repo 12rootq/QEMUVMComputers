@@ -19,6 +19,7 @@ import java.util.zip.Inflater;
 
 import com.google.gson.Gson; // <-- Добавлен импорт для чтения JSON
 
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import newvmcomputers.client.entities.model.DeliveryChestModel;
 import newvmcomputers.client.entities.model.OrderingTabletModel;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -79,6 +80,8 @@ public class ClientMod implements ClientModInitializer {
 	public static boolean vmTurningOn;
 	public static ISession vmSession;
 
+	public static boolean useVmware3D = true;
+
 	public static int maxRam = 8192;
 	public static int videoMem = 256;
 
@@ -118,7 +121,25 @@ public class ClientMod implements ClientModInitializer {
 	public static int glfwUnfocusKey2;
 	public static int glfwUnfocusKey3;
 	public static int glfwUnfocusKey4;
-
+	public static void forceStopVM() {
+		System.out.println("[VMComputers] Shutting down VmWare");
+		try {
+			if (useVmware) {
+				// Убиваем сам движок VMware
+				Runtime.getRuntime().exec("taskkill /F /IM vmware-vmx.exe /T");
+				// Убиваем фоновый плеер
+				Runtime.getRuntime().exec("taskkill /F /IM vmware-kvm.exe /T");
+				Runtime.getRuntime().exec("taskkill /F /IM vmplayer.exe /T");
+			} else {
+				// Для VirtualBox
+				Runtime.getRuntime().exec("taskkill /F /IM VirtualBoxVM.exe /T");
+				Runtime.getRuntime().exec("taskkill /F /IM VBoxHeadless.exe /T");
+			}
+		} catch (Exception e) {
+			System.err.println("Could not kill VmWare:");
+			e.printStackTrace();
+		}
+	}
 	static {
 		if(SystemUtils.IS_OS_MAC) {
 			glfwUnfocusKey1 = GLFW.GLFW_KEY_LEFT_ALT;
@@ -334,9 +355,6 @@ public class ClientMod implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		// ==============================================================
-		// НОВЫЙ БЛОК: Загрузка файла настроек при запуске игры
-		// ==============================================================
 		File setupFile = new File(MinecraftClient.getInstance().runDirectory, "vm_computers/setup.json");
 		if (setupFile.exists()) {
 			try (FileReader fr = new FileReader(setupFile)) {
@@ -373,7 +391,14 @@ public class ClientMod implements ClientModInitializer {
 			ClientMod.vhdDirectory = new File(defaultDir, "vhds");
 		}
 		// ==============================================================
-
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			if (ClientMod.vmTurnedOn || ClientMod.vmUpdateThread != null) {
+				System.out.println("[VMComputers] The player has left the world, turning it off...");
+				ClientMod.vmTurnedOn = false;
+				ClientMod.vmTurningOff = true;
+				forceStopVM();
+			}
+		});
 
 		MainMod.pcOpenGui = () -> MinecraftClient.getInstance().setScreen(new GuiPCEditing(currentPC));
 

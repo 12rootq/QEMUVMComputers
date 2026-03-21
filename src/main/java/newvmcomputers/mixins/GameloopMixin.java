@@ -119,16 +119,35 @@ public class GameloopMixin {
 			if(player == null) {
 				vmUpdateThread.interrupt();
 
-				IMachine m = vb.findMachine("VmComputersVm");
-				ISession sess = vbManager.getSessionObject();
-				m.lockMachine(sess, LockType.Shared);
-				IProgress pg = sess.getConsole().powerDown();
-				pg.waitForCompletion(-1);
-				sess.unlockMachine();
+				if (useVmware) {
+					try {
+						File vmxFile = new File(vhdDirectory.getParentFile(), "vmware_vm.vmx");
+						String vmrunPath = vmwareDirectory + File.separator + (org.apache.commons.lang3.SystemUtils.IS_OS_WINDOWS ? "vmrun.exe" : "vmrun");
+						ProcessBuilder pb = new ProcessBuilder(vmrunPath, "-T", "ws", "stop", vmxFile.getAbsolutePath(), "hard");
+						Process p = pb.start();
+						p.waitFor();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				} else {
+					if (vb != null && vbManager != null) {
+						try {
+							IMachine m = vb.findMachine("VmComputersVm");
+							ISession sess = vbManager.getSessionObject();
+							m.lockMachine(sess, LockType.Shared);
+							IProgress pg = sess.getConsole().powerDown();
+							pg.waitForCompletion(-1);
+							sess.unlockMachine();
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}
+
 				vmTurnedOn = false;
 				vmTurningOff = false;
 				vmTurningOn = false;
-			}else {
+			} else {
 				if(vmUpdateThread == null) {
 					vmUpdateThread = new Thread(new VMRunnable(), "VM Update Thread");
 					vmUpdateThread.start();

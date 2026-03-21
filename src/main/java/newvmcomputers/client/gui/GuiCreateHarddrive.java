@@ -79,8 +79,6 @@ public class GuiCreateHarddrive extends Screen {
 
 			BB = this.addDrawableChild(ButtonWidget.builder(Text.literal("vmdk"), (btn) -> extset(Ext.vmdk))
 					.dimensions(this.width/2-96, this.height/2+25, 50, 20).build());
-
-			// Если используем VMware, принудительно выбираем VMDK и блокируем кнопки
 			if (ClientMod.useVmware) {
 				extset(Ext.vmdk);
 			} else {
@@ -172,17 +170,12 @@ public class GuiCreateHarddrive extends Screen {
 			File vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "."+extension);
 
 			if (ClientMod.useVmware) {
-				// -------------------------
-				// БЭКЕНД VMWARE: СОЗДАНИЕ ДИСКА
-				// -------------------------
 				try {
 					String vdiskManager = ClientMod.vmwareDirectory + File.separator + (SystemUtils.IS_OS_WINDOWS ? "vmware-vdiskmanager.exe" : "vmware-vdiskmanager");
 
 					if (minecraft.player != null) {
-						minecraft.player.sendMessage(Text.literal("Создание диска VMDK... Пожалуйста, подождите.").formatted(Formatting.YELLOW), false);
+						minecraft.player.sendMessage(Text.literal("Creating VMDK disk... Please wait.").formatted(Formatting.YELLOW), false);
 					}
-
-					// Вызов команды: vmware-vdiskmanager -c -t 0 -s [размер]MB -a ide [путь_к_файлу.vmdk]
 					ProcessBuilder pb = new ProcessBuilder(
 							vdiskManager,
 							"-c",
@@ -197,21 +190,18 @@ public class GuiCreateHarddrive extends Screen {
 					if (!vhd.exists()) {
 						System.err.println("VMware-vdiskmanager failed to create file.");
 						if (minecraft.player != null) {
-							minecraft.player.sendMessage(Text.literal("Ошибка: vdiskmanager не смог создать диск. Возможно, его нет в папке VMware.").formatted(Formatting.RED), false);
+							minecraft.player.sendMessage(Text.literal("Error: vdiskmanager could not create the disk. It may not be in the VMware folder.").formatted(Formatting.RED), false);
 						}
 						return;
 					}
 				} catch (Exception e) {
 					System.err.println("Failed to execute vmware-vdiskmanager: " + e.getMessage());
 					if (minecraft.player != null) {
-						minecraft.player.sendMessage(Text.literal("Ошибка выполнения vdiskmanager: " + e.getMessage()).formatted(Formatting.RED), false);
+						minecraft.player.sendMessage(Text.literal("vdiskmanager execution error: " + e.getMessage()).formatted(Formatting.RED), false);
 					}
 					return;
 				}
 			} else {
-				// -------------------------
-				// БЭКЕНД VIRTUALBOX: СОЗДАНИЕ ДИСКА
-				// -------------------------
 				IMedium hdd = null;
 
 				if(extension == Ext.vdi){
