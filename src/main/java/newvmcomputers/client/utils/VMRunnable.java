@@ -23,11 +23,11 @@ import org.virtualbox_6_1.MachineState;
 
 import newvmcomputers.client.ClientMod;
 import newvmcomputers.client.gui.GuiFocus;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public class VMRunnable implements Runnable {
 	private int lastMouseButtons = 0;
-	private long lastMousePacketTime = 0; // НОВОЕ
+	private long lastMousePacketTime = 0; // Р СњР С›Р вЂ™Р С›Р вЂў
 	@Override
 	public void run() {
 		if (ClientMod.useVmware) {
@@ -92,8 +92,28 @@ public class VMRunnable implements Runnable {
 		try {
 			Thread.sleep(3000);
 
-			System.out.println("VMware: Connecting to VNC (127.0.0.1:5900)...");
-			Socket socket = new Socket("127.0.0.1", 5900);
+			Socket socket = null;
+			long lastLogTime = 0L;
+			while (ClientMod.vmTurnedOn && !ClientMod.vmTurningOff) {
+				try {
+					System.out.println("VMware: Connecting to VNC (127.0.0.1:5900)...");
+					socket = new Socket("127.0.0.1", 5900);
+					break;
+				} catch (Exception ex) {
+					long now = System.currentTimeMillis();
+					if (now - lastLogTime >= 2000L) {
+						System.err.println("VMware VNC Error: " + ex.getMessage());
+						lastLogTime = now;
+					}
+					Thread.sleep(1000);
+				}
+			}
+
+			if (socket == null) {
+				vmUpdateThread = null;
+				return;
+			}
+
 			socket.setTcpNoDelay(true);
 			DataInputStream in = new DataInputStream(socket.getInputStream());
 			DataOutputStream out = new DataOutputStream(socket.getOutputStream());
@@ -145,7 +165,7 @@ public class VMRunnable implements Runnable {
 			int lastMouseButtons = 0;
 			long lastMousePacketTime = 0;
 			while (ClientMod.vmTurnedOn && !ClientMod.vmTurningOff) {
-				if (MinecraftClient.getInstance().currentScreen instanceof GuiFocus) {
+				if (Minecraft.getInstance().screen instanceof GuiFocus) {
 					boolean moved = false;
 					if (ClientMod.mouseCurX != ClientMod.mouseLastX || ClientMod.mouseCurY != ClientMod.mouseLastY) {
 						absX += (ClientMod.mouseCurX - ClientMod.mouseLastX);
@@ -283,84 +303,117 @@ public class VMRunnable implements Runnable {
 		}
 	}
 	private void runVirtualBox() {
-		MinecraftClient mcc = MinecraftClient.getInstance();
-		while(true) {
-			try {
-				double deltaX = 0;
-				double deltaY = 0;
+		Minecraft mcc = Minecraft.getInstance();
+		long lastErrorLogTime = 0L;
+		try {
+			while (vmTurnedOn && !vmTurningOff) {
+				ISession ns = null;
+				boolean machineLocked = false;
 
-				deltaX = mouseCurX - mouseLastX;
-				deltaY = mouseCurY - mouseLastY;
-				mouseLastX = mouseCurX;
-				mouseLastY = mouseCurY;
+				try {
+					double deltaX = mouseCurX - mouseLastX;
+					double deltaY = mouseCurY - mouseLastY;
+					mouseLastX = mouseCurX;
+					mouseLastY = mouseCurY;
 
-				IMachine m = vb.findMachine("VmComputersVm");
-				if(m.getState() == MachineState.PoweredOff) {
-					if(!vmTurningOff && vmTurnedOn) {
-						IProgress pr = m.launchVMProcess(vbManager.getSessionObject(), "headless", List.of());
-						pr.waitForCompletion(-1);
-					}else {
-						vmUpdateThread = null;
+					IMachine machine = vb.findMachine("VmComputersVm");
+					if (machine.getState() == MachineState.PoweredOff) {
+						if (!vmTurningOff) {
+							System.out.println("VMComputers: VirtualBox VM is powered off, stopping screen capture.");
+						}
+						vmTurnedOn = false;
+						vmEntityID = -1;
 						return;
 					}
-				}
-				ISession ns = vbManager.getSessionObject();
-				m.lockMachine(ns, LockType.Shared);
-				IConsole console = ns.getConsole();
-				if(mcc.currentScreen instanceof GuiFocus) {
-					int val = 0x00;
-					if(leftMouseButton) val += 0x01;
-					if(middleMouseButton) val += 0x04;
-					if(rightMouseButton) val += 0x02;
-					console.getMouse().putMouseEvent((int)deltaX, (int)deltaY, mouseDeltaScroll, 0, val);
-				}
-				if(releaseKeys) {
-					try {
-						java.util.List<Integer> releaseCodes = new java.util.ArrayList<>();
-						int[] currentKeys = { newvmcomputers.client.ClientMod.glfwUnfocusKey1,
-								newvmcomputers.client.ClientMod.glfwUnfocusKey2,
-								newvmcomputers.client.ClientMod.glfwUnfocusKey3,
-								newvmcomputers.client.ClientMod.glfwUnfocusKey4 };
 
-						for(int k : currentKeys) {
-							if(k > 0) {
-								java.util.List<Integer> codes = newvmcomputers.client.utils.KeyConverter.toVBKey(k, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
-								codes.removeIf(val -> val == 0x80 || val == 0x00);
-								releaseCodes.addAll(codes);
-							}
-						}
+					ns = vbManager.getSessionObject();
+					machine.lockMachine(ns, LockType.Shared);
+					machineLocked = true;
 
-						if (!releaseCodes.isEmpty()) console.getKeyboard().putScancodes(releaseCodes);
-					} catch (Exception e) {
-						e.printStackTrace();
-					} finally {
-						vmKeyboardScancodes.clear();
-						releaseKeys = false;
+					IConsole console = ns.getConsole();
+					if (mcc.screen instanceof GuiFocus) {
+						int val = 0x00;
+						if (leftMouseButton) val += 0x01;
+						if (middleMouseButton) val += 0x04;
+						if (rightMouseButton) val += 0x02;
+						console.getMouse().putMouseEvent((int) deltaX, (int) deltaY, mouseDeltaScroll, 0, val);
 					}
-				}else {
-					console.getKeyboard().putScancodes(vmKeyboardScancodes);
-					vmKeyboardScancodes.clear();
+
+					if (releaseKeys) {
+						try {
+							java.util.List<Integer> releaseCodes = new java.util.ArrayList<>();
+							int[] currentKeys = {
+									newvmcomputers.client.ClientMod.glfwUnfocusKey1,
+									newvmcomputers.client.ClientMod.glfwUnfocusKey2,
+									newvmcomputers.client.ClientMod.glfwUnfocusKey3,
+									newvmcomputers.client.ClientMod.glfwUnfocusKey4
+							};
+
+							for (int k : currentKeys) {
+								if (k > 0) {
+									java.util.List<Integer> codes = newvmcomputers.client.utils.KeyConverter.toVBKey(k, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+									codes.removeIf(val -> val == 0x80 || val == 0x00);
+									releaseCodes.addAll(codes);
+								}
+							}
+
+							if (!releaseCodes.isEmpty()) {
+								console.getKeyboard().putScancodes(releaseCodes);
+							}
+						} finally {
+							synchronized (vmKeyboardScancodes) {
+								vmKeyboardScancodes.clear();
+							}
+							releaseKeys = false;
+						}
+					} else {
+						java.util.List<Integer> pressedScancodes;
+						synchronized (vmKeyboardScancodes) {
+							pressedScancodes = new java.util.ArrayList<>(vmKeyboardScancodes);
+							vmKeyboardScancodes.clear();
+						}
+						if (!pressedScancodes.isEmpty()) {
+							console.getKeyboard().putScancodes(pressedScancodes);
+						}
+					}
+
+					Holder<Long> width = new Holder<>();
+					Holder<Long> height = new Holder<>();
+					Holder<Long> bitsPP = new Holder<>();
+					Holder<Integer> xOrigin = new Holder<>();
+					Holder<Integer> yOrigin = new Holder<>();
+					Holder<GuestMonitorStatus> status = new Holder<>();
+					console.getDisplay().getScreenResolution(0L, width, height, bitsPP, xOrigin, yOrigin, status);
+
+					Long w = width.value;
+					Long h = height.value;
+					if (w != null && h != null && w > 0 && h > 0) {
+						byte[] image = console.getDisplay().takeScreenShotToArray(0L, w, h, BitmapFormat.PNG);
+						vmTextureBytesSize = image.length;
+						vmTextureBytes = image;
+					}
+				} catch (Exception ex) {
+					long now = System.currentTimeMillis();
+					if (!vmTurningOff && now - lastErrorLogTime >= 1000L) {
+						System.err.println("VMComputers: VirtualBox screen update failed: " + ex.getMessage());
+						lastErrorLogTime = now;
+					}
+				} finally {
+					if (ns != null && machineLocked) {
+						try {
+							ns.unlockMachine();
+						} catch (Exception ignored) {
+						}
+					}
 				}
-				Holder<Long> width = new Holder<Long>();
-				Holder<Long> height = new Holder<Long>();
-				Holder<Long> bitsPP = new Holder<Long>();
-				Holder<Integer> xOrigin = new Holder<Integer>();
-				Holder<Integer> yOrigin = new Holder<Integer>();
-				Holder<GuestMonitorStatus> status = new Holder<GuestMonitorStatus>();
-				console.getDisplay().getScreenResolution(0L, width, height, bitsPP, xOrigin, yOrigin, status);
-				Long w = width.value;
-				Long h = height.value;
-				byte[] image = null;
-				try {
-					image = console.getDisplay().takeScreenShotToArray(0L, w, h, BitmapFormat.PNG);
-				}catch(Exception ex) {
-					ns.unlockMachine();
-					continue;
-				}
-				ns.unlockMachine();
-				vmTextureBytesSize = image.length;
-				vmTextureBytes = image;
-			}catch(Exception ex) {}
+
+				Thread.sleep(50L);
+			}
+		} catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		} finally {
+			vmUpdateThread = null;
 		}
 	}
 }
+

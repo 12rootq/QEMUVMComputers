@@ -1,23 +1,74 @@
+buildscript {
+	repositories {
+		maven { url = 'https://maven.minecraftforge.net/' }
+		maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
+		mavenCentral()
+	}
+	dependencies {
+		classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '6.0.+', changing: true
+		classpath 'org.spongepowered:mixingradle:0.7-SNAPSHOT'
+	}
+}
+
 plugins {
-	id 'fabric-loom' version '1.4.1'
+	id 'eclipse'
+	id 'idea'
 	id 'maven-publish'
 	id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
-java {
-	sourceCompatibility = JavaVersion.VERSION_17
-	targetCompatibility = JavaVersion.VERSION_17
-	withSourcesJar()
-}
+apply plugin: 'net.minecraftforge.gradle'
+apply plugin: 'org.spongepowered.mixin'
 
-tasks.withType(JavaCompile).configureEach {
-	options.release = 17
-}
+version = project.mod_version
+group = project.maven_group
+
 base {
 	archivesName = project.archives_base_name
 }
-version = project.mod_version
-group = project.maven_group
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
+
+minecraft {
+	mappings channel: project.mappings_channel, version: project.mappings_version
+	copyIdeResources = true
+
+	runs {
+		configureEach {
+			workingDirectory project.file('run')
+			property 'forge.logging.markers', 'REGISTRIES'
+			property 'forge.logging.console.level', 'debug'
+
+			// Настройка миксинов для среды разработки
+			property 'mixin.env.remapRefMap', 'true'
+			property 'mixin.env.refMapTarget', 'newvmcomputers.refmap.json'
+
+			mods {
+				"${project.archives_base_name}" {
+					source sourceSets.main
+				}
+			}
+		}
+
+		client {
+			property 'forge.enabledGameTestNamespaces', project.archives_base_name
+			args '-mixin.config=newvmcomputers.mixins.json'
+		}
+
+		server {
+			property 'forge.enabledGameTestNamespaces', project.archives_base_name
+			args '--nogui', '-mixin.config=newvmcomputers.mixins.json'
+		}
+	}
+}
+
+// Настройка Mixin
+mixin {
+	add sourceSets.main, "newvmcomputers.refmap.json"
+	config "newvmcomputers.mixins.json"
+}
 
 configurations {
 	shadow
@@ -25,55 +76,86 @@ configurations {
 }
 
 dependencies {
-	minecraft "com.mojang:minecraft:1.20.1"
-	mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
-	modImplementation "net.fabricmc:fabric-loader:0.18.4"
+	minecraft "net.minecraftforge:forge:${project.minecraft_version}-${project.forge_version}"
 
-	modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.7+1.20.1"
+	// Процессор аннотаций для правильной компиляции миксинов
+	annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 
-	shadow files('lib/vboxjws.jar')
-	implementation files("libs/vboxjws.jar")
-	
-	include files("libs/vboxjws.jar")
+	// Ваши библиотеки
+	shadow files("lib/vboxjws.jar")
 
-	
-	implementation "com.sun.xml.ws:jaxws-rt:2.3.7"
-	include "com.sun.xml.ws:jaxws-rt:2.3.7"
-	include "javax.xml.ws:jaxws-api:2.3.1"
-	include "javax.xml.bind:jaxb-api:2.3.1"
-	include "javax.jws:javax.jws-api:1.1"
-	include "com.sun.istack:istack-commons-runtime:3.0.12"
-	include "org.jvnet.staxex:stax-ex:1.8.3"
-	include "com.sun.xml.fastinfoset:FastInfoset:1.2.18"
-	include "org.jvnet.mimepull:mimepull:1.9.15"
-	include "com.sun.xml.messaging.saaj:saaj-impl:1.5.3"
-	include "jakarta.xml.soap:jakarta.xml.soap-api:1.4.2"
-	include "com.sun.xml.stream.buffer:streambuffer:2.0.1"
-	include "com.sun.xml.ws:policy:2.7.10"
-	include "org.glassfish.gmbal:gmbal-api-only:4.0.3"
-	include "org.glassfish.ha:ha-api:3.1.13"
-	include "org.glassfish.external:management-api:3.2.3"
-	include "org.glassfish.jaxb:jaxb-runtime:2.3.7"
-	include "org.glassfish.jaxb:txw2:2.3.7"
-	include "com.sun.activation:jakarta.activation:1.2.2"
+	shadow "com.sun.xml.ws:jaxws-rt:2.3.7"
+	shadow "javax.xml.ws:jaxws-api:2.3.1"
+	shadow "javax.xml.bind:jaxb-api:2.3.1"
+	shadow "javax.jws:javax.jws-api:1.1"
+	shadow "com.sun.istack:istack-commons-runtime:3.0.12"
+	shadow "org.jvnet.staxex:stax-ex:1.8.3"
+	shadow "com.sun.xml.fastinfoset:FastInfoset:1.2.18"
+	shadow "org.jvnet.mimepull:mimepull:1.9.15"
+	shadow "com.sun.xml.messaging.saaj:saaj-impl:1.5.3"
+	shadow "jakarta.xml.soap:jakarta.xml.soap-api:1.4.2"
+	shadow "com.sun.xml.stream.buffer:streambuffer:2.0.1"
+	shadow "com.sun.xml.ws:policy:2.7.10"
+	shadow "org.glassfish.gmbal:gmbal-api-only:4.0.3"
+	shadow "org.glassfish.ha:ha-api:3.1.13"
+	shadow "org.glassfish.external:management-api:3.2.3"
+	shadow "org.glassfish.jaxb:jaxb-runtime:2.3.7"
+	shadow "org.glassfish.jaxb:txw2:2.3.7"
+	shadow "com.sun.activation:jakarta.activation:1.2.2"
 }
+
 shadowJar {
+	archiveClassifier = ''
 	configurations = [project.configurations.shadow]
-	archiveBaseName = "${project.archives_base_name}"
-	archiveClassifier = 'dev-shadow'
-	archiveVersion = "${project.mod_version}"
+	exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+
+	doLast {
+		def overridePaths = [
+			'com/sun/xml/bind/v2/model/annotation/RuntimeInlineAnnotationReader.class',
+			'org/virtualbox_6_1/jaxws/package-info.class',
+			'com/oracle/xmlns/webservices/jaxws_databinding/package-info.class'
+		]
+
+		sourceSets.main.output.classesDirs.files.findAll { it.exists() }.each { classesDir ->
+			ant.zip(update: 'true', destfile: archiveFile.get().asFile) {
+				overridePaths.each { overridePath ->
+					zipfileset(dir: classesDir) {
+						include(name: overridePath)
+					}
+				}
+			}
+		}
+	}
 }
 
-remapJar {
-	dependsOn shadowJar
-	inputFile = shadowJar.archiveFile
-	archiveClassifier = ''
+jar {
+	archiveClassifier = 'slim'
+	manifest {
+		attributes([
+				"Specification-Title"     : project.archives_base_name,
+				"Specification-Vendor"    : "FB527",
+				"Specification-Version"   : "1",
+				"Implementation-Title"    : project.archives_base_name,
+				"Implementation-Version"  : project.mod_version,
+				"Implementation-Vendor"   : "FB527",
+				"Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+				"MixinConfigs"            : "newvmcomputers.mixins.json" // Указываем Forge, где файл миксинов
+		])
+	}
 }
+
+// Заставляем Forge обфусцировать именно тот jar, в который вшиты библиотеки
+reobf {
+	shadowJar {}
+}
+
+tasks.build.dependsOn shadowJar
+shadowJar.finalizedBy reobfShadowJar
 
 processResources {
 	inputs.property "version", project.version
 
-	filesMatching("fabric.mod.json") {
+	filesMatching("META-INF/mods.toml") {
 		expand "version": project.version
 	}
 }
@@ -83,23 +165,10 @@ tasks.withType(JavaCompile).configureEach {
 	options.release = 17
 }
 
-jar {
-	from "LICENSE"
-}
-
 publishing {
 	publications {
 		mavenJava(MavenPublication) {
-			artifact(remapJar) {
-				builtBy remapJar
-			}
-			artifact(sourcesJar) {
-				builtBy remapSourcesJar
-			}
+			artifact shadowJar
 		}
-	}
-
-	repositories {
-		
 	}
 }

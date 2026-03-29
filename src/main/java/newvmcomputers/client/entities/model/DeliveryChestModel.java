@@ -4,187 +4,173 @@ import java.awt.Color;
 import java.io.IOException;
 import java.util.Random;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.model.ModelData;
-import net.minecraft.client.model.ModelPart;
-import net.minecraft.client.model.ModelPartBuilder;
-import net.minecraft.client.model.ModelPartData;
-import net.minecraft.client.model.ModelTransform;
-import net.minecraft.client.model.TexturedModelData;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Identifier;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
 
 public class DeliveryChestModel extends EntityModel<Entity> {
-	public final ModelPart model;
-	public final ModelPart opening;
-	public final ModelPart engine;
-	public final ModelPart fire;
+    public final ModelPart model;
+    public final ModelPart opening;
+    public final ModelPart engine;
+    public final ModelPart fire;
+    public final ModelPart upleg0;
+    public final ModelPart upleg1;
+    public final ModelPart upleg2;
+    public final ModelPart upleg3;
+    public final ModelPart uleg0;
+    public final ModelPart uleg1;
+    public final ModelPart uleg2;
+    public final ModelPart uleg3;
 
-	
-	public final ModelPart upleg0, upleg1, upleg2, upleg3;
-	public final ModelPart uleg0, uleg1, uleg2, uleg3;
+    private static final ResourceLocation BASE_TEXTURE_LOCATION = new ResourceLocation("newvmcomputers", "textures/entity/delivery_chest.png");
 
-	private final NativeImage baseTexture;
-	private final MinecraftClient mcc;
+    private NativeImage baseTexture;
+    private final Minecraft minecraft;
 
-	public static final Random TEX_RANDOM = new Random();
+    public static final Random TEX_RANDOM = new Random();
 
-	private NativeImage ni;
-	private NativeImageBackedTexture nibt;
-	private Identifier texId;
+    private NativeImage generatedTexture;
+    private DynamicTexture dynamicTexture;
+    private ResourceLocation textureId;
 
-	public boolean fireYes = true;
+    public boolean fireYes = true;
 
-	public DeliveryChestModel(ModelPart root) throws IOException {
-		this.mcc = MinecraftClient.getInstance();
-		this.baseTexture = NativeImage.read(mcc.getResourceManager().getResource(new Identifier("newvmcomputers", "textures/entity/delivery_chest.png")).get().getInputStream());
+    public DeliveryChestModel(ModelPart root) {
+        this.minecraft = Minecraft.getInstance();
+        this.model = root.getChild("model");
+        this.opening = this.model.getChild("opening");
+        this.engine = this.model.getChild("engine");
+        this.fire = this.engine.getChild("fire");
+        this.upleg0 = this.model.getChild("upleg0");
+        this.uleg0 = this.upleg0.getChild("uleg0");
+        this.upleg1 = this.model.getChild("upleg1");
+        this.uleg1 = this.upleg1.getChild("uleg1");
+        this.upleg2 = this.model.getChild("upleg2");
+        this.uleg2 = this.upleg2.getChild("uleg2");
+        this.upleg3 = this.model.getChild("upleg3");
+        this.uleg3 = this.upleg3.getChild("uleg3");
+    }
 
-		this.model = root.getChild("model");
-		this.opening = this.model.getChild("opening");
-		this.engine = this.model.getChild("engine");
-		this.fire = this.engine.getChild("fire");
+    public static LayerDefinition getLayerDefinition() {
+        MeshDefinition meshDefinition = new MeshDefinition();
+        PartDefinition root = meshDefinition.getRoot();
+        PartDefinition model = root.addOrReplaceChild("model", CubeListBuilder.create().texOffs(0, 0).addBox(-6.0F, -5.0F, -6.0F, 12.0F, 8.0F, 12.0F), PartPose.offset(0.0F, 7.0F, 0.0F));
+        model.addOrReplaceChild("opening", CubeListBuilder.create().texOffs(0, 20).addBox(-6.0F, -2.0F, -12.0F, 12.0F, 2.0F, 12.0F), PartPose.offsetAndRotation(0.0F, -5.0F, 6.0F, -1.1345F, 0.0F, 0.0F));
 
-		
-		this.upleg0 = this.model.getChild("upleg0");
-		this.uleg0 = this.upleg0.getChild("uleg0");
+        PartDefinition upleg0 = model.addOrReplaceChild("upleg0", CubeListBuilder.create().texOffs(24, 34).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F), PartPose.offsetAndRotation(-6.0F, 3.0F, 6.0F, 0.0F, 0.7854F, 0.0F));
+        upleg0.addOrReplaceChild("uleg0", CubeListBuilder.create().texOffs(0, 46).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F).texOffs(0, 20).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F), PartPose.offset(-0.9828F, 7.0F, -0.0071F));
+        PartDefinition upleg1 = model.addOrReplaceChild("upleg1", CubeListBuilder.create().texOffs(0, 34).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F), PartPose.offsetAndRotation(-6.0F, 3.0F, -6.0F, 0.0F, -0.7854F, 0.0F));
+        upleg1.addOrReplaceChild("uleg1", CubeListBuilder.create().texOffs(44, 44).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F).texOffs(0, 8).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F), PartPose.offset(-0.9828F, 7.0F, -0.0071F));
+        PartDefinition upleg2 = model.addOrReplaceChild("upleg2", CubeListBuilder.create().texOffs(6, 24).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F), PartPose.offsetAndRotation(6.0F, 3.0F, -6.0F, 0.0F, -2.3562F, 0.0F));
+        upleg2.addOrReplaceChild("uleg2", CubeListBuilder.create().texOffs(38, 43).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F).texOffs(0, 4).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F), PartPose.offset(-0.9828F, 7.0F, -0.0071F));
+        PartDefinition upleg3 = model.addOrReplaceChild("upleg3", CubeListBuilder.create().texOffs(0, 24).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F), PartPose.offsetAndRotation(6.0F, 3.0F, 6.0F, 0.0F, 2.3562F, 0.0F));
+        upleg3.addOrReplaceChild("uleg3", CubeListBuilder.create().texOffs(32, 43).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F).texOffs(0, 0).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F), PartPose.offset(-0.9828F, 7.0F, -0.0071F));
+        PartDefinition engine = model.addOrReplaceChild("engine", CubeListBuilder.create()
+                .texOffs(0, 34).addBox(-4.0F, 8.0F, -4.0F, 8.0F, 4.0F, 8.0F)
+                .texOffs(36, 0).addBox(-3.0F, 5.0F, -3.0F, 6.0F, 3.0F, 6.0F)
+                .texOffs(36, 20).addBox(-2.0F, 3.0F, -2.0F, 4.0F, 2.0F, 4.0F)
+                .texOffs(36, 26).addBox(-4.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
+                .texOffs(30, 34).addBox(3.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
+                .texOffs(36, 0).addBox(-4.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F)
+                .texOffs(34, 34).addBox(3.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F), PartPose.ZERO);
+        engine.addOrReplaceChild("fire", CubeListBuilder.create().texOffs(32, 34).addBox(-3.0F, -1.0F, -3.0F, 6.0F, 3.0F, 6.0F), PartPose.offset(0.0F, 13.0F, 0.0F));
+        return LayerDefinition.create(meshDefinition, 64, 64);
+    }
 
-		this.upleg1 = this.model.getChild("upleg1");
-		this.uleg1 = this.upleg1.getChild("uleg1");
+    public void setRotationAngle(ModelPart part, float xRot, float yRot, float zRot) {
+        part.xRot = xRot;
+        part.yRot = yRot;
+        part.zRot = zRot;
+    }
 
-		this.upleg2 = this.model.getChild("upleg2");
-		this.uleg2 = this.upleg2.getChild("uleg2");
+    @Override
+    public void setupAnim(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    }
 
-		this.upleg3 = this.model.getChild("upleg3");
-		this.uleg3 = this.upleg3.getChild("uleg3");
-	}
+    @Override
+    public void renderToBuffer(PoseStack poseStack, VertexConsumer vertexConsumer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
+        model.render(poseStack, vertexConsumer, packedLight, packedOverlay, red, green, blue, alpha);
+    }
 
-	public static TexturedModelData getTexturedModelData() {
-		ModelData modelData = new ModelData();
-		ModelPartData modelPartData = modelData.getRoot();
+    public void render(PoseStack poseStack, MultiBufferSource provider, int packedLight, int packedOverlay) {
+        if (!ensureBaseTexture()) {
+            model.render(poseStack, provider.getBuffer(RenderType.entityTranslucent(MissingTextureAtlasSprite.getLocation())), packedLight, packedOverlay, 1.0F, 1.0F, 1.0F, 1.0F);
+            return;
+        }
+        generateTexture();
+        model.render(poseStack, provider.getBuffer(RenderType.entityTranslucent(textureId)), packedLight, packedOverlay, 1.0F, 1.0F, 1.0F, 1.0F);
+    }
 
-		ModelPartData model = modelPartData.addChild("model",
-				ModelPartBuilder.create().uv(0, 0).cuboid(-6.0F, -5.0F, -6.0F, 12.0F, 8.0F, 12.0F),
-				ModelTransform.pivot(0.0F, 7.0F, 0.0F));
+    private boolean ensureBaseTexture() {
+        if (baseTexture != null) {
+            return true;
+        }
 
-		model.addChild("opening",
-				ModelPartBuilder.create().uv(0, 20).cuboid(-6.0F, -2.0F, -12.0F, 12.0F, 2.0F, 12.0F),
-				ModelTransform.of(0.0F, -5.0F, 6.0F, -1.1345F, 0.0F, 0.0F));
+        try {
+            baseTexture = NativeImage.read(
+                    minecraft.getResourceManager()
+                            .getResource(BASE_TEXTURE_LOCATION)
+                            .orElseThrow(() -> new IOException("Missing resource " + BASE_TEXTURE_LOCATION))
+                            .open()
+            );
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
 
-		ModelPartData upleg0 = model.addChild("upleg0",
-				ModelPartBuilder.create().uv(24, 34).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-				ModelTransform.of(-6.0F, 3.0F, 6.0F, 0.0F, 0.7854F, 0.0F));
-		upleg0.addChild("uleg0",
-				ModelPartBuilder.create()
-						.uv(0, 46).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-						.uv(0, 20).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-				ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
+    private void generateTexture() {
+        if (generatedTexture != null) {
+            generatedTexture.close();
+        }
+        if (dynamicTexture != null) {
+            dynamicTexture.close();
+        }
+        if (textureId != null) {
+            minecraft.getTextureManager().release(textureId);
+        }
 
-		ModelPartData upleg1 = model.addChild("upleg1",
-				ModelPartBuilder.create().uv(0, 34).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-				ModelTransform.of(-6.0F, 3.0F, -6.0F, 0.0F, -0.7854F, 0.0F));
-		upleg1.addChild("uleg1",
-				ModelPartBuilder.create()
-						.uv(44, 44).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-						.uv(0, 8).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-				ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
+        generatedTexture = new NativeImage(64, 64, true);
+        generatedTexture.copyFrom(baseTexture);
+        for (int x = 38; x < 50; x++) {
+            for (int y = 34; y < 40; y++) {
+                generatedTexture.setPixelRGBA(x, y, randomColorAbgr());
+            }
+        }
+        for (int x = 32; x < 56; x++) {
+            for (int y = 40; y < 43; y++) {
+                generatedTexture.setPixelRGBA(x, y, randomColorAbgr());
+            }
+        }
+        dynamicTexture = new DynamicTexture(generatedTexture);
+        textureId = minecraft.getTextureManager().register("delivery_chest_fire", dynamicTexture);
+    }
 
-		ModelPartData upleg2 = model.addChild("upleg2",
-				ModelPartBuilder.create().uv(6, 24).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-				ModelTransform.of(6.0F, 3.0F, -6.0F, 0.0F, -2.3562F, 0.0F));
-		upleg2.addChild("uleg2",
-				ModelPartBuilder.create()
-						.uv(38, 43).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-						.uv(0, 4).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-				ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
-
-		ModelPartData upleg3 = model.addChild("upleg3",
-				ModelPartBuilder.create().uv(0, 24).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-				ModelTransform.of(6.0F, 3.0F, 6.0F, 0.0F, 2.3562F, 0.0F));
-		upleg3.addChild("uleg3",
-				ModelPartBuilder.create()
-						.uv(32, 43).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-						.uv(0, 0).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-				ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
-
-		ModelPartData engine = model.addChild("engine",
-				ModelPartBuilder.create()
-						.uv(0, 34).cuboid(-4.0F, 8.0F, -4.0F, 8.0F, 4.0F, 8.0F)
-						.uv(36, 0).cuboid(-3.0F, 5.0F, -3.0F, 6.0F, 3.0F, 6.0F)
-						.uv(36, 20).cuboid(-2.0F, 3.0F, -2.0F, 4.0F, 2.0F, 4.0F)
-						.uv(36, 26).cuboid(-4.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
-						.uv(30, 34).cuboid(3.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
-						.uv(36, 0).cuboid(-4.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F)
-						.uv(34, 34).cuboid(3.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F),
-				ModelTransform.pivot(0.0F, 0.0F, 0.0F));
-
-		engine.addChild("fire",
-				ModelPartBuilder.create().uv(32, 34).cuboid(-3.0F, -1.0F, -3.0F, 6.0F, 3.0F, 6.0F),
-				ModelTransform.pivot(0.0F, 13.0F, 0.0F));
-
-		return TexturedModelData.of(modelData, 64, 64);
-	}
-
-	
-	public void setRotationAngle(ModelPart part, float pitch, float yaw, float roll) {
-		part.pitch = pitch;
-		part.yaw = yaw;
-		part.roll = roll;
-	}
-
-	private void generateTexture() {
-		if(ni != null) {ni.close(); ni = null;}
-		if(nibt != null) {nibt.close(); nibt = null;}
-		if(texId != null) {mcc.getTextureManager().destroyTexture(texId); texId = null;}
-
-		ni = new NativeImage(64, 64, true);
-		ni.copyFrom(baseTexture);
-		for(int x = 38; x < 50; x++) {
-			for(int y = 34; y < 40; y++) {
-				ni.setColor(x, y, randomColorABGR());
-			}
-		}
-		for(int x = 32; x < 56; x++) {
-			for(int y = 40; y < 43; y++) {
-				ni.setColor(x, y, randomColorABGR());
-			}
-		}
-		nibt = new NativeImageBackedTexture(ni);
-		texId = mcc.getTextureManager().registerDynamicTexture("delivery_chest_fire", nibt);
-	}
-
-	private int randomColorABGR() {
-		if(fireYes) {
-			int a = TEX_RANDOM.nextInt(256);
-			Color[] colors = new Color[] {
-					new Color(0, 0, 255),    
-					new Color(0, 128, 255),  
-					new Color(0, 255, 255)   
-			};
-			Color c = colors[TEX_RANDOM.nextInt(colors.length)];
-			return (a << 24) | (c.getBlue() << 16) | (c.getGreen() << 8) | c.getRed();
-		} else {
-			return 0;
-		}
-	}
-
-	@Override
-	public void setAngles(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-	}
-
-	@Override
-	public void render(MatrixStack matrixStack, VertexConsumer buffer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-		model.render(matrixStack, buffer, packedLight, packedOverlay, red, green, blue, alpha);
-	}
-
-	public void render(MatrixStack matrixStack, VertexConsumerProvider provider, int packedLight, int packedOverlay) {
-		this.generateTexture();
-		model.render(matrixStack, provider.getBuffer(RenderLayer.getEntityTranslucent(texId)), packedLight, packedOverlay, 1.0f, 1.0f, 1.0f, 1.0f);
-	}
+    private int randomColorAbgr() {
+        if (!fireYes) {
+            return 0;
+        }
+        int alpha = TEX_RANDOM.nextInt(256);
+        Color[] colors = new Color[] {
+                new Color(0, 0, 255),
+                new Color(0, 128, 255),
+                new Color(0, 255, 255)
+        };
+        Color color = colors[TEX_RANDOM.nextInt(colors.length)];
+        return (alpha << 24) | (color.getBlue() << 16) | (color.getGreen() << 8) | color.getRed();
+    }
 }

@@ -121,5 +121,8 @@
     "newvmcomputers.setup.use_vmware": "Use VMware",
     "newvmcomputers.setup.vmware_dir": "VMware folder",
     "newvmcomputers.input_dir_notvmware": "This doesn't look like a VMware folder",
-    "newvmcomputers.input_dir_yesvmware": "VMware folder detected"
+    "newvmcomputers.input_dir_yesvmware": "VMware folder detected",
+    "newvmcomputers.setup.vmrun_help": "Select your VMware Workstation folder.",
+    "newvmcomputers.setup.vmrun_note": "It should contain vmrun.exe",
+    "newvmcomputers.setup.vmrun_note_detail": "and vmware-vdiskmanager.exe."
 }

@@ -12,11 +12,12 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 
 import newvmcomputers.client.ClientMod;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-import net.minecraft.util.Language;
+import newvmcomputers.client.utils.KeyConverter;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.locale.Language;
 
 public class GuiFocus extends Screen {
 	private String keyString;
@@ -24,10 +25,10 @@ public class GuiFocus extends Screen {
 	
 	private final Set<Integer> pressedKeys = new HashSet<>();
 	private final Language lang = Language.getInstance();
-	private final MinecraftClient minecraft = MinecraftClient.getInstance();
+	private final Minecraft minecraft = Minecraft.getInstance();
 
 	public GuiFocus() {
-		super(Text.translatable("Focus"));
+		super(Component.translatable("Focus"));
 	}
 
 	@Override
@@ -66,9 +67,9 @@ public class GuiFocus extends Screen {
 			@Override
 			public void run() {
 				if (minecraft.getWindow() == null) return;
-				long window = minecraft.getWindow().getHandle();
+				long window = minecraft.getWindow().getWindow();
 
-				if (minecraft.getCurrentServerEntry() == null && !minecraft.isInSingleplayer()) {
+				if (minecraft.getCurrentServer() == null && !minecraft.hasSingleplayerServer()) {
 					GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
 					serverAddressTimer.cancel();
 				}
@@ -78,26 +79,44 @@ public class GuiFocus extends Screen {
 	}
 
 	
-	private void tryUnfocus() {
+	private void queueVmKeyAction(int keyCode, int action) {
+		List<Integer> scanCodes = KeyConverter.toVBKey(keyCode, action);
+		scanCodes.removeIf(code -> code == 0x00 || code == 0x80);
+		if (scanCodes.isEmpty()) {
+			return;
+		}
+
+		synchronized (ClientMod.vmKeyboardScancodes) {
+			ClientMod.vmKeyboardScancodes.addAll(scanCodes);
+		}
+	}
+
+	private boolean tryUnfocus() {
 		if (keys == null || keys.isEmpty()) {
-			return; 
+			return false; 
 		}
 
 		for (int key : keys) {
 			if (!pressedKeys.contains(key)) {
-				return; 
+				return false; 
 			}
 		}
 
 		
 		minecraft.setScreen(null);
+		return true;
 	}
 
 	
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		pressedKeys.add(keyCode);
-		tryUnfocus();
+		boolean firstPress = pressedKeys.add(keyCode);
+		if (tryUnfocus()) {
+			return true;
+		}
+		if (firstPress) {
+			queueVmKeyAction(keyCode, GLFW.GLFW_PRESS);
+		}
 		return true;
 	}
 
@@ -105,12 +124,13 @@ public class GuiFocus extends Screen {
 	@Override
 	public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
 		pressedKeys.remove(keyCode);
+		queueVmKeyAction(keyCode, GLFW.GLFW_RELEASE);
 		return true;
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseXGUI, int mouseYGUI, float delta) {
-		long window = minecraft.getWindow().getHandle();
+	public void render(GuiGraphics context, int mouseXGUI, int mouseYGUI, float delta) {
+		long window = minecraft.getWindow().getWindow();
 		DoubleBuffer mX = BufferUtils.createDoubleBuffer(1);
 		DoubleBuffer mY = BufferUtils.createDoubleBuffer(1);
 		GLFW.glfwGetCursorPos(window, mX, mY);
@@ -125,7 +145,7 @@ public class GuiFocus extends Screen {
 		ClientMod.middleMouseButton = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS;
 		ClientMod.rightMouseButton = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
 
-		context.drawText(this.textRenderer, lang.get("newvmcomputers.focus.lose").replace("%s", keyString), 4, 4, -1, false);
+		context.drawString(this.font, lang.getOrDefault("newvmcomputers.focus.lose").replace("%s", keyString), 4, 4, -1, false);
 		GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
 
 		
@@ -135,7 +155,10 @@ public class GuiFocus extends Screen {
 
 	@Override
 	public void removed() {
-		ClientMod.releaseKeys = true;
+		for (int key : new ArrayList<>(pressedKeys)) {
+			queueVmKeyAction(key, GLFW.GLFW_RELEASE);
+		}
+		ClientMod.releaseKeys = false;
 		pressedKeys.clear();
 		ClientMod.leftMouseButton = false;
 		ClientMod.middleMouseButton = false;
@@ -148,7 +171,8 @@ public class GuiFocus extends Screen {
 	}
 
 	@Override
-	public boolean shouldPause() {
+	public boolean isPauseScreen() {
 		return false;
 	}
 }
+

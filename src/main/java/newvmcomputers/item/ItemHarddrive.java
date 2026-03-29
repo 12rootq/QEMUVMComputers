@@ -1,51 +1,55 @@
 package newvmcomputers.item;
 
+import java.util.List;
+
 import newvmcomputers.MainMod;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.world.World;
+import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
 
 public class ItemHarddrive extends OrderableItem {
-	public ItemHarddrive(Settings settings) {
-		super(settings, 6);
-	}
+    public ItemHarddrive(Properties properties) {
+        super(properties, 6);
+    }
 
+    @Override
+    public boolean shouldOverrideMultiplayerNbt() {
+        return true;
+    }
 
-	public boolean shouldSyncTagToClient() {
-		return true;
-	}
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player user, InteractionHand hand) {
+        if (level.isClientSide) {
+            MainMod.hardDriveClick.run();
+        }
+        return InteractionResultHolder.sidedSuccess(user.getItemInHand(hand), level.isClientSide);
+    }
 
-	@Override
-	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-		if(world.isClient) {
-			MainMod.hardDriveClick.run();
-		}
-		return super.use(world, user, hand);
-	}
+    @Override
+    public Component getName(ItemStack stack) {
+        if (stack.getTag() != null && stack.getTag().contains("vhdfile")) {
+            return Component.translatable("newvmcomputers.hdd_item_name", stack.getTag().getString("vhdfile")).withStyle(ChatFormatting.WHITE);
+        }
+        return Component.translatable("newvmcomputers.hdd_item_name", Component.translatable("newvmcomputers.hdd_right_click").getString())
+                .withStyle(ChatFormatting.WHITE);
+    }
 
-	@Override
-	public Text getName(ItemStack stack) {
-		if(stack.getNbt() != null) {
-			if(stack.getNbt().contains("vhdfile")) {
-				return Text.translatable("newvmcomputers.hdd_item_name", stack.getNbt().getString("vhdfile")).formatted(Formatting.WHITE);
-			}
-		}
-		return Text.translatable("newvmcomputers.hdd_item_name", Text.translatable("newvmcomputers.hdd_right_click").getString()).formatted(Formatting.WHITE);
-	}
+    @Override
+    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, level, tooltip, flag);
+    }
 
-	public static ItemStack createHardDrive(String fileName) {
-		ItemStack is = new ItemStack(ItemList.ITEM_HARDDRIVE);
-
-
-		NbtCompound ct = is.getOrCreateNbt();
-		ct.putString("vhdfile", fileName);
-
-		is.setNbt(ct);
-		return is;
-	}
+    public static ItemStack createHardDrive(String fileName) {
+        ItemStack stack = new ItemStack(ItemList.ITEM_HARDDRIVE.get());
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putString("vhdfile", fileName);
+        return stack;
+    }
 }
+

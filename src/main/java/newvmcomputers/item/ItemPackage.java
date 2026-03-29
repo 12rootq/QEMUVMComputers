@@ -2,69 +2,58 @@ package newvmcomputers.item;
 
 import java.util.List;
 
-import org.jetbrains.annotations.Nullable;
-
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.world.World;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
 
 public class ItemPackage extends Item {
+    public ItemPackage(Properties properties) {
+        super(properties);
+    }
 
-	public ItemPackage(Settings settings) {
-		super(settings);
-	}
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player user, InteractionHand hand) {
+        if (!level.isClientSide) {
+            ItemStack stack = user.getItemInHand(hand);
+            if (stack.getTag() != null && stack.getTag().contains("packaged_item")) {
+                stack.shrink(1);
+                Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(stack.getTag().getString("packaged_item")));
+                user.addItem(new ItemStack(item));
+            }
+        }
+        return InteractionResultHolder.sidedSuccess(user.getItemInHand(hand), level.isClientSide);
+    }
 
-	@Override
-	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-		if(!world.isClient){
-			ItemStack is = user.getStackInHand(hand);
-			if(is.getNbt() != null) {
-				if(is.getNbt().contains("packaged_item")) {
-					is.decrement(1);
+    @Override
+    public Component getName(ItemStack stack) {
+        if (stack.getTag() != null && stack.getTag().contains("packaged_item")) {
+            Item item = BuiltInRegistries.ITEM.get(new ResourceLocation(stack.getTag().getString("packaged_item")));
+            return Component.translatable("newvmcomputers.packaged")
+                    .withStyle(ChatFormatting.GRAY)
+                    .append(Component.translatable(item.getDescriptionId()).withStyle(ChatFormatting.GREEN));
+        }
+        return Component.translatable("newvmcomputers.invalid_package").withStyle(ChatFormatting.RED);
+    }
 
-					user.giveItemStack(new ItemStack(Registries.ITEM.get(new Identifier(is.getNbt().getString("packaged_item")))));
-				}
-			}
-		}
-		return super.use(world, user, hand);
-	}
+    @Override
+    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+        tooltip.add(Component.translatable("newvmcomputers.open_with_right_click").withStyle(ChatFormatting.GRAY));
+    }
 
-	@Override
-	public Text getName(ItemStack stack) {
-		if(stack.getNbt() != null) {
-			if(stack.getNbt().contains("packaged_item")) {
-				return Text.translatable("newvmcomputers.packaged")
-						.formatted(Formatting.GRAY)
-						.append(Text.translatable(Registries.ITEM.get(new Identifier(stack.getNbt().getString("packaged_item"))).getTranslationKey())
-								.formatted(Formatting.GREEN));
-			}
-		}
-
-		return Text.translatable("newvmcomputers.invalid_package").formatted(Formatting.RED);
-	}
-
-	@Override
-	public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
-
-		tooltip.add(Text.translatable("newvmcomputers.open_with_right_click").formatted(Formatting.GRAY));
-	}
-
-	public static ItemStack createPackage(Identifier id) {
-		ItemStack is = new ItemStack(ItemList.ITEM_PACKAGE);
-		NbtCompound ct = is.getOrCreateNbt();
-		ct.putString("packaged_item", id.toString());
-
-		is.setNbt(ct);
-		return is;
-	}
-
+    public static ItemStack createPackage(ResourceLocation id) {
+        ItemStack stack = new ItemStack(ItemList.ITEM_PACKAGE.get());
+        CompoundTag tag = stack.getOrCreateTag();
+        tag.putString("packaged_item", id.toString());
+        return stack;
+    }
 }
+

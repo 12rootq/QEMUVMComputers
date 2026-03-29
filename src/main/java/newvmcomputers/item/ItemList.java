@@ -2,151 +2,112 @@ package newvmcomputers.item;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
 import newvmcomputers.entities.EntityCRTScreen;
 import newvmcomputers.entities.EntityFlatScreen;
 import newvmcomputers.entities.EntityKeyboard;
 import newvmcomputers.entities.EntityMouse;
 import newvmcomputers.entities.EntityWallTV;
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
-import net.minecraft.block.Blocks;
-import net.minecraft.item.Item;
-import net.minecraft.item.Item.Settings;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.Registries;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Rarity;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
 public class ItemList {
+	public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, "newvmcomputers");
+	public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, "newvmcomputers");
 
-	public static final OrderableItem PC_CASE_SIDEPANEL = new ItemPCCaseSidepanel(new Settings());
-	public static final OrderableItem ITEM_MOTHERBOARD = new OrderableItem(new Settings(), 4);
-	public static final OrderableItem ITEM_MOTHERBOARD64 = new OrderableItem(new Settings(), 8);
-	public static final OrderableItem ITEM_FLATSCREEN = new PlacableOrderableItem(new Settings(), EntityFlatScreen.class, SoundEvents.BLOCK_METAL_PLACE, 10);
-	public static final OrderableItem ITEM_WALLTV = new PlacableOrderableItem(new Settings(), EntityWallTV.class, SoundEvents.BLOCK_METAL_PLACE, 14, true);
-	public static final OrderableItem ITEM_CRTSCREEN = new PlacableOrderableItem(new Settings(), EntityCRTScreen.class, SoundEvents.BLOCK_METAL_PLACE, 10);
-	public static final OrderableItem ITEM_HARDDRIVE = new ItemHarddrive(new Settings());
-	public static final OrderableItem ITEM_KEYBOARD = new PlacableOrderableItem(new Settings(), EntityKeyboard.class, SoundEvents.BLOCK_METAL_PLACE, 4);
-	public static final OrderableItem ITEM_MOUSE = new PlacableOrderableItem(new Settings(), EntityMouse.class, SoundEvents.BLOCK_METAL_PLACE, 4);
-	public static final OrderableItem ITEM_RAM64M = new OrderableItem(new Settings(), 2);
-	public static final OrderableItem ITEM_RAM128M = new OrderableItem(new Settings(), 2);
-	public static final OrderableItem ITEM_RAM256M = new OrderableItem(new Settings(), 3);
-	public static final OrderableItem ITEM_RAM512M = new OrderableItem(new Settings(), 4);
-	public static final OrderableItem ITEM_RAM1G = new OrderableItem(new Settings(), 6);
-	public static final OrderableItem ITEM_RAM2G = new OrderableItem(new Settings(), 8);
-	public static final OrderableItem ITEM_RAM4G = new OrderableItem(new Settings(), 14);
-	public static final OrderableItem ITEM_CPU2 = new OrderableItem(new Settings(), 10);
-	public static final OrderableItem ITEM_CPU4 = new OrderableItem(new Settings(), 8);
-	public static final OrderableItem ITEM_CPU6 = new OrderableItem(new Settings(), 6);
-	public static final OrderableItem ITEM_GPU = new OrderableItem(new Settings(), 12);
-	public static final Item ITEM_TABLET = new ItemOrderingTablet(new Settings().maxCount(1));
-	public static final Item ITEM_PACKAGE = new ItemPackage(new Settings().rarity(Rarity.EPIC));
-	public static final OrderableItem PC_CASE = new ItemPCCase(new Settings());
-	public static final Item PC_CASE_NO_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
-	public static final Item PC_CASE_ONLY_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
-	public static final Item PC_CASE_GLASS_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
+	public static final RegistryObject<Item> PC_CASE_SIDEPANEL = ITEMS.register("pc_case_sidepanel", () -> new ItemPCCaseSidepanel(new Item.Properties()));
+	public static final RegistryObject<Item> ITEM_MOTHERBOARD = ITEMS.register("motherboard", () -> new OrderableItem(new Item.Properties(), 4));
+	public static final RegistryObject<Item> ITEM_MOTHERBOARD64 = ITEMS.register("motherboard64", () -> new OrderableItem(new Item.Properties(), 8));
+	public static final RegistryObject<Item> ITEM_FLATSCREEN = ITEMS.register("flatscreen", () -> new PlacableOrderableItem(new Item.Properties(), EntityFlatScreen.class, SoundEvents.METAL_PLACE, 10));
+	public static final RegistryObject<Item> ITEM_WALLTV = ITEMS.register("walltv", () -> new PlacableOrderableItem(new Item.Properties(), EntityWallTV.class, SoundEvents.METAL_PLACE, 14, true));
+	public static final RegistryObject<Item> ITEM_CRTSCREEN = ITEMS.register("crtscreen", () -> new PlacableOrderableItem(new Item.Properties(), EntityCRTScreen.class, SoundEvents.METAL_PLACE, 10));
+	public static final RegistryObject<Item> ITEM_HARDDRIVE = ITEMS.register("harddrive", () -> new ItemHarddrive(new Item.Properties()));
+	public static final RegistryObject<Item> ITEM_KEYBOARD = ITEMS.register("keyboard", () -> new PlacableOrderableItem(new Item.Properties(), EntityKeyboard.class, SoundEvents.METAL_PLACE, 4));
+	public static final RegistryObject<Item> ITEM_MOUSE = ITEMS.register("mouse", () -> new PlacableOrderableItem(new Item.Properties(), EntityMouse.class, SoundEvents.METAL_PLACE, 4));
+	public static final RegistryObject<Item> ITEM_RAM64M = ITEMS.register("ram64m", () -> new OrderableItem(new Item.Properties(), 2));
+	public static final RegistryObject<Item> ITEM_RAM128M = ITEMS.register("ram128m", () -> new OrderableItem(new Item.Properties(), 2));
+	public static final RegistryObject<Item> ITEM_RAM256M = ITEMS.register("ram256m", () -> new OrderableItem(new Item.Properties(), 3));
+	public static final RegistryObject<Item> ITEM_RAM512M = ITEMS.register("ram512m", () -> new OrderableItem(new Item.Properties(), 4));
+	public static final RegistryObject<Item> ITEM_RAM1G = ITEMS.register("ram1g", () -> new OrderableItem(new Item.Properties(), 6));
+	public static final RegistryObject<Item> ITEM_RAM2G = ITEMS.register("ram2g", () -> new OrderableItem(new Item.Properties(), 8));
+	public static final RegistryObject<Item> ITEM_RAM4G = ITEMS.register("ram4g", () -> new OrderableItem(new Item.Properties(), 14));
+	public static final RegistryObject<Item> ITEM_CPU2 = ITEMS.register("cpu_divided_by_2", () -> new OrderableItem(new Item.Properties(), 10));
+	public static final RegistryObject<Item> ITEM_CPU4 = ITEMS.register("cpu_divided_by_4", () -> new OrderableItem(new Item.Properties(), 8));
+	public static final RegistryObject<Item> ITEM_CPU6 = ITEMS.register("cpu_divided_by_6", () -> new OrderableItem(new Item.Properties(), 6));
+	public static final RegistryObject<Item> ITEM_GPU = ITEMS.register("gpu", () -> new OrderableItem(new Item.Properties(), 12));
+	public static final RegistryObject<Item> ITEM_TABLET = ITEMS.register("ordering_tablet", () -> new ItemOrderingTablet(new Item.Properties().stacksTo(1)));
+	public static final RegistryObject<Item> ITEM_PACKAGE = ITEMS.register("package", () -> new ItemPackage(new Item.Properties().rarity(Rarity.EPIC)));
+	public static final RegistryObject<Item> PC_CASE = ITEMS.register("pc_case", () -> new ItemPCCase(new Item.Properties()));
+	public static final RegistryObject<Item> PC_CASE_NO_PANEL = ITEMS.register("pc_case_no_panel", () -> new Item(new Item.Properties().rarity(Rarity.EPIC)));
+	public static final RegistryObject<Item> PC_CASE_ONLY_PANEL = ITEMS.register("pc_case_only_panel", () -> new Item(new Item.Properties().rarity(Rarity.EPIC)));
+	public static final RegistryObject<Item> PC_CASE_GLASS_PANEL = ITEMS.register("pc_case_only_glass_sidepanel", () -> new Item(new Item.Properties().rarity(Rarity.EPIC)));
 
-	public static final ItemGroup MOD_ITEM_GROUP_PARTS = Registry.register(
-			Registries.ITEM_GROUP,
-			new Identifier("newvmcomputers", "parts"),
-			FabricItemGroup.builder()
+	public static final RegistryObject<CreativeModeTab> MOD_ITEM_GROUP_PARTS = CREATIVE_MODE_TABS.register("parts",
+			() -> CreativeModeTab.builder()
 					.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
-					.displayName(Text.translatable("itemGroup.newvmcomputers.parts"))
-					.entries((context, entries) -> {
-						entries.add(PC_CASE);
-						entries.add(PC_CASE_SIDEPANEL);
-						entries.add(ITEM_MOTHERBOARD);
-						entries.add(ITEM_MOTHERBOARD64);
-						entries.add(ITEM_HARDDRIVE);
-						entries.add(ITEM_RAM64M);
-						entries.add(ITEM_RAM128M);
-						entries.add(ITEM_RAM256M);
-						entries.add(ITEM_RAM512M);
-						entries.add(ITEM_RAM1G);
-						entries.add(ITEM_RAM2G);
-						entries.add(ITEM_RAM4G);
-						entries.add(ITEM_CPU2);
-						entries.add(ITEM_CPU4);
-						entries.add(ITEM_CPU6);
-						entries.add(ITEM_GPU);
-					})
-					.build()
-	);
+					.title(Component.translatable("itemGroup.newvmcomputers.parts"))
+					.displayItems((parameters, output) -> {
+						output.accept(PC_CASE.get());
+						output.accept(PC_CASE_SIDEPANEL.get());
+						output.accept(ITEM_MOTHERBOARD.get());
+						output.accept(ITEM_MOTHERBOARD64.get());
+						output.accept(ITEM_HARDDRIVE.get());
+						output.accept(ITEM_RAM64M.get());
+						output.accept(ITEM_RAM128M.get());
+						output.accept(ITEM_RAM256M.get());
+						output.accept(ITEM_RAM512M.get());
+						output.accept(ITEM_RAM1G.get());
+						output.accept(ITEM_RAM2G.get());
+						output.accept(ITEM_RAM4G.get());
+						output.accept(ITEM_CPU2.get());
+						output.accept(ITEM_CPU4.get());
+						output.accept(ITEM_CPU6.get());
+						output.accept(ITEM_GPU.get());
+					}).build());
 
-	public static final ItemGroup MOD_ITEM_GROUP_PERIPHERALS = Registry.register(
-			Registries.ITEM_GROUP,
-			new Identifier("newvmcomputers", "peripherals"),
-			FabricItemGroup.builder()
+	public static final RegistryObject<CreativeModeTab> MOD_ITEM_GROUP_PERIPHERALS = CREATIVE_MODE_TABS.register("peripherals",
+			() -> CreativeModeTab.builder()
 					.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
-					.displayName(Text.translatable("itemGroup.newvmcomputers.peripherals"))
-					.entries((context, entries) -> {
-						entries.add(ITEM_FLATSCREEN);
-						entries.add(ITEM_WALLTV);
-						entries.add(ITEM_CRTSCREEN);
-						entries.add(ITEM_KEYBOARD);
-						entries.add(ITEM_MOUSE);
-					})
-					.build()
-	);
+					.title(Component.translatable("itemGroup.newvmcomputers.peripherals"))
+					.displayItems((parameters, output) -> {
+						output.accept(ITEM_FLATSCREEN.get());
+						output.accept(ITEM_WALLTV.get());
+						output.accept(ITEM_CRTSCREEN.get());
+						output.accept(ITEM_KEYBOARD.get());
+						output.accept(ITEM_MOUSE.get());
+					}).build());
 
-	public static final ItemGroup MOD_ITEM_GROUP_OTHERS = Registry.register(
-			Registries.ITEM_GROUP,
-			new Identifier("newvmcomputers", "others"),
-			FabricItemGroup.builder()
+	public static final RegistryObject<CreativeModeTab> MOD_ITEM_GROUP_OTHERS = CREATIVE_MODE_TABS.register("others",
+			() -> CreativeModeTab.builder()
 					.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
-					.displayName(Text.translatable("itemGroup.newvmcomputers.others"))
-					.entries((context, entries) -> {
-						entries.add(ITEM_TABLET);
-						entries.add(ITEM_PACKAGE);
-					})
-					.build()
+					.title(Component.translatable("itemGroup.newvmcomputers.others"))
+					.displayItems((parameters, output) -> {
+						output.accept(ITEM_TABLET.get());
+						output.accept(ITEM_PACKAGE.get());
+					}).build());
+
+	public static final Supplier<List<Item>> PLACABLE_ITEMS = () -> Arrays.asList(
+			PC_CASE.get(),
+			PC_CASE_SIDEPANEL.get(),
+			ITEM_KEYBOARD.get(),
+			ITEM_MOUSE.get(),
+			ITEM_CRTSCREEN.get(),
+			ITEM_FLATSCREEN.get(),
+			ITEM_WALLTV.get()
 	);
 
-	public static final List<Item> PLACABLE_ITEMS = Arrays.asList(
-			PC_CASE,
-			PC_CASE_SIDEPANEL,
-			ITEM_KEYBOARD,
-			ITEM_MOUSE,
-			ITEM_CRTSCREEN,
-			ITEM_FLATSCREEN,
-			ITEM_WALLTV
-	);
-
-	public static void init() {
-		registerItem("pc_case_sidepanel", PC_CASE_SIDEPANEL);
-		registerItem("pc_case", PC_CASE);
-		registerItem("motherboard", ITEM_MOTHERBOARD);
-		registerItem("motherboard64", ITEM_MOTHERBOARD64);
-		registerItem("walltv", ITEM_WALLTV);
-		registerItem("flatscreen", ITEM_FLATSCREEN);
-		registerItem("crtscreen", ITEM_CRTSCREEN);
-		registerItem("harddrive", ITEM_HARDDRIVE);
-		registerItem("keyboard", ITEM_KEYBOARD);
-		registerItem("mouse", ITEM_MOUSE);
-		registerItem("ram64m", ITEM_RAM64M);
-		registerItem("ram128m", ITEM_RAM128M);
-		registerItem("ram256m", ITEM_RAM256M);
-		registerItem("ram512m", ITEM_RAM512M);
-		registerItem("ram1g", ITEM_RAM1G);
-		registerItem("ram2g", ITEM_RAM2G);
-		registerItem("ram4g", ITEM_RAM4G);
-		registerItem("cpu_divided_by_2", ITEM_CPU2);
-		registerItem("cpu_divided_by_4", ITEM_CPU4);
-		registerItem("cpu_divided_by_6", ITEM_CPU6);
-		registerItem("gpu", ITEM_GPU);
-		registerItem("ordering_tablet", ITEM_TABLET);
-		registerItem("package", ITEM_PACKAGE);
-		registerItem("pc_case_no_panel", PC_CASE_NO_PANEL);
-		registerItem("pc_case_only_panel", PC_CASE_ONLY_PANEL);
-		registerItem("pc_case_only_glass_sidepanel", PC_CASE_GLASS_PANEL);
-	}
-
-	private static Item registerItem(String id, Item it) {
-		Registry.register(Registries.ITEM, new Identifier("newvmcomputers", id), it);
-		return it;
+	public static void init(net.minecraftforge.eventbus.api.IEventBus bus) {
+		ITEMS.register(bus);
+		CREATIVE_MODE_TABS.register(bus);
 	}
 }

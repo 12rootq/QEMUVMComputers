@@ -1,20 +1,16 @@
 package newvmcomputers.item;
 
-import net.minecraft.item.Item;
+import net.minecraft.world.item.Item;
 
-public class OrderableItem extends Item{
-	private final int price;
-	
-	public OrderableItem(Settings settings, int price) {
-		super(settings);
-		this.price = price;
-	}
-	
-	/**
-	 * @return Price in Iron Ingots.
-	 */
-	public int getPrice() {
-		return price;
-	}
+public class OrderableItem extends Item {
+    private final int price;
 
+    public OrderableItem(Properties properties, int price) {
+        super(properties);
+        this.price = price;
+    }
+
+    public int getPrice() {
+        return price;
+    }
 }

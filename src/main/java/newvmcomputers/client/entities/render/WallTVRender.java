@@ -8,91 +8,94 @@ import newvmcomputers.client.ClientMod;
 import newvmcomputers.entities.EntityWallTV;
 import newvmcomputers.item.ItemList;
 import newvmcomputers.utils.MVCUtils;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.RenderType;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.world.item.ItemDisplayContext;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
+import com.mojang.math.Axis;
 
 public class WallTVRender extends EntityRenderer<EntityWallTV> {
 
-	public WallTVRender(EntityRendererFactory.Context ctx) {
+	public WallTVRender(EntityRendererProvider.Context ctx) {
 		super(ctx);
 	}
 
 	@Override
-	public Identifier getTexture(EntityWallTV entity) {
+	public ResourceLocation getTextureLocation(EntityWallTV entity) {
 		return null;
 	}
 
 	@Override
-	public void render(EntityWallTV entity, float yaw, float tickDelta, MatrixStack matrices,
-					   VertexConsumerProvider vertexConsumers, int light) {
+	public void render(EntityWallTV entity, float yaw, float tickDelta, PoseStack matrices,
+					   MultiBufferSource vertexConsumers, int light) {
 
 		if (entity.getOwnerUUID() == null || entity.getOwnerUUID().isEmpty()) {
 			return;
 		}
 
-		matrices.push();
+		matrices.pushPose();
 		matrices.translate(0, 0.5, 0);
 
 		
-		Quaternionf look = MVCUtils.lookAt(entity.getPos(), entity.getLookAtPos());
-		matrices.multiply(look);
+		Quaternionf look = MVCUtils.lookAt(entity.position(), entity.getLookAtPos());
+		matrices.mulPose(look);
 
-		matrices.push();
+		matrices.pushPose();
 		matrices.translate(0, 0, -0.1);
 
 		
-		MinecraftClient.getInstance().getItemRenderer().renderItem(
-				new ItemStack(ItemList.ITEM_WALLTV),
-				ModelTransformationMode.NONE,
+		Minecraft.getInstance().getItemRenderer().renderStatic(
+				new ItemStack(ItemList.ITEM_WALLTV.get()),
+				ItemDisplayContext.NONE,
 				light,
-				OverlayTexture.DEFAULT_UV,
+				OverlayTexture.NO_OVERLAY,
 				matrices,
 				vertexConsumers,
-				entity.getWorld(),
+				entity.level(),
 				entity.getId()
 		);
-		matrices.pop();
+		matrices.popPose();
 
 		UUID ownerUuid = UUID.fromString(entity.getOwnerUUID());
 		if (ClientMod.vmScreenTextures.containsKey(ownerUuid)) {
-			matrices.push();
+			matrices.pushPose();
 			matrices.scale(0.0198f, 0.014f, 0.006f);
 
 			
-			matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180f));
+			matrices.mulPose(Axis.ZP.rotationDegrees(180f));
 
 			matrices.translate(-63.1f, -45.7f, -24.4f);
 			matrices.scale(0.736f, 0.597f, 1f);
 			matrices.translate(22, 1.6f, 7.6f);
 
 			
-			Matrix4f matrix4f = matrices.peek().getPositionMatrix();
-			Identifier screenTex = ClientMod.vmScreenTextures.get(ownerUuid);
+			Matrix4f matrix4f = matrices.last().pose();
+			ResourceLocation screenTex = ClientMod.vmScreenTextures.get(ownerUuid);
 
 			
-			VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getEntityTranslucent(screenTex));
+			VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderType.entityTranslucent(screenTex));
 
 			
-			vertexConsumer.vertex(matrix4f, 0.0F, 128.0F, -0.01F).color(255, 255, 255, 255).texture(0.0F, 1.0F).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(0, 0, 1).next();
-			vertexConsumer.vertex(matrix4f, 128.0F, 128.0F, -0.01F).color(255, 255, 255, 255).texture(1.0F, 1.0F).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(0, 0, 1).next();
-			vertexConsumer.vertex(matrix4f, 128.0F, 0.0F, -0.01F).color(255, 255, 255, 255).texture(1.0F, 0.0F).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(0, 0, 1).next();
-			vertexConsumer.vertex(matrix4f, 0.0F, 0.0F, -0.01F).color(255, 255, 255, 255).texture(0.0F, 0.0F).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(0, 0, 1).next();
+			vertexConsumer.vertex(matrix4f, 0.0F, 128.0F, -0.01F).color(255, 255, 255, 255).uv(0.0F, 1.0F).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 0, 1).endVertex();
+			vertexConsumer.vertex(matrix4f, 128.0F, 128.0F, -0.01F).color(255, 255, 255, 255).uv(1.0F, 1.0F).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 0, 1).endVertex();
+			vertexConsumer.vertex(matrix4f, 128.0F, 0.0F, -0.01F).color(255, 255, 255, 255).uv(1.0F, 0.0F).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 0, 1).endVertex();
+			vertexConsumer.vertex(matrix4f, 0.0F, 0.0F, -0.01F).color(255, 255, 255, 255).uv(0.0F, 0.0F).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(0, 0, 1).endVertex();
 
-			matrices.pop();
+			matrices.popPose();
 		}
-		matrices.pop();
+		matrices.popPose();
 
 		
 		super.render(entity, yaw, tickDelta, matrices, vertexConsumers, light);
 	}
 }
+
+
+

@@ -2,129 +2,125 @@ package newvmcomputers.item;
 
 import java.util.List;
 
-import org.jetbrains.annotations.Nullable;
-
 import newvmcomputers.MainMod;
 import newvmcomputers.client.ClientMod;
 import newvmcomputers.entities.EntityPC;
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 public class ItemPCCase extends OrderableItem {
-	public ItemPCCase(Settings settings) {
-		super(settings, 2);
-	}
+    public ItemPCCase(Properties properties) {
+        super(properties, 2);
+    }
 
-	@Override
-	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-		if(!world.isClient && hand == Hand.MAIN_HAND) {
-			user.getStackInHand(hand).decrement(1);
-			HitResult hr = user.raycast(10, 0f, false);
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player user, InteractionHand hand) {
+        ItemStack heldStack = user.getItemInHand(hand);
+        if (!level.isClientSide && hand == InteractionHand.MAIN_HAND) {
+            HitResult hitResult = user.pick(10.0D, 0.0F, false);
+            CompoundTag tag = heldStack.getTag() == null ? null : heldStack.getTag().copy();
+            heldStack.shrink(1);
 
-			EntityPC ek = new EntityPC(world,
-					hr.getPos().getX(),
-					hr.getPos().getY(),
-					hr.getPos().getZ(),
-					new Vec3d(user.getPos().x,
-							hr.getPos().getY(),
-							user.getPos().z), user.getUuid(), user.getStackInHand(hand).getNbt());
-			world.spawnEntity(ek);
-			MainMod.computers.put(user.getUuid(), ek);
-		}
+            EntityPC pc = new EntityPC(level,
+                    hitResult.getLocation().x,
+                    hitResult.getLocation().y,
+                    hitResult.getLocation().z,
+                    new Vec3(user.getX(), hitResult.getLocation().y, user.getZ()),
+                    user.getUUID(),
+                    tag);
+            level.addFreshEntity(pc);
+            MainMod.computers.put(user.getUUID(), pc);
+        }
 
-		if(world.isClient) {
-			world.playSound(ClientMod.thePreviewEntity.getX(),
-					ClientMod.thePreviewEntity.getY(),
-					ClientMod.thePreviewEntity.getZ(),
-					SoundEvents.BLOCK_METAL_PLACE,
-					SoundCategory.BLOCKS, 1, 1, true);
-		}
+        if (level.isClientSide && ClientMod.thePreviewEntity != null) {
+            level.playLocalSound(ClientMod.thePreviewEntity.getX(),
+                    ClientMod.thePreviewEntity.getY(),
+                    ClientMod.thePreviewEntity.getZ(),
+                    SoundEvents.METAL_PLACE,
+                    SoundSource.BLOCKS,
+                    1.0F,
+                    1.0F,
+                    false);
+        }
 
-		return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, user.getStackInHand(hand));
-	}
+        return InteractionResultHolder.sidedSuccess(user.getItemInHand(hand), level.isClientSide);
+    }
 
-	@Override
-	public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
+    @Override
+    public void appendHoverText(ItemStack stack, Level level, List<Component> tooltip, TooltipFlag flag) {
+        appendPcTooltip(stack, tooltip);
+    }
 
-		if(stack.getNbt() != null) {
-			if (stack.getNbt().contains("MoboInstalled")) {
-				if(stack.getNbt().getBoolean("MoboInstalled")) {
+    @Override
+    public Component getName(ItemStack stack) {
+        if (stack.getTag() != null && stack.getTag().contains("MoboInstalled") && stack.getTag().getBoolean("MoboInstalled")) {
+            return Component.translatable("newvmcomputers.pc_item_built");
+        }
+        return Component.translatable("item.newvmcomputers.pc_case");
+    }
 
+    public static ItemStack createPCStackByEntity(EntityPC pc) {
+        ItemStack stack = new ItemStack(ItemList.PC_CASE.get());
+        if (pc.getMotherboardInstalled()) {
+            CompoundTag tag = stack.getOrCreateTag();
+            tag.putBoolean("x64", pc.get64Bit());
+            tag.putBoolean("MoboInstalled", pc.getMotherboardInstalled());
+            tag.putBoolean("GPUInstalled", pc.getGpuInstalled());
+            tag.putInt("CPUDividedBy", pc.getCpuDividedBy());
+            tag.putInt("RAMSlot0", pc.getGigsOfRamInSlot0());
+            tag.putInt("RAMSlot1", pc.getGigsOfRamInSlot1());
+            tag.putString("VHDName", pc.getHardDriveFileName());
+            tag.putString("ISOName", pc.getIsoFileName());
+        }
+        return stack;
+    }
 
-					tooltip.add(Text.translatable(stack.getNbt().getBoolean("x64") ? "item.newvmcomputers.motherboard64" : "item.newvmcomputers.motherboard").formatted(Formatting.GRAY));
+    static void appendPcTooltip(ItemStack stack, List<Component> tooltip) {
+        if (stack.getTag() == null || !stack.getTag().contains("MoboInstalled") || !stack.getTag().getBoolean("MoboInstalled")) {
+            return;
+        }
 
-					if(stack.getNbt().getBoolean("GPUInstalled"))
-						tooltip.add(Text.translatable("newvmcomputers.pc_item_gpu").formatted(Formatting.GRAY));
+        CompoundTag tag = stack.getTag();
+        tooltip.add(Component.translatable(tag.getBoolean("x64") ? "item.newvmcomputers.motherboard64" : "item.newvmcomputers.motherboard")
+                .withStyle(ChatFormatting.GRAY));
 
-					if(stack.getNbt().getInt("CPUDividedBy") > 0)
-						tooltip.add(Text.translatable("newvmcomputers.pc_item_cpu", stack.getNbt().getInt("CPUDividedBy")).formatted(Formatting.GRAY));
-
-					if(stack.getNbt().getInt("RAMSlot0") > 0) {
-						if((stack.getNbt().getInt("RAMSlot0") / 1024) < 1) {
-							tooltip.add(Text.translatable("newvmcomputers.pc_item_ramSlot0Mb", stack.getNbt().getInt("RAMSlot0")).formatted(Formatting.GRAY));
-						} else if((stack.getNbt().getInt("RAMSlot0") / 1024) >= 1) {
-							tooltip.add(Text.translatable("newvmcomputers.pc_item_ramSlot0", (stack.getNbt().getInt("RAMSlot0") / 1024)).formatted(Formatting.GRAY));
-						}
-					}
-
-					if(stack.getNbt().getInt("RAMSlot1") > 0) {
-						if((stack.getNbt().getInt("RAMSlot1") / 1024) < 1) {
-							tooltip.add(Text.translatable("newvmcomputers.pc_item_ramSlot1Mb", stack.getNbt().getInt("RAMSlot1")).formatted(Formatting.GRAY));
-						} else if((stack.getNbt().getInt("RAMSlot1") / 1024) >= 1) {
-							tooltip.add(Text.translatable("newvmcomputers.pc_item_ramSlot1", (stack.getNbt().getInt("RAMSlot1") / 1024)).formatted(Formatting.GRAY));
-						}
-					}
-
-					if(!stack.getNbt().getString("VHDName").isEmpty())
-						tooltip.add(Text.translatable("newvmcomputers.pc_item_hdd", stack.getNbt().getString("VHDName")).formatted(Formatting.GRAY));
-
-					if(!stack.getNbt().getString("ISOName").isEmpty())
-						tooltip.add(Text.translatable("newvmcomputers.pc_item_iso", stack.getNbt().getString("ISOName")).formatted(Formatting.GRAY));
-				}
-			}
-		}
-	}
-
-	@Override
-	public Text getName(ItemStack stack) {
-
-		if(stack.getNbt() != null) {
-			if (stack.getNbt().contains("MoboInstalled")) {
-				if(stack.getNbt().getBoolean("MoboInstalled")) {
-
-					return Text.translatable("newvmcomputers.pc_item_built");
-				}
-			}
-		}
-		return Text.translatable("item.newvmcomputers.pc_case");
-	}
-
-	public static ItemStack createPCStackByEntity(EntityPC pc) {
-		ItemStack is = new ItemStack(ItemList.PC_CASE);
-		if(pc.getMotherboardInstalled()) {
-			NbtCompound ct = is.getOrCreateNbt();
-			ct.putBoolean("x64", pc.get64Bit());
-			ct.putBoolean("MoboInstalled", pc.getMotherboardInstalled());
-			ct.putBoolean("GPUInstalled", pc.getGpuInstalled());
-			ct.putInt("CPUDividedBy", pc.getCpuDividedBy());
-			ct.putInt("RAMSlot0", pc.getGigsOfRamInSlot0());
-			ct.putInt("RAMSlot1", pc.getGigsOfRamInSlot1());
-			ct.putString("VHDName", pc.getHardDriveFileName());
-			ct.putString("ISOName", pc.getIsoFileName());
-		}
-		return is;
-	}
+        if (tag.getBoolean("GPUInstalled")) {
+            tooltip.add(Component.translatable("newvmcomputers.pc_item_gpu").withStyle(ChatFormatting.GRAY));
+        }
+        if (tag.getInt("CPUDividedBy") > 0) {
+            tooltip.add(Component.translatable("newvmcomputers.pc_item_cpu", tag.getInt("CPUDividedBy")).withStyle(ChatFormatting.GRAY));
+        }
+        if (tag.getInt("RAMSlot0") > 0) {
+            if ((tag.getInt("RAMSlot0") / 1024) < 1) {
+                tooltip.add(Component.translatable("newvmcomputers.pc_item_ramSlot0Mb", tag.getInt("RAMSlot0")).withStyle(ChatFormatting.GRAY));
+            } else {
+                tooltip.add(Component.translatable("newvmcomputers.pc_item_ramSlot0", tag.getInt("RAMSlot0") / 1024).withStyle(ChatFormatting.GRAY));
+            }
+        }
+        if (tag.getInt("RAMSlot1") > 0) {
+            if ((tag.getInt("RAMSlot1") / 1024) < 1) {
+                tooltip.add(Component.translatable("newvmcomputers.pc_item_ramSlot1Mb", tag.getInt("RAMSlot1")).withStyle(ChatFormatting.GRAY));
+            } else {
+                tooltip.add(Component.translatable("newvmcomputers.pc_item_ramSlot1", tag.getInt("RAMSlot1") / 1024).withStyle(ChatFormatting.GRAY));
+            }
+        }
+        if (!tag.getString("VHDName").isEmpty()) {
+            tooltip.add(Component.translatable("newvmcomputers.pc_item_hdd", tag.getString("VHDName")).withStyle(ChatFormatting.GRAY));
+        }
+        if (!tag.getString("ISOName").isEmpty()) {
+            tooltip.add(Component.translatable("newvmcomputers.pc_item_iso", tag.getString("ISOName")).withStyle(ChatFormatting.GRAY));
+        }
+    }
 }
+

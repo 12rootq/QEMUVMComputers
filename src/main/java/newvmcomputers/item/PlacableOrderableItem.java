@@ -3,67 +3,68 @@ package newvmcomputers.item;
 import java.lang.reflect.Constructor;
 
 import newvmcomputers.client.ClientMod;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
-public class PlacableOrderableItem extends OrderableItem{
-	private Constructor<? extends Entity> constructor;
-	private final SoundEvent placeSound;
-	public final boolean wallTV;
-	
-	public PlacableOrderableItem(Settings settings, Class<? extends Entity> entityPlaced, SoundEvent placeSound, int price, boolean wallTV) {
-		super(settings, price);
-		this.wallTV = wallTV;
-		this.placeSound = placeSound;
-		try {
-			constructor = entityPlaced.getConstructor(World.class, Double.class, Double.class, Double.class, Vec3d.class, String.class);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public PlacableOrderableItem(Settings settings, Class<? extends Entity> entityPlaced, SoundEvent placeSound, int price) {
-		this(settings, entityPlaced, placeSound, price, false);
-	}
-	
-	@Override
-	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-		if(!world.isClient && hand == Hand.MAIN_HAND) {
-			user.getStackInHand(hand).decrement(1);
-			HitResult hr = user.raycast(5, 0f, false);
-			Entity ek;
-			try {
-				ek = constructor.newInstance(world, 
-											hr.getPos().getX(),
-											hr.getPos().getY(),
-											hr.getPos().getZ(),
-											new Vec3d(user.getPos().x,
-														hr.getPos().getY(),
-														user.getPos().z), user.getUuid().toString());
-				world.spawnEntity(ek);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		
-		if(world.isClient) {
-			world.playSound(ClientMod.thePreviewEntity.getX(),
-							ClientMod.thePreviewEntity.getY(),
-							ClientMod.thePreviewEntity.getZ(),
-							placeSound,
-							SoundCategory.BLOCKS, 1, 1, true);
-		}
-		
-		return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, user.getStackInHand(hand));
-	}
+public class PlacableOrderableItem extends OrderableItem {
+    private Constructor<? extends Entity> constructor;
+    private final SoundEvent placeSound;
+    public final boolean wallTV;
 
+    public PlacableOrderableItem(Properties properties, Class<? extends Entity> entityPlaced, SoundEvent placeSound, int price, boolean wallTV) {
+        super(properties, price);
+        this.wallTV = wallTV;
+        this.placeSound = placeSound;
+        try {
+            constructor = entityPlaced.getConstructor(Level.class, Double.class, Double.class, Double.class, Vec3.class, String.class);
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+    }
+
+    public PlacableOrderableItem(Properties properties, Class<? extends Entity> entityPlaced, SoundEvent placeSound, int price) {
+        this(properties, entityPlaced, placeSound, price, false);
+    }
+
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player user, InteractionHand hand) {
+        ItemStack heldStack = user.getItemInHand(hand);
+        if (!level.isClientSide && hand == InteractionHand.MAIN_HAND) {
+            HitResult hitResult = user.pick(5.0D, 0.0F, false);
+            heldStack.shrink(1);
+            try {
+                Entity entity = constructor.newInstance(level,
+                        hitResult.getLocation().x,
+                        hitResult.getLocation().y,
+                        hitResult.getLocation().z,
+                        new Vec3(user.getX(), hitResult.getLocation().y, user.getZ()),
+                        user.getStringUUID());
+                level.addFreshEntity(entity);
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+        }
+
+        if (level.isClientSide && ClientMod.thePreviewEntity != null) {
+            level.playLocalSound(ClientMod.thePreviewEntity.getX(),
+                    ClientMod.thePreviewEntity.getY(),
+                    ClientMod.thePreviewEntity.getZ(),
+                    placeSound,
+                    SoundSource.BLOCKS,
+                    1.0F,
+                    1.0F,
+                    false);
+        }
+
+        return InteractionResultHolder.sidedSuccess(user.getItemInHand(hand), level.isClientSide);
+    }
 }
+

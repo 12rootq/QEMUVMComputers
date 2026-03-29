@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,21 +18,25 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-import com.google.gson.Gson; // <-- Добавлен импорт для чтения JSON
+import com.google.gson.Gson; // <-- Р вЂќР С•Р В±Р В°Р Р†Р В»Р ВµР Р… Р С‘Р СР С—Р С•РЎР‚РЎвЂљ Р Т‘Р В»РЎРЏ РЎвЂЎРЎвЂљР ВµР Р…Р С‘РЎРЏ JSON
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import newvmcomputers.client.entities.model.DeliveryChestModel;
 import newvmcomputers.client.entities.model.OrderingTabletModel;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerLocationRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.minecraft.client.render.entity.model.EntityModelLayer;
-import net.minecraft.text.Text;
+import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.network.chat.Component;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.lwjgl.glfw.GLFW;
+import org.virtualbox_6_1.IMachine;
+import org.virtualbox_6_1.IProgress;
 import org.virtualbox_6_1.ISession;
 import org.virtualbox_6_1.IVirtualBox;
+import org.virtualbox_6_1.LockType;
+import org.virtualbox_6_1.MachineState;
 import org.virtualbox_6_1.VirtualBoxManager;
 
 import io.netty.buffer.Unpooled;
@@ -47,8 +52,10 @@ import newvmcomputers.client.entities.render.PCRender;
 import newvmcomputers.client.gui.GuiCreateHarddrive;
 import newvmcomputers.client.gui.GuiFocus;
 import newvmcomputers.client.gui.GuiPCEditing;
+import newvmcomputers.client.gui.setup.GuiSetup;
 import newvmcomputers.client.tablet.TabletOS;
-import newvmcomputers.client.utils.VMSettings; // <-- Добавлен импорт настроек
+import newvmcomputers.client.utils.VMRunnable;
+import newvmcomputers.client.utils.VMSettings; // <-- Р вЂќР С•Р В±Р В°Р Р†Р В»Р ВµР Р… Р С‘Р СР С—Р С•РЎР‚РЎвЂљ Р Р…Р В°РЎРѓРЎвЂљРЎР‚Р С•Р ВµР С”
 import newvmcomputers.entities.EntityDeliveryChest;
 import newvmcomputers.entities.EntityItemPreview;
 import newvmcomputers.entities.EntityList;
@@ -58,27 +65,29 @@ import newvmcomputers.networking.PacketList;
 import newvmcomputers.utils.TabletOrder;
 import newvmcomputers.utils.TabletOrder.OrderStatus;
 import net.fabricmc.api.ClientModInitializer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.ChatFormatting;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
 
 public class ClientMod implements ClientModInitializer {
 
-	public static final EntityModelLayer DELIVERY_CHEST_LAYER = new EntityModelLayer(new Identifier("newvmcomputers", "delivery_chest"), "main");
-	public static final EntityModelLayer ORDERING_TABLET_LAYER = new EntityModelLayer(new Identifier("newvmcomputers", "ordering_tablet"), "main");
+	public static final ModelLayerLocation DELIVERY_CHEST_LAYER = new ModelLayerLocation(new ResourceLocation("newvmcomputers", "delivery_chest"), "main");
+	public static final ModelLayerLocation ORDERING_TABLET_LAYER = new ModelLayerLocation(new ResourceLocation("newvmcomputers", "ordering_tablet"), "main");
 
 	public static final OutputStream discardAllBytes = new OutputStream() { @Override public void write(int b) throws IOException {} };
-	public static Map<UUID, Identifier> vmScreenTextures;
+	public static Map<UUID, ResourceLocation> vmScreenTextures;
 	public static Map<UUID, NativeImage> vmScreenTextureNI;
-	public static Map<UUID, NativeImageBackedTexture> vmScreenTextureNIBT;
+	public static Map<UUID, DynamicTexture> vmScreenTextureNIBT;
 	public static EntityItemPreview thePreviewEntity;
-	public static boolean vmTurnedOn;
-	public static boolean vmTurningOff;
-	public static boolean vmTurningOn;
-	public static ISession vmSession;
+	public static volatile boolean vmTurnedOn;
+	public static volatile boolean vmTurningOff;
+	public static volatile boolean vmTurningOn;
+	public static volatile ISession vmSession;
 
 	public static boolean useVmware3D = true;
 
@@ -89,12 +98,13 @@ public class ClientMod implements ClientModInitializer {
 	public static IVirtualBox vb;
 
 	public static Process vboxWebSrv;
-	public static Thread vmUpdateThread;
-	public static byte[] vmTextureBytes;
-	public static int vmTextureBytesSize;
+	public static volatile Thread vmUpdateThread;
+	public static volatile byte[] vmTextureBytes;
+	public static volatile int vmTextureBytesSize;
 	public static boolean failedSend;
-	public static boolean useVmware = false; // По умолчанию false
+	public static boolean useVmware = false; // Р СџР С• РЎС“Р СР С•Р В»РЎвЂЎР В°Р Р…Р С‘РЎР‹ false
 	public static String vmwareDirectory = "";
+	public static String virtualBoxDirectory = "";
 	public static double mouseLastX = 0;
 	public static double mouseLastY = 0;
 	public static double mouseCurX = 0;
@@ -103,41 +113,177 @@ public class ClientMod implements ClientModInitializer {
 	public static boolean leftMouseButton;
 	public static boolean middleMouseButton;
 	public static boolean rightMouseButton;
-	public static List<Integer> vmKeyboardScancodes = new ArrayList<>();
+	public static final List<Integer> vmKeyboardScancodes = Collections.synchronizedList(new ArrayList<>());
 	public static boolean releaseKeys = false;
 	public static File vhdDirectory;
 	public static File isoDirectory;
 	public static int latestVHDNum = 0;
 	public static TabletOS tabletOS;
 	public static TabletOrder myOrder;
-	public static int vmEntityID = -1;
+	public static volatile int vmEntityID = -1;
 
 	public static Thread tabletThread;
 
 	public static float deltaTime;
 	public static long lastDeltaTimeTime;
+	private static boolean setupScreenCheckPending = true;
 
 	public static int glfwUnfocusKey1;
 	public static int glfwUnfocusKey2;
 	public static int glfwUnfocusKey3;
 	public static int glfwUnfocusKey4;
+
+	private static boolean hasSavedSetup() {
+		File setupFile = new File(Minecraft.getInstance().gameDirectory, "vm_computers/setup.json");
+		if (!setupFile.exists()) {
+			return false;
+		}
+
+		try (FileReader fr = new FileReader(setupFile)) {
+			VMSettings set = new Gson().fromJson(fr, VMSettings.class);
+			return set != null
+					&& set.vmComputersDirectory != null
+					&& !set.vmComputersDirectory.isEmpty();
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	private static void startVmUpdateThreadIfNeeded() {
+		Thread updateThread = vmUpdateThread;
+		if (!vmTurnedOn || vmTurningOff || (updateThread != null && updateThread.isAlive())) {
+			return;
+		}
+
+		Thread newThread = new Thread(new VMRunnable(), useVmware ? "VMware Screen Update" : "VirtualBox Screen Update");
+		newThread.setDaemon(true);
+		vmUpdateThread = newThread;
+		newThread.start();
+		System.out.println("VMComputers: Started VM screen update thread.");
+	}
+
+	private static void tickVmRuntime() {
+		startVmUpdateThreadIfNeeded();
+		if (vmTextureBytes != null) {
+			generatePCScreen();
+		}
+	}
+
+	public static synchronized void closeVirtualBoxSession(boolean powerDown) {
+		if (useVmware) {
+			return;
+		}
+
+		ISession activeSession = vmSession;
+		vmSession = null;
+
+		if (activeSession != null) {
+			try {
+				if (powerDown) {
+					IProgress progress = activeSession.getConsole().powerDown();
+					if (progress != null) {
+						progress.waitForCompletion(-1);
+					}
+				}
+			} catch (Exception e) {
+				System.err.println("VMComputers: Failed to power down active VirtualBox session: " + e.getMessage());
+			}
+
+			try {
+				activeSession.unlockMachine();
+			} catch (Exception ignored) {
+			}
+		}
+
+		if (!powerDown || vb == null || vbManager == null) {
+			return;
+		}
+
+		try {
+			IMachine machine = vb.findMachine("VmComputersVm");
+			if (machine != null && machine.getState() != MachineState.PoweredOff) {
+				ISession tempSession = vbManager.getSessionObject();
+				machine.lockMachine(tempSession, LockType.Shared);
+				try {
+					IProgress progress = tempSession.getConsole().powerDown();
+					if (progress != null) {
+						progress.waitForCompletion(-1);
+					}
+				} finally {
+					try {
+						tempSession.unlockMachine();
+					} catch (Exception ignored) {
+					}
+				}
+			}
+		} catch (Exception e) {
+			System.err.println("VMComputers: Failed to close VirtualBox machine cleanly: " + e.getMessage());
+		}
+	}
+
+	private static void onClientTick(TickEvent.ClientTickEvent event) {
+		if (event.phase != TickEvent.Phase.END) {
+			return;
+		}
+
+		tickVmRuntime();
+
+		if (!setupScreenCheckPending) {
+			return;
+		}
+
+		Minecraft minecraft = Minecraft.getInstance();
+		if (minecraft.level != null || minecraft.player != null || minecraft.screen == null) {
+			return;
+		}
+
+		if (minecraft.screen instanceof GuiSetup) {
+			return;
+		}
+
+		setupScreenCheckPending = false;
+		if (hasSavedSetup()) {
+			System.out.println("VMComputers: Opening setup screen with saved configuration.");
+		} else {
+			System.out.println("VMComputers: Opening initial setup screen.");
+		}
+		minecraft.setScreen(new GuiSetup());
+	}
+
 	public static void forceStopVM() {
-		System.out.println("[VMComputers] Shutting down VmWare");
+		System.out.println("[VMComputers] Shutting down virtual machine runtime.");
 		try {
 			if (useVmware) {
-				// Убиваем сам движок VMware
+				// Р Р€Р В±Р С‘Р Р†Р В°Р ВµР С РЎРѓР В°Р С Р Т‘Р Р†Р С‘Р В¶Р С•Р С” VMware
 				Runtime.getRuntime().exec("taskkill /F /IM vmware-vmx.exe /T");
-				// Убиваем фоновый плеер
+				// Р Р€Р В±Р С‘Р Р†Р В°Р ВµР С РЎвЂћР С•Р Р…Р С•Р Р†РЎвЂ№Р в„– Р С—Р В»Р ВµР ВµРЎР‚
 				Runtime.getRuntime().exec("taskkill /F /IM vmware-kvm.exe /T");
 				Runtime.getRuntime().exec("taskkill /F /IM vmplayer.exe /T");
 			} else {
-				// Для VirtualBox
+				// Р вЂќР В»РЎРЏ VirtualBox
+				closeVirtualBoxSession(true);
 				Runtime.getRuntime().exec("taskkill /F /IM VirtualBoxVM.exe /T");
 				Runtime.getRuntime().exec("taskkill /F /IM VBoxHeadless.exe /T");
 			}
 		} catch (Exception e) {
-			System.err.println("Could not kill VmWare:");
+			System.err.println("Could not stop virtual machine runtime:");
 			e.printStackTrace();
+		} finally {
+			vmTurnedOn = false;
+			vmTurningOn = false;
+			vmTurningOff = false;
+			vmEntityID = -1;
+			vmTextureBytes = null;
+			vmTextureBytesSize = 0;
+			vmUpdateThread = null;
+			leftMouseButton = false;
+			middleMouseButton = false;
+			rightMouseButton = false;
+			mouseDeltaScroll = 0;
+			releaseKeys = false;
+			synchronized (vmKeyboardScancodes) {
+				vmKeyboardScancodes.clear();
+			}
 		}
 	}
 	static {
@@ -179,7 +325,7 @@ public class ClientMod implements ClientModInitializer {
 			case org.lwjgl.glfw.GLFW.GLFW_KEY_CAPS_LOCK: return "Caps Lock";
 		}
 
-		String name = net.minecraft.client.util.InputUtil.fromKeyCode(key, 0).getLocalizedText().getString();
+		String name = GLFW.glfwGetKeyName(key, 0);
 		if (name == null || name.isEmpty() || name.contains("key.keyboard.unknown")) {
 			return "Key " + key;
 		}
@@ -207,14 +353,14 @@ public class ClientMod implements ClientModInitializer {
 	}
 
 	public static void generatePCScreen() {
-		MinecraftClient mcc = MinecraftClient.getInstance();
+		Minecraft mcc = Minecraft.getInstance();
 		if(mcc.player == null) {
 			return;
 		}
 		if(vmTextureBytes != null) {
-			if(vmScreenTextures.containsKey(mcc.player.getUuid())) {
-				MinecraftClient.getInstance().getTextureManager().destroyTexture(vmScreenTextures.get(mcc.player.getUuid()));
-				vmScreenTextures.remove(mcc.player.getUuid());
+			if(vmScreenTextures.containsKey(mcc.player.getUUID())) {
+				Minecraft.getInstance().getTextureManager().release(vmScreenTextures.get(mcc.player.getUUID()));
+				vmScreenTextures.remove(mcc.player.getUUID());
 			}
 
 			Deflater def = new Deflater();
@@ -226,16 +372,16 @@ public class ClientMod implements ClientModInitializer {
 
 			if(sz > 32766) {
 				if(!failedSend){
-					mcc.player.sendMessage(Text.translatable("newvmcomputers.screen_too_big_mp").formatted(Formatting.RED), false);
+					mcc.player.displayClientMessage(Component.translatable("newvmcomputers.screen_too_big_mp").withStyle(ChatFormatting.RED), false);
 					failedSend = true;
 				}
 			} else {
 				if(failedSend) {
-					mcc.player.sendMessage(Text.translatable("newvmcomputers.screen_ok_mp").formatted(Formatting.GREEN), false);
+					mcc.player.displayClientMessage(Component.translatable("newvmcomputers.screen_ok_mp").withStyle(ChatFormatting.GREEN), false);
 					failedSend = false;
 				}
 
-				PacketByteBuf p = new PacketByteBuf(Unpooled.buffer());
+				FriendlyByteBuf p = new FriendlyByteBuf(Unpooled.buffer());
 				p.writeByteArray(Arrays.copyOfRange(deflated, 0, sz));
 				p.writeInt(sz);
 				p.writeInt(vmTextureBytesSize);
@@ -249,18 +395,18 @@ public class ClientMod implements ClientModInitializer {
 			} catch (IOException e) {
 			}
 			if(ni != null) {
-				if(vmScreenTextureNI.containsKey(mcc.player.getUuid())) {
-					vmScreenTextureNI.get(mcc.player.getUuid()).close();
-					vmScreenTextureNI.remove(mcc.player.getUuid());
+				if(vmScreenTextureNI.containsKey(mcc.player.getUUID())) {
+					vmScreenTextureNI.get(mcc.player.getUUID()).close();
+					vmScreenTextureNI.remove(mcc.player.getUUID());
 				}
-				if(vmScreenTextureNIBT.containsKey(mcc.player.getUuid())) {
-					vmScreenTextureNIBT.get(mcc.player.getUuid()).close();
-					vmScreenTextureNIBT.remove(mcc.player.getUuid());
+				if(vmScreenTextureNIBT.containsKey(mcc.player.getUUID())) {
+					vmScreenTextureNIBT.get(mcc.player.getUUID()).close();
+					vmScreenTextureNIBT.remove(mcc.player.getUUID());
 				}
-				vmScreenTextureNI.put(mcc.player.getUuid(), ni);
-				NativeImageBackedTexture nibt = new NativeImageBackedTexture(ni);
-				vmScreenTextureNIBT.put(mcc.player.getUuid(), nibt);
-				vmScreenTextures.put(mcc.player.getUuid(), MinecraftClient.getInstance().getTextureManager().registerDynamicTexture("vm_texture", nibt));
+				vmScreenTextureNI.put(mcc.player.getUUID(), ni);
+				DynamicTexture nibt = new DynamicTexture(ni);
+				vmScreenTextureNIBT.put(mcc.player.getUUID(), nibt);
+				vmScreenTextures.put(mcc.player.getUUID(), Minecraft.getInstance().getTextureManager().register("vm_texture", nibt));
 			}
 			vmTextureBytes = null;
 		}
@@ -271,24 +417,24 @@ public class ClientMod implements ClientModInitializer {
 			byte[] screen = buf.readByteArray();
 			int compressedDataSize = buf.readInt();
 			int dataSize = buf.readInt();
-			UUID pcOwner = buf.readUuid();
+			UUID pcOwner = buf.readUUID();
 
 			client.execute(() -> {
-				MinecraftClient mcc = MinecraftClient.getInstance();
+				Minecraft mcc = Minecraft.getInstance();
 				if(mcc.player == null) return;
 
-				if(!pcOwner.equals(mcc.player.getUuid())) {
+				if(!pcOwner.equals(mcc.player.getUUID())) {
 					if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
-						mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
-						vmScreenTextures.remove(mcc.player.getUuid());
+						mcc.getTextureManager().release(ClientMod.vmScreenTextures.get(pcOwner));
+						vmScreenTextures.remove(pcOwner);
 					}
 					if(ClientMod.vmScreenTextureNI.containsKey(pcOwner)) {
 						ClientMod.vmScreenTextureNI.get(pcOwner).close();
-						vmScreenTextureNI.remove(mcc.player.getUuid());
+						vmScreenTextureNI.remove(pcOwner);
 					}
 					if(ClientMod.vmScreenTextureNIBT.containsKey(pcOwner)) {
 						ClientMod.vmScreenTextureNIBT.get(pcOwner).close();
-						vmScreenTextureNIBT.remove(mcc.player.getUuid());
+						vmScreenTextureNIBT.remove(pcOwner);
 					}
 					try {
 						Inflater inf = new Inflater();
@@ -297,8 +443,8 @@ public class ClientMod implements ClientModInitializer {
 						int size = inf.inflate(actualScreen);
 						inf.end();
 						NativeImage ni = NativeImage.read(new ByteArrayInputStream(actualScreen, 0, size));
-						NativeImageBackedTexture nibt = new NativeImageBackedTexture(ni);
-						ClientMod.vmScreenTextures.put(pcOwner, mcc.getTextureManager().registerDynamicTexture("pc_screen_mp", nibt));
+						DynamicTexture nibt = new DynamicTexture(ni);
+						ClientMod.vmScreenTextures.put(pcOwner, mcc.getTextureManager().register("pc_screen_mp", nibt));
 						ClientMod.vmScreenTextureNI.put(pcOwner, ni);
 						ClientMod.vmScreenTextureNIBT.put(pcOwner, nibt);
 					} catch (IOException | DataFormatException e) {
@@ -309,23 +455,23 @@ public class ClientMod implements ClientModInitializer {
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_STOP_SCREEN, (client, handler, buf, responseSender) -> {
-			UUID pcOwner = buf.readUuid();
+			UUID pcOwner = buf.readUUID();
 
 			client.execute(() -> {
-				MinecraftClient mcc = MinecraftClient.getInstance();
+				Minecraft mcc = Minecraft.getInstance();
 				if(mcc.player == null) return;
 
 				if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
-					mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
-					vmScreenTextures.remove(mcc.player.getUuid());
+					mcc.getTextureManager().release(ClientMod.vmScreenTextures.get(pcOwner));
+					vmScreenTextures.remove(pcOwner);
 				}
 				if(ClientMod.vmScreenTextureNI.containsKey(pcOwner)) {
 					ClientMod.vmScreenTextureNI.get(pcOwner).close();
-					vmScreenTextureNI.remove(mcc.player.getUuid());
+					vmScreenTextureNI.remove(pcOwner);
 				}
 				if(ClientMod.vmScreenTextureNIBT.containsKey(pcOwner)) {
 					ClientMod.vmScreenTextureNIBT.get(pcOwner).close();
-					vmScreenTextureNIBT.remove(mcc.player.getUuid());
+					vmScreenTextureNIBT.remove(pcOwner);
 				}
 			});
 		});
@@ -334,7 +480,7 @@ public class ClientMod implements ClientModInitializer {
 			int arraySize = buf.readInt();
 			OrderableItem[] arr = new OrderableItem[arraySize];
 			for(int i = 0; i < arraySize; i++) {
-				arr[i] = (OrderableItem) buf.readItemStack().getItem();
+				arr[i] = (OrderableItem) buf.readItem().getItem();
 			}
 			int price = buf.readInt();
 			OrderStatus status = OrderStatus.values()[buf.readInt()];
@@ -347,7 +493,7 @@ public class ClientMod implements ClientModInitializer {
 				}
 				ClientMod.myOrder.price = price;
 				ClientMod.myOrder.items = Arrays.asList(arr);
-				ClientMod.myOrder.orderUUID = client.player.getUuid().toString();
+				ClientMod.myOrder.orderUUID = client.player.getUUID().toString();
 				ClientMod.myOrder.currentStatus = status;
 			});
 		});
@@ -355,13 +501,15 @@ public class ClientMod implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		File setupFile = new File(MinecraftClient.getInstance().runDirectory, "vm_computers/setup.json");
+		setupScreenCheckPending = true;
+		File setupFile = new File(Minecraft.getInstance().gameDirectory, "vm_computers/setup.json");
 		if (setupFile.exists()) {
 			try (FileReader fr = new FileReader(setupFile)) {
 				VMSettings set = new Gson().fromJson(fr, VMSettings.class);
 				if (set != null) {
 					ClientMod.useVmware = set.useVmware;
 					ClientMod.vmwareDirectory = set.vmwareDirectory == null ? "" : set.vmwareDirectory;
+					ClientMod.virtualBoxDirectory = set.vboxDirectory == null ? "" : set.vboxDirectory;
 					ClientMod.maxRam = set.maxRam;
 					ClientMod.videoMem = set.videoMem;
 					ClientMod.glfwUnfocusKey1 = set.unfocusKey1;
@@ -386,7 +534,7 @@ public class ClientMod implements ClientModInitializer {
 			}
 		} else {
 			System.out.println("VMComputers: setup.json not found, using default paths.");
-			File defaultDir = new File(MinecraftClient.getInstance().runDirectory, "vm_computers");
+			File defaultDir = new File(Minecraft.getInstance().gameDirectory, "vm_computers");
 			ClientMod.isoDirectory = new File(defaultDir, "isos");
 			ClientMod.vhdDirectory = new File(defaultDir, "vhds");
 		}
@@ -400,28 +548,29 @@ public class ClientMod implements ClientModInitializer {
 			}
 		});
 
-		MainMod.pcOpenGui = () -> MinecraftClient.getInstance().setScreen(new GuiPCEditing(currentPC));
+		MainMod.pcOpenGui = () -> Minecraft.getInstance().setScreen(new GuiPCEditing(currentPC));
 
-		MainMod.hardDriveClick = () -> MinecraftClient.getInstance().setScreen(new GuiCreateHarddrive());
+		MainMod.hardDriveClick = () -> Minecraft.getInstance().setScreen(new GuiCreateHarddrive());
 
-		MainMod.focus = () -> MinecraftClient.getInstance().setScreen(new GuiFocus());
+		MainMod.focus = () -> Minecraft.getInstance().setScreen(new GuiFocus());
 
 		MainMod.deliveryChestSound = () -> {
 			if(currentDeliveryChest != null && currentDeliveryChest.rocketSound != null) {
-				if(MinecraftClient.getInstance().getSoundManager().isPlaying(currentDeliveryChest.rocketSound)) {
-					MinecraftClient.getInstance().getSoundManager().stop(currentDeliveryChest.rocketSound);
+				if(Minecraft.getInstance().getSoundManager().isActive(currentDeliveryChest.rocketSound)) {
+					Minecraft.getInstance().getSoundManager().stop(currentDeliveryChest.rocketSound);
 				}
 			}
 		};
 
 		registerClientPackets();
+		MinecraftForge.EVENT_BUS.addListener(ClientMod::onClientTick);
 
 		vmScreenTextures = new HashMap<>();
 		vmScreenTextureNI = new HashMap<>();
 		vmScreenTextureNIBT = new HashMap<>();
 
-		EntityModelLayerRegistry.registerModelLayer(DELIVERY_CHEST_LAYER, DeliveryChestModel::getTexturedModelData);
-		EntityModelLayerRegistry.registerModelLayer(ORDERING_TABLET_LAYER, OrderingTabletModel::getTexturedModelData);
+		ModelLayerLocationRegistry.registerModelLayer(DELIVERY_CHEST_LAYER, DeliveryChestModel::getLayerDefinition);
+		ModelLayerLocationRegistry.registerModelLayer(ORDERING_TABLET_LAYER, OrderingTabletModel::getLayerDefinition);
 
 		EntityRendererRegistry.register(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
 		EntityRendererRegistry.register(EntityList.KEYBOARD, KeyboardRender::new);
@@ -433,3 +582,4 @@ public class ClientMod implements ClientModInitializer {
 		EntityRendererRegistry.register(EntityList.DELIVERY_CHEST, DeliveryChestRender::new);
 	}
 }
+

@@ -1,11 +1,9 @@
 package newvmcomputers.item;
 
-import net.minecraft.item.Item;
+import net.minecraft.world.item.Item;
 
-public class ItemOrderingTablet extends Item{
-
-	public ItemOrderingTablet(Settings settings) {
-		super(settings);
-	}
-
+public class ItemOrderingTablet extends Item {
+    public ItemOrderingTablet(Properties properties) {
+        super(properties);
+    }
 }

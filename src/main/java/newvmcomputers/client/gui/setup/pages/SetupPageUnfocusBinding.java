@@ -1,9 +1,9 @@
 package newvmcomputers.client.gui.setup.pages;
 
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
 
 import static newvmcomputers.client.ClientMod.*;
 
@@ -14,18 +14,18 @@ public class SetupPageUnfocusBinding extends SetupPage {
 	public static int bindingToBeChangedNum;
 	public static boolean bindingJustChanged;
 
-	public SetupPageUnfocusBinding(GuiSetup setupGui, TextRenderer textRender) {
+	public SetupPageUnfocusBinding(GuiSetup setupGui, Font textRender) {
 		super(setupGui, textRender);
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 		if(bindingJustChanged) {
 			setupGui.init();
 			bindingJustChanged = false;
 		}
 		String s = setupGui.translation("newvmcomputers.setup.unfocusCombo");
-		context.drawText(this.textRender, s, setupGui.width/2-this.textRender.getWidth(s)/2, setupGui.height/2-20, -1, false);
+		context.drawString(this.textRender, s, setupGui.width/2-this.textRender.width(s)/2, setupGui.height/2-20, -1, false);
 	}
 
 	private void changeBinding(int num) {
@@ -56,36 +56,37 @@ public class SetupPageUnfocusBinding extends SetupPage {
 	@Override
 	public void init() {
 		if(changeBinding) {
-			setupGui.addButton(ButtonWidget.builder(Text.literal((bindingToBeChangedNum == 1 ? "> " : "") + getKeyName(glfwUnfocusKey1) + (bindingToBeChangedNum == 1 ? " <" : "")), (bw) -> changeBinding(1))
-					.dimensions(setupGui.width/2-130, setupGui.height/2-10, 60, 20).build());
-			setupGui.addButton(ButtonWidget.builder(Text.literal((bindingToBeChangedNum == 2 ? "> " : "") + getKeyName(glfwUnfocusKey2) + (bindingToBeChangedNum == 2 ? " <" : "")), (bw) -> changeBinding(2))
-					.dimensions(setupGui.width/2-64, setupGui.height/2-10, 60, 20).build());
-			setupGui.addButton(ButtonWidget.builder(Text.literal((bindingToBeChangedNum == 3 ? "> " : "") + getKeyName(glfwUnfocusKey3) + (bindingToBeChangedNum == 3 ? " <" : "")), (bw) -> changeBinding(3))
-					.dimensions(setupGui.width/2+3, setupGui.height/2-10, 60, 20).build());
-			setupGui.addButton(ButtonWidget.builder(Text.literal((bindingToBeChangedNum == 4 ? "> " : "") + getKeyName(glfwUnfocusKey4) + (bindingToBeChangedNum == 4 ? " <" : "")), (bw) -> changeBinding(4))
-					.dimensions(setupGui.width/2+70, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal((bindingToBeChangedNum == 1 ? "> " : "") + getKeyName(glfwUnfocusKey1) + (bindingToBeChangedNum == 1 ? " <" : "")), (bw) -> changeBinding(1))
+					.bounds(setupGui.width/2-130, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal((bindingToBeChangedNum == 2 ? "> " : "") + getKeyName(glfwUnfocusKey2) + (bindingToBeChangedNum == 2 ? " <" : "")), (bw) -> changeBinding(2))
+					.bounds(setupGui.width/2-64, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal((bindingToBeChangedNum == 3 ? "> " : "") + getKeyName(glfwUnfocusKey3) + (bindingToBeChangedNum == 3 ? " <" : "")), (bw) -> changeBinding(3))
+					.bounds(setupGui.width/2+3, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal((bindingToBeChangedNum == 4 ? "> " : "") + getKeyName(glfwUnfocusKey4) + (bindingToBeChangedNum == 4 ? " <" : "")), (bw) -> changeBinding(4))
+					.bounds(setupGui.width/2+70, setupGui.height/2-10, 60, 20).build());
 		}else {
-			setupGui.addButton(ButtonWidget.builder(Text.literal(getKeyName(glfwUnfocusKey1)), (bw) -> changeBinding(1))
-					.dimensions(setupGui.width/2-130, setupGui.height/2-10, 60, 20).build());
-			setupGui.addButton(ButtonWidget.builder(Text.literal(getKeyName(glfwUnfocusKey2)), (bw) -> changeBinding(2))
-					.dimensions(setupGui.width/2-64, setupGui.height/2-10, 60, 20).build());
-			setupGui.addButton(ButtonWidget.builder(Text.literal(getKeyName(glfwUnfocusKey3)), (bw) -> changeBinding(3))
-					.dimensions(setupGui.width/2+3, setupGui.height/2-10, 60, 20).build());
-			setupGui.addButton(ButtonWidget.builder(Text.literal(getKeyName(glfwUnfocusKey4)), (bw) -> changeBinding(4))
-					.dimensions(setupGui.width/2+70, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal(getKeyName(glfwUnfocusKey1)), (bw) -> changeBinding(1))
+					.bounds(setupGui.width/2-130, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal(getKeyName(glfwUnfocusKey2)), (bw) -> changeBinding(2))
+					.bounds(setupGui.width/2-64, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal(getKeyName(glfwUnfocusKey3)), (bw) -> changeBinding(3))
+					.bounds(setupGui.width/2+3, setupGui.height/2-10, 60, 20).build());
+			setupGui.addButton(Button.builder(Component.literal(getKeyName(glfwUnfocusKey4)), (bw) -> changeBinding(4))
+					.bounds(setupGui.width/2+70, setupGui.height/2-10, 60, 20).build());
 		}
 
-		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(1))
-				.dimensions(setupGui.width/2-130, setupGui.height/2+12, 60, 12).build());
-		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(2))
-				.dimensions(setupGui.width/2-64, setupGui.height/2+12, 60, 12).build());
-		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(3))
-				.dimensions(setupGui.width/2+3, setupGui.height/2+12, 60, 12).build());
-		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(4))
-				.dimensions(setupGui.width/2+70, setupGui.height/2+12, 60, 12).build());
+		setupGui.addButton(Button.builder(Component.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(1))
+				.bounds(setupGui.width/2-130, setupGui.height/2+12, 60, 12).build());
+		setupGui.addButton(Button.builder(Component.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(2))
+				.bounds(setupGui.width/2-64, setupGui.height/2+12, 60, 12).build());
+		setupGui.addButton(Button.builder(Component.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(3))
+				.bounds(setupGui.width/2+3, setupGui.height/2+12, 60, 12).build());
+		setupGui.addButton(Button.builder(Component.literal(setupGui.translation("newvmcomputers.setup.clearButton")), (bw) -> clearBinding(4))
+				.bounds(setupGui.width/2+70, setupGui.height/2+12, 60, 12).build());
 
-		int nextButtonW = textRender.getWidth(setupGui.translation("newvmcomputers.setup.nextButton"))+40;
-		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("newvmcomputers.setup.nextButton")), (bw) -> this.setupGui.nextPage())
-				.dimensions(setupGui.width/2 - (nextButtonW/2), setupGui.height - 40, nextButtonW, 20).build());
+		int nextButtonW = textRender.width(setupGui.translation("newvmcomputers.setup.nextButton"))+40;
+		setupGui.addButton(Button.builder(Component.literal(setupGui.translation("newvmcomputers.setup.nextButton")), (bw) -> this.setupGui.nextPage())
+				.bounds(setupGui.width/2 - (nextButtonW/2), setupGui.height - 40, nextButtonW, 20).build());
 	}
 }
+

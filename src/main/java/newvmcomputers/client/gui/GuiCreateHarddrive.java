@@ -21,26 +21,26 @@ import newvmcomputers.client.ClientMod;
 import newvmcomputers.networking.PacketList;
 import newvmcomputers.utils.MVCUtils;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Language;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.locale.Language;
 
 public class GuiCreateHarddrive extends Screen {
-	private TextFieldWidget hddSize;
+	private EditBox hddSize;
 	private String status;
 	private State currentState = State.MENU;
 	private final Language lang = Language.getInstance();
 	private Ext extension = Ext.vdi;
 	private static final char COLOR_CHAR = (char) (0xfeff00a7);
-	private ButtonWidget AA;
-	private ButtonWidget BB;
-	private final MinecraftClient minecraft = MinecraftClient.getInstance();
+	private Button AA;
+	private Button BB;
+	private final Minecraft minecraft = Minecraft.getInstance();
 
 	public enum State{
 		MENU,
@@ -54,11 +54,11 @@ public class GuiCreateHarddrive extends Screen {
 	}
 
 	public GuiCreateHarddrive() {
-		super(Text.translatable("Create Harddrive"));
+		super(Component.translatable("Create Harddrive"));
 	}
 
 	public String translation(String in) {
-		return lang.get(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
+		return lang.getOrDefault(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
 	}
 
 	@Override
@@ -66,40 +66,40 @@ public class GuiCreateHarddrive extends Screen {
 		if(currentState == State.CREATE_NEW) {
 			String s = "";
 			if(hddSize != null) {
-				s = hddSize.getText();
+				s = hddSize.getValue();
 			}
-			hddSize = new TextFieldWidget(this.textRenderer, this.width/2-150, this.height/2-10, 300, 20, Text.empty());
-			hddSize.setText(s);
-			hddSize.setChangedListener(this::hddSizeUpdate);
-			this.addSelectableChild(hddSize);
-			this.hddSizeUpdate(hddSize.getText());
+			hddSize = new EditBox(this.font, this.width/2-150, this.height/2-10, 300, 20, Component.empty());
+			hddSize.setValue(s);
+			hddSize.setResponder(this::hddSizeUpdate);
+			this.addRenderableWidget(hddSize);
+			this.hddSizeUpdate(hddSize.getValue());
 
-			AA = this.addDrawableChild(ButtonWidget.builder(Text.literal("vdi"), (btn) -> extset(Ext.vdi))
-					.dimensions(this.width/2-150, this.height/2+25, 50, 20).build());
+			AA = this.addRenderableWidget(Button.builder(Component.literal("vdi"), (btn) -> extset(Ext.vdi))
+					.bounds(this.width/2-150, this.height/2+25, 50, 20).build());
 
-			BB = this.addDrawableChild(ButtonWidget.builder(Text.literal("vmdk"), (btn) -> extset(Ext.vmdk))
-					.dimensions(this.width/2-96, this.height/2+25, 50, 20).build());
+			BB = this.addRenderableWidget(Button.builder(Component.literal("vmdk"), (btn) -> extset(Ext.vmdk))
+					.bounds(this.width/2-96, this.height/2+25, 50, 20).build());
 			if (ClientMod.useVmware) {
 				extset(Ext.vmdk);
 			} else {
 				extset(Ext.vdi);
 			}
 
-			int newvhdWidth = textRenderer.getWidth(translation("newvmcomputers.vhd_setup.newvhd"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("newvmcomputers.vhd_setup.newvhd")), (btn) -> createNew())
-					.dimensions(this.width/2-(newvhdWidth/2), this.height/2+50, newvhdWidth, 20).build());
+			int newvhdWidth = font.width(translation("newvmcomputers.vhd_setup.newvhd"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("newvmcomputers.vhd_setup.newvhd")), (btn) -> createNew())
+					.bounds(this.width/2-(newvhdWidth/2), this.height/2+50, newvhdWidth, 20).build());
 
-			int menuWidth = textRenderer.getWidth(translation("newvmcomputers.vhd_setup.menu"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("newvmcomputers.vhd_setup.menu")), (btn) -> switchState(State.MENU))
-					.dimensions(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
+			int menuWidth = font.width(translation("newvmcomputers.vhd_setup.menu"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("newvmcomputers.vhd_setup.menu")), (btn) -> switchState(State.MENU))
+					.bounds(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
 		}else if(currentState == State.MENU) {
-			int newvhdWidth = textRenderer.getWidth(translation("newvmcomputers.vhd_setup.newvhd"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("newvmcomputers.vhd_setup.newvhd")), (btn) -> switchState(State.CREATE_NEW))
-					.dimensions(this.width/2 - (newvhdWidth/2), this.height/2 - 12, newvhdWidth, 20).build());
+			int newvhdWidth = font.width(translation("newvmcomputers.vhd_setup.newvhd"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("newvmcomputers.vhd_setup.newvhd")), (btn) -> switchState(State.CREATE_NEW))
+					.bounds(this.width/2 - (newvhdWidth/2), this.height/2 - 12, newvhdWidth, 20).build());
 
-			int oldvhdWidth = textRenderer.getWidth(translation("newvmcomputers.vhd_setup.oldvhd"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("newvmcomputers.vhd_setup.oldvhd")), (btn) -> switchState(State.SELECT_OLD))
-					.dimensions(this.width/2 - (oldvhdWidth/2), this.height/2 + 12, oldvhdWidth, 20).build());
+			int oldvhdWidth = font.width(translation("newvmcomputers.vhd_setup.oldvhd"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("newvmcomputers.vhd_setup.oldvhd")), (btn) -> switchState(State.SELECT_OLD))
+					.bounds(this.width/2 - (oldvhdWidth/2), this.height/2 + 12, oldvhdWidth, 20).build());
 		}else {
 			int lastY = 60;
 			ArrayList<File> files = new ArrayList<>();
@@ -116,17 +116,17 @@ public class GuiCreateHarddrive extends Screen {
 			files.sort(Comparator.comparing(File::getName));
 
 			for(File f : files) {
-				this.addDrawableChild(ButtonWidget.builder(Text.literal((f.getName() + " | " + ((float)f.length()/1024f/1024f) + " " + translation("newvmcomputers.vhd_setup.mb_used"))), this::selectOld)
-						.dimensions(this.width/2 - 90, lastY, 180, 14).build());
+				this.addRenderableWidget(Button.builder(Component.literal((f.getName() + " | " + ((float)f.length()/1024f/1024f) + " " + translation("newvmcomputers.vhd_setup.mb_used"))), this::selectOld)
+						.bounds(this.width/2 - 90, lastY, 180, 14).build());
 
-				this.addDrawableChild(ButtonWidget.builder(Text.literal("x"), (btn) -> removevhd(f.getName()))
-						.dimensions(this.width/2 + 92, lastY, 14, 14).build());
+				this.addRenderableWidget(Button.builder(Component.literal("x"), (btn) -> removevhd(f.getName()))
+						.bounds(this.width/2 + 92, lastY, 14, 14).build());
 				lastY += 16;
 			}
 
-			int menuWidth = textRenderer.getWidth(translation("newvmcomputers.vhd_setup.menu"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("newvmcomputers.vhd_setup.menu")), (btn) -> switchState(State.MENU))
-					.dimensions(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
+			int menuWidth = font.width(translation("newvmcomputers.vhd_setup.menu"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("newvmcomputers.vhd_setup.menu")), (btn) -> switchState(State.MENU))
+					.bounds(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
 		}
 	}
 
@@ -149,22 +149,22 @@ public class GuiCreateHarddrive extends Screen {
 	}
 
 	private void switchState(State newState) {
-		this.clearChildren();
+		this.clearWidgets();
 		currentState = newState;
 		this.init();
 	}
 
-	private void selectOld(ButtonWidget wdgt) {
+	private void selectOld(Button wdgt) {
 		String fileName = wdgt.getMessage().getString().split(Pattern.quote(" | "))[0];
-		PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
-		pb.writeString(fileName);
+		FriendlyByteBuf pb = new FriendlyByteBuf(Unpooled.buffer());
+		pb.writeUtf(fileName);
 		ClientPlayNetworking.send(PacketList.C2S_CHANGE_HDD, pb);
 		minecraft.setScreen(null);
 	}
 
 	private void createNew() {
 		if(status != null && !status.startsWith(COLOR_CHAR + "c")) {
-			long sizeMB = Long.parseLong(hddSize.getText());
+			long sizeMB = Long.parseLong(hddSize.getValue());
 			long sizeBytes = sizeMB * 1024L * 1024L;
 			int i = ClientMod.latestVHDNum;
 			File vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "."+extension);
@@ -174,7 +174,7 @@ public class GuiCreateHarddrive extends Screen {
 					String vdiskManager = ClientMod.vmwareDirectory + File.separator + (SystemUtils.IS_OS_WINDOWS ? "vmware-vdiskmanager.exe" : "vmware-vdiskmanager");
 
 					if (minecraft.player != null) {
-						minecraft.player.sendMessage(Text.literal("Creating VMDK disk... Please wait.").formatted(Formatting.YELLOW), false);
+						minecraft.player.displayClientMessage(Component.literal("Creating VMDK disk... Please wait.").withStyle(ChatFormatting.YELLOW), false);
 					}
 					ProcessBuilder pb = new ProcessBuilder(
 							vdiskManager,
@@ -190,14 +190,14 @@ public class GuiCreateHarddrive extends Screen {
 					if (!vhd.exists()) {
 						System.err.println("VMware-vdiskmanager failed to create file.");
 						if (minecraft.player != null) {
-							minecraft.player.sendMessage(Text.literal("Error: vdiskmanager could not create the disk. It may not be in the VMware folder.").formatted(Formatting.RED), false);
+							minecraft.player.displayClientMessage(Component.literal("Error: vdiskmanager could not create the disk. It may not be in the VMware folder.").withStyle(ChatFormatting.RED), false);
 						}
 						return;
 					}
 				} catch (Exception e) {
 					System.err.println("Failed to execute vmware-vdiskmanager: " + e.getMessage());
 					if (minecraft.player != null) {
-						minecraft.player.sendMessage(Text.literal("vdiskmanager execution error: " + e.getMessage()).formatted(Formatting.RED), false);
+						minecraft.player.displayClientMessage(Component.literal("vdiskmanager execution error: " + e.getMessage()).withStyle(ChatFormatting.RED), false);
 					}
 					return;
 				}
@@ -225,8 +225,8 @@ public class GuiCreateHarddrive extends Screen {
 				System.err.println("Error increasing VHD Num: " + e.getMessage());
 			}
 
-			PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
-			pb.writeString(vhd.getName());
+			FriendlyByteBuf pb = new FriendlyByteBuf(Unpooled.buffer());
+			pb.writeUtf(vhd.getName());
 			ClientPlayNetworking.send(PacketList.C2S_CHANGE_HDD, pb);
 			minecraft.setScreen(null);
 		}
@@ -268,18 +268,19 @@ public class GuiCreateHarddrive extends Screen {
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 		this.renderBackground(context);
 		if(currentState == State.CREATE_NEW) {
-			context.drawText(this.textRenderer, status, this.width/2-150, this.height/2+13, -1, false);
-			context.drawText(this.textRenderer, translation("newvmcomputers.vhd_setup.vhdsize"), this.width/2-150, this.height/2-20, -1, false);
+			context.drawString(this.font, status, this.width/2-150, this.height/2+13, -1, false);
+			context.drawString(this.font, translation("newvmcomputers.vhd_setup.vhdsize"), this.width/2-150, this.height/2-20, -1, false);
 			if (this.hddSize != null) {
 				this.hddSize.render(context, mouseX, mouseY, delta);
 			}
 		} else if(currentState == State.MENU) {
 			String s = translation("newvmcomputers.vhd_setup.setupnewvhd");
-			context.drawText(this.textRenderer, s, this.width/2 - this.textRenderer.getWidth(s)/2, this.height/2 - 30, -1, false);
+			context.drawString(this.font, s, this.width/2 - this.font.width(s)/2, this.height/2 - 30, -1, false);
 		}
 		super.render(context, mouseX, mouseY, delta);
 	}
 }
+

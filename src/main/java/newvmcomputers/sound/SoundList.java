@@ -1,22 +1,32 @@
 package newvmcomputers.sound;
 
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Identifier;
+import newvmcomputers.MainMod;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraftforge.registries.RegistryObject;
 
-public class SoundList {
-	public static final SoundEvent RADAR_SOUND = SoundEvent.of(new Identifier("newvmcomputers", "radar"));
-	public static final SoundEvent ROCKET_SOUND = SoundEvent.of(new Identifier("newvmcomputers", "rocket"));
-	public static final SoundEvent SHOPINTRO_SOUND = SoundEvent.of(new Identifier("newvmcomputers", "shopintro"));
-	public static final SoundEvent SHOPOUTRO_SOUND = SoundEvent.of(new Identifier("newvmcomputers", "shopoutro"));
-	public static final SoundEvent SHOPMUSIC_SOUND = SoundEvent.of(new Identifier("newvmcomputers", "shopmusic"));
+public final class SoundList {
+    public static final DeferredRegister<SoundEvent> SOUND_EVENTS =
+            DeferredRegister.create(ForgeRegistries.SOUND_EVENTS, MainMod.MODID);
 
-	public static void init() {
-		Registry.register(Registries.SOUND_EVENT, new Identifier("newvmcomputers", "radar"), RADAR_SOUND);
-		Registry.register(Registries.SOUND_EVENT, new Identifier("newvmcomputers", "rocket"), ROCKET_SOUND);
-		Registry.register(Registries.SOUND_EVENT, new Identifier("newvmcomputers", "shopintro"), SHOPINTRO_SOUND);
-		Registry.register(Registries.SOUND_EVENT, new Identifier("newvmcomputers", "shopoutro"), SHOPOUTRO_SOUND);
-		Registry.register(Registries.SOUND_EVENT, new Identifier("newvmcomputers", "shopmusic"), SHOPMUSIC_SOUND);
-	}
+    public static final RegistryObject<SoundEvent> RADAR_SOUND = register("radar");
+    public static final RegistryObject<SoundEvent> ROCKET_SOUND = register("rocket");
+    public static final RegistryObject<SoundEvent> SHOPINTRO_SOUND = register("shopintro");
+    public static final RegistryObject<SoundEvent> SHOPOUTRO_SOUND = register("shopoutro");
+    public static final RegistryObject<SoundEvent> SHOPMUSIC_SOUND = register("shopmusic");
+
+    private SoundList() {
+    }
+
+    public static void init(IEventBus bus) {
+        SOUND_EVENTS.register(bus);
+    }
+
+    private static RegistryObject<SoundEvent> register(String name) {
+        ResourceLocation id = new ResourceLocation(MainMod.MODID, name);
+        return SOUND_EVENTS.register(name, () -> SoundEvent.createVariableRangeEvent(id));
+    }
 }

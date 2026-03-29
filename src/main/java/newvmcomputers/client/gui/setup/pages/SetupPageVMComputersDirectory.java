@@ -5,33 +5,33 @@ import java.io.IOException;
 
 import newvmcomputers.client.ClientMod;
 import newvmcomputers.client.gui.setup.GuiSetup;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 public class SetupPageVMComputersDirectory extends SetupPage {
-	private TextFieldWidget vmComputersDirectory;
-	private ButtonWidget next;
+	private EditBox vmComputersDirectory;
+	private Button next;
 	private String vboxStatus;
 
-	public SetupPageVMComputersDirectory(GuiSetup setupGui, TextRenderer textRender) {
+	public SetupPageVMComputersDirectory(GuiSetup setupGui, Font textRender) {
 		super(setupGui, textRender);
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.vmcomputersdir"), setupGui.width/2-160, setupGui.height/2-20, -1, false);
-		context.drawText(this.textRender, vboxStatus, setupGui.width/2-160, setupGui.height/2+13, -1, false);
-		context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange0"), setupGui.width/2-160, 60, -1, false);
-		context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange1"), setupGui.width/2-160, 70, -1, false);
+	public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+		context.drawString(this.textRender, setupGui.translation("newvmcomputers.setup.vmcomputersdir"), setupGui.width/2-160, setupGui.height/2-20, -1, false);
+		context.drawString(this.textRender, vboxStatus, setupGui.width/2-160, setupGui.height/2+13, -1, false);
+		context.drawString(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange0"), setupGui.width/2-160, 60, -1, false);
+		context.drawString(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange1"), setupGui.width/2-160, 70, -1, false);
 		this.vmComputersDirectory.render(context, mouseX, mouseY, delta);
 	}
 
-	private void next(ButtonWidget bw) {
-		if(checkDirectory(vmComputersDirectory.getText())) {
-			File parent = new File(vmComputersDirectory.getText());
+	private void next(Button bw) {
+		if(checkDirectory(vmComputersDirectory.getValue())) {
+			File parent = new File(vmComputersDirectory.getValue());
 			ClientMod.isoDirectory = new File(parent, "isos");
 			ClientMod.vhdDirectory = new File(parent, "vhds");
 
@@ -77,23 +77,24 @@ public class SetupPageVMComputersDirectory extends SetupPage {
 
 	@Override
 	public void init() {
-		int nextButtonW = textRender.getWidth(setupGui.translation("newvmcomputers.setup.nextButton"))+40;
-		next = ButtonWidget.builder(Text.literal(setupGui.translation("newvmcomputers.setup.nextButton")), this::next)
-				.dimensions(setupGui.width/2 - (nextButtonW/2), setupGui.height - 40, nextButtonW, 20)
+		int nextButtonW = textRender.width(setupGui.translation("newvmcomputers.setup.nextButton"))+40;
+		next = Button.builder(Component.literal(setupGui.translation("newvmcomputers.setup.nextButton")), this::next)
+				.bounds(setupGui.width/2 - (nextButtonW/2), setupGui.height - 40, nextButtonW, 20)
 				.build();
 
 		String dirText = ClientMod.vhdDirectory.getParentFile().getAbsolutePath();
 		if(vmComputersDirectory != null) {
-			dirText = vmComputersDirectory.getText();
+			dirText = vmComputersDirectory.getValue();
 		}
 		this.checkDirectory(dirText);
 
-		vmComputersDirectory = new TextFieldWidget(this.textRender, setupGui.width/2 - 160, setupGui.height/2 - 10, 320, 20, Text.empty());
+		vmComputersDirectory = new EditBox(this.textRender, setupGui.width/2 - 160, setupGui.height/2 - 10, 320, 20, Component.empty());
 		vmComputersDirectory.setMaxLength(35565);
-		vmComputersDirectory.setText(dirText);
-		vmComputersDirectory.setChangedListener(this::checkDirectory);
+		vmComputersDirectory.setValue(dirText);
+		vmComputersDirectory.setResponder(this::checkDirectory);
 
 		setupGui.addElement(vmComputersDirectory);
 		setupGui.addButton(next);
 	}
 }
+

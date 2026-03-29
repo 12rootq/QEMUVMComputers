@@ -5,58 +5,58 @@ import java.io.File;
 import org.apache.commons.lang3.SystemUtils;
 
 import newvmcomputers.client.gui.setup.GuiSetup;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.CheckboxWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Checkbox;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
 
 public class SetupPageVboxDirectory extends SetupPage {
-	private TextFieldWidget vboxDirectory;
-	private TextFieldWidget vmwareDirectory;
-	private CheckboxWidget useVmware;
-	private ButtonWidget next;
+	private EditBox vboxDirectory;
+	private EditBox vmwareDirectory;
+	private Checkbox useVmware;
+	private Button next;
 	private String vboxStatus;
 	private String vmwareStatus;
 
-	public SetupPageVboxDirectory(GuiSetup setupGui, TextRenderer textRender) {
+	public SetupPageVboxDirectory(GuiSetup setupGui, Font textRender) {
 		super(setupGui, textRender);
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		boolean vmware = useVmware != null && useVmware.isChecked();
+	public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+		boolean vmware = useVmware != null && useVmware.selected();
 
 		if (vboxDirectory != null) vboxDirectory.setVisible(!vmware);
 		if (vmwareDirectory != null) vmwareDirectory.setVisible(vmware);
 
 		if(vmware) {
-			checkVmwareDirectory(vmwareDirectory.getText());
-			context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.vmware_dir"), setupGui.width/2-160, setupGui.height/2-20, -1, false);
-			context.drawText(this.textRender, vmwareStatus, setupGui.width/2-160, setupGui.height/2+13, -1, false);
+			checkVmwareDirectory(vmwareDirectory.getValue());
+			context.drawString(this.textRender, setupGui.translation("newvmcomputers.setup.vmware_dir"), setupGui.width/2-160, setupGui.height/2-20, -1, false);
+			context.drawString(this.textRender, vmwareStatus, setupGui.width/2-160, setupGui.height/2+13, -1, false);
 			this.vmwareDirectory.render(context, mouseX, mouseY, delta);
 		}else {
-			checkDirectory(vboxDirectory.getText());
-			context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.vbox_dir"), setupGui.width/2-160, setupGui.height/2-20, -1, false);
-			context.drawText(this.textRender, vboxStatus, setupGui.width/2-160, setupGui.height/2+13, -1, false);
-			context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange0"), setupGui.width/2-160, 60, -1, false);
-			context.drawText(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange1"), setupGui.width/2-160, 70, -1, false);
+			checkDirectory(vboxDirectory.getValue());
+			context.drawString(this.textRender, setupGui.translation("newvmcomputers.setup.vbox_dir"), setupGui.width/2-160, setupGui.height/2-20, -1, false);
+			context.drawString(this.textRender, vboxStatus, setupGui.width/2-160, setupGui.height/2+13, -1, false);
+			context.drawString(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange0"), setupGui.width/2-160, 60, -1, false);
+			context.drawString(this.textRender, setupGui.translation("newvmcomputers.setup.dontchange1"), setupGui.width/2-160, 70, -1, false);
 			this.vboxDirectory.render(context, mouseX, mouseY, delta);
 		}
 	}
 
-	private void next(ButtonWidget bw) {
-		if (useVmware != null && useVmware.isChecked()) {
-			if(checkVmwareDirectory(vmwareDirectory.getText())) {
+	private void next(Button bw) {
+		if (useVmware != null && useVmware.selected()) {
+			if(checkVmwareDirectory(vmwareDirectory.getValue())) {
 				this.setupGui.useVmware = true;
-				this.setupGui.vmwareDirectory = vmwareDirectory.getText();
+				this.setupGui.vmwareDirectory = vmwareDirectory.getValue();
 				this.setupGui.nextPage();
 			}
 		} else {
-			if(checkDirectory(vboxDirectory.getText())) {
+			if(checkDirectory(vboxDirectory.getValue())) {
 				this.setupGui.useVmware = false;
-				this.setupGui.virtualBoxDirectory = vboxDirectory.getText();
+				this.setupGui.virtualBoxDirectory = vboxDirectory.getValue();
 				this.setupGui.nextPage();
 			}
 		}
@@ -135,36 +135,36 @@ public class SetupPageVboxDirectory extends SetupPage {
 
 	@Override
 	public void init() {
-		int nextButtonW = textRender.getWidth(setupGui.translation("newvmcomputers.setup.nextButton"))+40;
-		next = ButtonWidget.builder(Text.literal(setupGui.translation("newvmcomputers.setup.nextButton")), this::next)
-				.dimensions(setupGui.width/2 - (nextButtonW/2), setupGui.height - 40, nextButtonW, 20)
+		int nextButtonW = textRender.width(setupGui.translation("newvmcomputers.setup.nextButton"))+40;
+		next = Button.builder(Component.literal(setupGui.translation("newvmcomputers.setup.nextButton")), this::next)
+				.bounds(setupGui.width/2 - (nextButtonW/2), setupGui.height - 40, nextButtonW, 20)
 				.build();
 
-		useVmware = new CheckboxWidget(
+		useVmware = new Checkbox(
 				setupGui.width/2 - 160, setupGui.height/2 - 55, 200, 20,
-				Text.literal(setupGui.translation("newvmcomputers.setup.use_vmware")),
+				Component.literal(setupGui.translation("newvmcomputers.setup.use_vmware")),
 				setupGui.useVmware
 		);
 
 		String vboxText = this.setupGui.virtualBoxDirectory;
 		if(vboxDirectory != null) {
-			vboxText = vboxDirectory.getText();
+			vboxText = vboxDirectory.getValue();
 		}
 
 		String vmwareText = this.setupGui.vmwareDirectory;
 		if(vmwareDirectory != null) {
-			vmwareText = vmwareDirectory.getText();
+			vmwareText = vmwareDirectory.getValue();
 		}
 
-		vboxDirectory = new TextFieldWidget(this.textRender, setupGui.width/2 - 160, setupGui.height/2 - 10, 320, 20, Text.empty());
+		vboxDirectory = new EditBox(this.textRender, setupGui.width/2 - 160, setupGui.height/2 - 10, 320, 20, Component.empty());
 		vboxDirectory.setMaxLength(35565);
-		vboxDirectory.setText(vboxText);
-		vboxDirectory.setChangedListener(this::checkDirectory);
+		vboxDirectory.setValue(vboxText);
+		vboxDirectory.setResponder(this::checkDirectory);
 
-		vmwareDirectory = new TextFieldWidget(this.textRender, setupGui.width/2 - 160, setupGui.height/2 - 10, 320, 20, Text.empty());
+		vmwareDirectory = new EditBox(this.textRender, setupGui.width/2 - 160, setupGui.height/2 - 10, 320, 20, Component.empty());
 		vmwareDirectory.setMaxLength(35565);
-		vmwareDirectory.setText(vmwareText);
-		vmwareDirectory.setChangedListener(this::checkVmwareDirectory);
+		vmwareDirectory.setValue(vmwareText);
+		vmwareDirectory.setResponder(this::checkVmwareDirectory);
 
 		if(setupGui.useVmware) {
 			checkVmwareDirectory(vmwareText);
@@ -178,3 +178,5 @@ public class SetupPageVboxDirectory extends SetupPage {
 		setupGui.addButton(next);
 	}
 }
+
+

@@ -2,123 +2,120 @@ package newvmcomputers.entities;
 
 import newvmcomputers.MainMod;
 import newvmcomputers.item.ItemList;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 
 public class EntityCRTScreen extends Entity {
-	private static final TrackedData<Float> LOOK_AT_POS_X =
-			DataTracker.registerData(EntityCRTScreen.class, TrackedDataHandlerRegistry.FLOAT);
-	private static final TrackedData<Float> LOOK_AT_POS_Y =
-			DataTracker.registerData(EntityCRTScreen.class, TrackedDataHandlerRegistry.FLOAT);
-	private static final TrackedData<Float> LOOK_AT_POS_Z =
-			DataTracker.registerData(EntityCRTScreen.class, TrackedDataHandlerRegistry.FLOAT);
+	private static final EntityDataAccessor<Float> LOOK_AT_POS_X =
+			SynchedEntityData.defineId(EntityCRTScreen.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Float> LOOK_AT_POS_Y =
+			SynchedEntityData.defineId(EntityCRTScreen.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Float> LOOK_AT_POS_Z =
+			SynchedEntityData.defineId(EntityCRTScreen.class, EntityDataSerializers.FLOAT);
 
-	private static final TrackedData<String> OWNER_UUID =
-			DataTracker.registerData(EntityCRTScreen.class, TrackedDataHandlerRegistry.STRING);
+	private static final EntityDataAccessor<String> OWNER_UUID =
+			SynchedEntityData.defineId(EntityCRTScreen.class, EntityDataSerializers.STRING);
 
-	public EntityCRTScreen(EntityType<?> type, World world) {
-		super(type, world);
+	public EntityCRTScreen(EntityType<?> type, Level level) {
+		super(type, level);
 	}
 
-	public EntityCRTScreen(World world, double x, double y, double z) {
-		this(EntityList.CRT_SCREEN, world);
-		this.updatePosition(x, y, z);
+	public EntityCRTScreen(Level level, double x, double y, double z) {
+		this(EntityList.CRT_SCREEN.get(), level);
+		this.setPos(x, y, z);
 	}
 
-	public EntityCRTScreen(World world, Double x, Double y, Double z, Vec3d lookAt, String uuid) {
-		this(EntityList.CRT_SCREEN, world);
-		this.updatePosition(x, y, z);
-		this.getDataTracker().set(LOOK_AT_POS_X, (float)lookAt.x);
-		this.getDataTracker().set(LOOK_AT_POS_Y, (float)lookAt.y);
-		this.getDataTracker().set(LOOK_AT_POS_Z, (float)lookAt.z);
-		this.getDataTracker().set(OWNER_UUID, uuid);
+	public EntityCRTScreen(Level level, Double x, Double y, Double z, Vec3 lookAt, String uuid) {
+		this(EntityList.CRT_SCREEN.get(), level);
+		this.setPos(x, y, z);
+		this.getEntityData().set(LOOK_AT_POS_X, (float)lookAt.x);
+		this.getEntityData().set(LOOK_AT_POS_Y, (float)lookAt.y);
+		this.getEntityData().set(LOOK_AT_POS_Z, (float)lookAt.z);
+		this.getEntityData().set(OWNER_UUID, uuid);
 	}
 
-	public Vec3d getLookAtPos() {
-		return new Vec3d(this.getDataTracker().get(LOOK_AT_POS_X),
-				this.getDataTracker().get(LOOK_AT_POS_Y),
-				this.getDataTracker().get(LOOK_AT_POS_Z));
-	}
-
-	@Override
-	protected void initDataTracker() {
-		this.getDataTracker().startTracking(LOOK_AT_POS_X, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Y, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Z, 0f);
-		this.getDataTracker().startTracking(OWNER_UUID, "");
+	public Vec3 getLookAtPos() {
+		return new Vec3(this.getEntityData().get(LOOK_AT_POS_X),
+				this.getEntityData().get(LOOK_AT_POS_Y),
+				this.getEntityData().get(LOOK_AT_POS_Z));
 	}
 
 	@Override
-	protected void readCustomDataFromNbt(NbtCompound tag) {
-		this.getDataTracker().set(LOOK_AT_POS_X, tag.getFloat("LookAtX"));
-		this.getDataTracker().set(LOOK_AT_POS_Y, tag.getFloat("LookAtY"));
-		this.getDataTracker().set(LOOK_AT_POS_Z, tag.getFloat("LookAtZ"));
-		this.getDataTracker().set(OWNER_UUID, tag.getString("Owner"));
+	protected void defineSynchedData() {
+		this.getEntityData().define(LOOK_AT_POS_X, 0f);
+		this.getEntityData().define(LOOK_AT_POS_Y, 0f);
+		this.getEntityData().define(LOOK_AT_POS_Z, 0f);
+		this.getEntityData().define(OWNER_UUID, "");
 	}
 
 	@Override
-	protected void writeCustomDataToNbt(NbtCompound tag) {
-		tag.putFloat("LookAtX", this.getDataTracker().get(LOOK_AT_POS_X));
-		tag.putFloat("LookAtY", this.getDataTracker().get(LOOK_AT_POS_Y));
-		tag.putFloat("LookAtZ", this.getDataTracker().get(LOOK_AT_POS_Z));
-		tag.putString("Owner", this.getDataTracker().get(OWNER_UUID));
+	protected void readAdditionalSaveData(CompoundTag tag) {
+		this.getEntityData().set(LOOK_AT_POS_X, tag.getFloat("LookAtX"));
+		this.getEntityData().set(LOOK_AT_POS_Y, tag.getFloat("LookAtY"));
+		this.getEntityData().set(LOOK_AT_POS_Z, tag.getFloat("LookAtZ"));
+		this.getEntityData().set(OWNER_UUID, tag.getString("Owner"));
 	}
 
 	@Override
-	public ActionResult interact(PlayerEntity player, Hand hand) {
-		if(!player.getWorld().isClient) { 
-			if(player.isSneaking()) {
-				this.kill();
-				player.getWorld().spawnEntity(new ItemEntity(player.getWorld(),
-						this.getPos().x, this.getPos().y, this.getPos().z,
-						new ItemStack(ItemList.ITEM_CRTSCREEN)));
+	protected void addAdditionalSaveData(CompoundTag tag) {
+		tag.putFloat("LookAtX", this.getEntityData().get(LOOK_AT_POS_X));
+		tag.putFloat("LookAtY", this.getEntityData().get(LOOK_AT_POS_Y));
+		tag.putFloat("LookAtZ", this.getEntityData().get(LOOK_AT_POS_Z));
+		tag.putString("Owner", this.getEntityData().get(OWNER_UUID));
+	}
+
+	@Override
+	public InteractionResult interact(Player player, InteractionHand hand) {
+		if (!player.level().isClientSide) {
+			if (player.isShiftKeyDown()) {
+				this.discard();
+				player.level().addFreshEntity(new ItemEntity(player.level(),
+						this.getX(), this.getY(), this.getZ(),
+						new ItemStack(ItemList.ITEM_CRTSCREEN.get())));
 			}
 		} else {
-			if(!player.isSneaking()) {
-				if(this.getOwnerUUID().equals(player.getUuid().toString())) {
+			if (!player.isShiftKeyDown()) {
+				if (this.getOwnerUUID().equals(player.getStringUUID())) {
 					MainMod.focus.run();
 				}
 			}
 		}
-		return ActionResult.SUCCESS;
+		return InteractionResult.SUCCESS;
 	}
 
 	@Override
 	public void tick() {
-		if(getOwnerUUID().isEmpty()) {
-			this.kill();
+		super.tick();
+		if (getOwnerUUID().isEmpty()) {
+			this.discard();
 		}
 	}
 
-	
-	
 	@Override
-	public boolean canHit() {
+	public boolean isPickable() {
 		return true;
 	}
 
 	public String getOwnerUUID() {
-		return this.getDataTracker().get(OWNER_UUID);
+		return this.getEntityData().get(OWNER_UUID);
 	}
 
-	
 	@Override
-	public Packet<ClientPlayPacketListener> createSpawnPacket() {
-		return new EntitySpawnS2CPacket(this);
+	public Packet<ClientGamePacketListener> getAddEntityPacket() {
+		return new ClientboundAddEntityPacket(this);
 	}
-
 }

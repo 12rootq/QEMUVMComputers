@@ -6,244 +6,239 @@ import newvmcomputers.MainMod;
 import newvmcomputers.client.ClientMod;
 import newvmcomputers.item.ItemPCCase;
 import newvmcomputers.item.ItemPCCaseSidepanel;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound; 
-import net.minecraft.network.listener.ClientPlayPacketListener; 
-import net.minecraft.network.packet.Packet; 
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.text.Text; 
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.ChatFormatting;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 
 public class EntityPC extends Entity {
-	private static final TrackedData<String> ISO_FILE_NAME =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.STRING);
-	private static final TrackedData<String> HARD_DRIVE_FILE_NAME =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.STRING);
-	private static final TrackedData<String> OWNER_UUID =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.STRING);
+	private static final EntityDataAccessor<String> ISO_FILE_NAME =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.STRING);
+	private static final EntityDataAccessor<String> HARD_DRIVE_FILE_NAME =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.STRING);
+	private static final EntityDataAccessor<String> OWNER_UUID =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.STRING);
 
-	private static final TrackedData<Float> LOOK_AT_POS_X =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.FLOAT);
-	private static final TrackedData<Float> LOOK_AT_POS_Y =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.FLOAT);
-	private static final TrackedData<Float> LOOK_AT_POS_Z =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.FLOAT);
+	private static final EntityDataAccessor<Float> LOOK_AT_POS_X =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Float> LOOK_AT_POS_Y =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Float> LOOK_AT_POS_Z =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.FLOAT);
 
-	private static final TrackedData<Integer> CPU_DIVIDED_BY =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.INTEGER);
-	private static final TrackedData<Integer> GB_OF_RAM_IN_SLOT_0 =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.INTEGER);
-	private static final TrackedData<Integer> GB_OF_RAM_IN_SLOT_1 =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.INTEGER);
+	private static final EntityDataAccessor<Integer> CPU_DIVIDED_BY =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> GB_OF_RAM_IN_SLOT_0 =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Integer> GB_OF_RAM_IN_SLOT_1 =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.INT);
 
-	private static final TrackedData<Boolean> SIXTY_FOUR_BIT =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.BOOLEAN);
-	private static final TrackedData<Boolean> GPU_IN_PCI_SLOT =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.BOOLEAN);
-	private static final TrackedData<Boolean> GLASS_SIDEPANEL =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.BOOLEAN);
-	private static final TrackedData<Boolean> MOTHERBOARD_INSTALLED =
-			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> SIXTY_FOUR_BIT =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> GPU_IN_PCI_SLOT =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> GLASS_SIDEPANEL =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> MOTHERBOARD_INSTALLED =
+			SynchedEntityData.defineId(EntityPC.class, EntityDataSerializers.BOOLEAN);
 
-	public EntityPC(EntityType<?> type, World world) {
-		super(type, world);
+	public EntityPC(EntityType<?> type, Level level) {
+		super(type, level);
 	}
 
-	public EntityPC(World world, double x, double y, double z) {
-		this(EntityList.PC, world);
-		this.updatePosition(x, y, z);
+	public EntityPC(Level level, double x, double y, double z) {
+		this(EntityList.PC.get(), level);
+		this.setPos(x, y, z);
 	}
 
-	
-	public EntityPC(World world, double x, double y, double z, Vec3d lookAt, UUID owner, NbtCompound tag) {
-		this(EntityList.PC, world);
-		this.updatePosition(x, y, z);
-		this.getDataTracker().set(LOOK_AT_POS_X, (float)lookAt.x);
-		this.getDataTracker().set(LOOK_AT_POS_Y, (float)lookAt.y);
-		this.getDataTracker().set(LOOK_AT_POS_Z, (float)lookAt.z);
-		this.getDataTracker().set(OWNER_UUID, owner.toString());
+	public EntityPC(Level level, double x, double y, double z, Vec3 lookAt, UUID owner, CompoundTag tag) {
+		this(EntityList.PC.get(), level);
+		this.setPos(x, y, z);
+		this.getEntityData().set(LOOK_AT_POS_X, (float) lookAt.x);
+		this.getEntityData().set(LOOK_AT_POS_Y, (float) lookAt.y);
+		this.getEntityData().set(LOOK_AT_POS_Z, (float) lookAt.z);
+		this.getEntityData().set(OWNER_UUID, owner.toString());
 
-		if(tag != null) {
-			if(tag.contains("x64"))
-				this.getDataTracker().set(SIXTY_FOUR_BIT, tag.getBoolean("x64"));
-			if(tag.contains("MoboInstalled"))
-				this.getDataTracker().set(MOTHERBOARD_INSTALLED, tag.getBoolean("MoboInstalled"));
-			if(tag.contains("GPUInstalled"))
-				this.getDataTracker().set(GPU_IN_PCI_SLOT, tag.getBoolean("GPUInstalled"));
-			if(tag.contains("CPUDividedBy"))
-				this.getDataTracker().set(CPU_DIVIDED_BY, tag.getInt("CPUDividedBy"));
-			if(tag.contains("RAMSlot0"))
-				this.getDataTracker().set(GB_OF_RAM_IN_SLOT_0, tag.getInt("RAMSlot0"));
-			if(tag.contains("RAMSlot1"))
-				this.getDataTracker().set(GB_OF_RAM_IN_SLOT_1, tag.getInt("RAMSlot1"));
-			if(tag.contains("VHDName"))
-				this.getDataTracker().set(HARD_DRIVE_FILE_NAME, tag.getString("VHDName"));
-			if(tag.contains("ISOName"))
-				this.getDataTracker().set(ISO_FILE_NAME, tag.getString("ISOName"));
+		if (tag != null) {
+			if (tag.contains("x64"))
+				this.getEntityData().set(SIXTY_FOUR_BIT, tag.getBoolean("x64"));
+			if (tag.contains("MoboInstalled"))
+				this.getEntityData().set(MOTHERBOARD_INSTALLED, tag.getBoolean("MoboInstalled"));
+			if (tag.contains("GPUInstalled"))
+				this.getEntityData().set(GPU_IN_PCI_SLOT, tag.getBoolean("GPUInstalled"));
+			if (tag.contains("CPUDividedBy"))
+				this.getEntityData().set(CPU_DIVIDED_BY, tag.getInt("CPUDividedBy"));
+			if (tag.contains("RAMSlot0"))
+				this.getEntityData().set(GB_OF_RAM_IN_SLOT_0, tag.getInt("RAMSlot0"));
+			if (tag.contains("RAMSlot1"))
+				this.getEntityData().set(GB_OF_RAM_IN_SLOT_1, tag.getInt("RAMSlot1"));
+			if (tag.contains("VHDName"))
+				this.getEntityData().set(HARD_DRIVE_FILE_NAME, tag.getString("VHDName"));
+			if (tag.contains("ISOName"))
+				this.getEntityData().set(ISO_FILE_NAME, tag.getString("ISOName"));
 		}
 	}
 
-	
-	public EntityPC(World world, double x, double y, double z, Vec3d lookAt, UUID owner, boolean glassSidepanel, NbtCompound tag) {
-		this(world, x, y, z, lookAt, owner, tag);
-		this.getDataTracker().set(GLASS_SIDEPANEL, glassSidepanel);
+	public EntityPC(Level level, double x, double y, double z, Vec3 lookAt, UUID owner, boolean glassSidepanel, CompoundTag tag) {
+		this(level, x, y, z, lookAt, owner, tag);
+		this.getEntityData().set(GLASS_SIDEPANEL, glassSidepanel);
 	}
 
-	public Vec3d getLookAtPos() {
-		return new Vec3d(this.getDataTracker().get(LOOK_AT_POS_X), this.getDataTracker().get(LOOK_AT_POS_Y), this.getDataTracker().get(LOOK_AT_POS_Z));
-	}
-
-	@Override
-	protected void initDataTracker() {
-		this.getDataTracker().startTracking(HARD_DRIVE_FILE_NAME, "");
-		this.getDataTracker().startTracking(ISO_FILE_NAME, "");
-		this.getDataTracker().startTracking(OWNER_UUID, "");
-		this.getDataTracker().startTracking(LOOK_AT_POS_X, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Y, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Z, 0f);
-		this.getDataTracker().startTracking(GB_OF_RAM_IN_SLOT_0, 0);
-		this.getDataTracker().startTracking(GB_OF_RAM_IN_SLOT_1, 0);
-		this.getDataTracker().startTracking(CPU_DIVIDED_BY, 0);
-		this.getDataTracker().startTracking(GPU_IN_PCI_SLOT, false);
-		this.getDataTracker().startTracking(MOTHERBOARD_INSTALLED, false);
-		this.getDataTracker().startTracking(GLASS_SIDEPANEL, false);
-		this.getDataTracker().startTracking(SIXTY_FOUR_BIT, false);
+	public Vec3 getLookAtPos() {
+		return new Vec3(this.getEntityData().get(LOOK_AT_POS_X), this.getEntityData().get(LOOK_AT_POS_Y), this.getEntityData().get(LOOK_AT_POS_Z));
 	}
 
 	@Override
-	protected void readCustomDataFromNbt(NbtCompound tag) {
-		this.getDataTracker().set(LOOK_AT_POS_X, tag.getFloat("LookAtX"));
-		this.getDataTracker().set(LOOK_AT_POS_Y, tag.getFloat("LookAtY"));
-		this.getDataTracker().set(LOOK_AT_POS_Z, tag.getFloat("LookAtZ"));
+	protected void defineSynchedData() {
+		this.getEntityData().define(HARD_DRIVE_FILE_NAME, "");
+		this.getEntityData().define(ISO_FILE_NAME, "");
+		this.getEntityData().define(OWNER_UUID, "");
+		this.getEntityData().define(LOOK_AT_POS_X, 0f);
+		this.getEntityData().define(LOOK_AT_POS_Y, 0f);
+		this.getEntityData().define(LOOK_AT_POS_Z, 0f);
+		this.getEntityData().define(GB_OF_RAM_IN_SLOT_0, 0);
+		this.getEntityData().define(GB_OF_RAM_IN_SLOT_1, 0);
+		this.getEntityData().define(CPU_DIVIDED_BY, 0);
+		this.getEntityData().define(GPU_IN_PCI_SLOT, false);
+		this.getEntityData().define(MOTHERBOARD_INSTALLED, false);
+		this.getEntityData().define(GLASS_SIDEPANEL, false);
+		this.getEntityData().define(SIXTY_FOUR_BIT, false);
+	}
 
-		if(tag.contains("Owner")){
-			this.getDataTracker().set(OWNER_UUID, tag.getString("Owner"));
+	@Override
+	protected void readAdditionalSaveData(CompoundTag tag) {
+		this.getEntityData().set(LOOK_AT_POS_X, tag.getFloat("LookAtX"));
+		this.getEntityData().set(LOOK_AT_POS_Y, tag.getFloat("LookAtY"));
+		this.getEntityData().set(LOOK_AT_POS_Z, tag.getFloat("LookAtZ"));
+
+		if (tag.contains("Owner")) {
+			this.getEntityData().set(OWNER_UUID, tag.getString("Owner"));
 		}
 
-		if(tag.contains("X64")) {
-			this.getDataTracker().set(SIXTY_FOUR_BIT, tag.getBoolean("X64"));
+		if (tag.contains("X64")) {
+			this.getEntityData().set(SIXTY_FOUR_BIT, tag.getBoolean("X64"));
 		}
 
-		if(tag.contains("CpuDividedBy")) {
-			this.getDataTracker().set(CPU_DIVIDED_BY, tag.getInt("CpuDividedBy"));
+		if (tag.contains("CpuDividedBy")) {
+			this.getEntityData().set(CPU_DIVIDED_BY, tag.getInt("CpuDividedBy"));
 		}
 
-		if(tag.contains("IsoFileName")) {
-			this.getDataTracker().set(ISO_FILE_NAME, tag.getString("IsoFileName"));
+		if (tag.contains("IsoFileName")) {
+			this.getEntityData().set(ISO_FILE_NAME, tag.getString("IsoFileName"));
 		}
 
-		if(tag.contains("GbRamSlot0")) {
-			this.getDataTracker().set(GB_OF_RAM_IN_SLOT_0, tag.getInt("GbRamSlot0"));
+		if (tag.contains("GbRamSlot0")) {
+			this.getEntityData().set(GB_OF_RAM_IN_SLOT_0, tag.getInt("GbRamSlot0"));
 		}
 
-		if(tag.contains("GbRamSlot1")) {
-			this.getDataTracker().set(GB_OF_RAM_IN_SLOT_1, tag.getInt("GbRamSlot1"));
+		if (tag.contains("GbRamSlot1")) {
+			this.getEntityData().set(GB_OF_RAM_IN_SLOT_1, tag.getInt("GbRamSlot1"));
 		}
 
-		if(tag.contains("GpuInstalled")) {
-			this.getDataTracker().set(GPU_IN_PCI_SLOT, tag.getBoolean("GpuInstalled"));
+		if (tag.contains("GpuInstalled")) {
+			this.getEntityData().set(GPU_IN_PCI_SLOT, tag.getBoolean("GpuInstalled"));
 		}
 
-		if(tag.contains("HardDriveFileName")) {
-			this.getDataTracker().set(HARD_DRIVE_FILE_NAME, tag.getString("HardDriveFileName"));
+		if (tag.contains("HardDriveFileName")) {
+			this.getEntityData().set(HARD_DRIVE_FILE_NAME, tag.getString("HardDriveFileName"));
 		}
 
-		if(tag.contains("MotherboardInstalled")) {
-			this.getDataTracker().set(MOTHERBOARD_INSTALLED, tag.getBoolean("MotherboardInstalled"));
+		if (tag.contains("MotherboardInstalled")) {
+			this.getEntityData().set(MOTHERBOARD_INSTALLED, tag.getBoolean("MotherboardInstalled"));
 		}
 
-		if(tag.contains("GlassSidepanel")) {
-			this.getDataTracker().set(GLASS_SIDEPANEL, tag.getBoolean("GlassSidepanel"));
+		if (tag.contains("GlassSidepanel")) {
+			this.getEntityData().set(GLASS_SIDEPANEL, tag.getBoolean("GlassSidepanel"));
 		}
 	}
 
 	@Override
-	protected void writeCustomDataToNbt(NbtCompound tag) {
-		tag.putBoolean("X64", this.getDataTracker().get(SIXTY_FOUR_BIT));
-		tag.putFloat("LookAtX", this.getDataTracker().get(LOOK_AT_POS_X));
-		tag.putFloat("LookAtY", this.getDataTracker().get(LOOK_AT_POS_Y));
-		tag.putFloat("LookAtZ", this.getDataTracker().get(LOOK_AT_POS_Z));
-		tag.putInt("CpuDividedBy", this.getDataTracker().get(CPU_DIVIDED_BY));
-		tag.putString("IsoFileName", this.getDataTracker().get(ISO_FILE_NAME));
-		tag.putInt("GbRamSlot0", this.getDataTracker().get(GB_OF_RAM_IN_SLOT_0));
-		tag.putInt("GbRamSlot1", this.getDataTracker().get(GB_OF_RAM_IN_SLOT_1));
-		tag.putBoolean("GpuInstalled", this.getDataTracker().get(GPU_IN_PCI_SLOT));
-		tag.putString("HardDriveFileName", this.getDataTracker().get(HARD_DRIVE_FILE_NAME));
-		tag.putBoolean("MotherboardInstalled", this.getDataTracker().get(MOTHERBOARD_INSTALLED));
-		tag.putBoolean("GlassSidepanel", this.getDataTracker().get(GLASS_SIDEPANEL));
-		tag.putString("Owner", this.getDataTracker().get(OWNER_UUID));
+	protected void addAdditionalSaveData(CompoundTag tag) {
+		tag.putBoolean("X64", this.getEntityData().get(SIXTY_FOUR_BIT));
+		tag.putFloat("LookAtX", this.getEntityData().get(LOOK_AT_POS_X));
+		tag.putFloat("LookAtY", this.getEntityData().get(LOOK_AT_POS_Y));
+		tag.putFloat("LookAtZ", this.getEntityData().get(LOOK_AT_POS_Z));
+		tag.putInt("CpuDividedBy", this.getEntityData().get(CPU_DIVIDED_BY));
+		tag.putString("IsoFileName", this.getEntityData().get(ISO_FILE_NAME));
+		tag.putInt("GbRamSlot0", this.getEntityData().get(GB_OF_RAM_IN_SLOT_0));
+		tag.putInt("GbRamSlot1", this.getEntityData().get(GB_OF_RAM_IN_SLOT_1));
+		tag.putBoolean("GpuInstalled", this.getEntityData().get(GPU_IN_PCI_SLOT));
+		tag.putString("HardDriveFileName", this.getEntityData().get(HARD_DRIVE_FILE_NAME));
+		tag.putBoolean("MotherboardInstalled", this.getEntityData().get(MOTHERBOARD_INSTALLED));
+		tag.putBoolean("GlassSidepanel", this.getEntityData().get(GLASS_SIDEPANEL));
+		tag.putString("Owner", this.getEntityData().get(OWNER_UUID));
 	}
 
-	public String getHardDriveFileName() { return this.getDataTracker().get(HARD_DRIVE_FILE_NAME); }
-	public String getIsoFileName() { return this.getDataTracker().get(ISO_FILE_NAME); }
-	public String getOwner() { return this.getDataTracker().get(OWNER_UUID); }
-	public int getGigsOfRamInSlot0() { return this.getDataTracker().get(GB_OF_RAM_IN_SLOT_0); }
-	public int getGigsOfRamInSlot1() { return this.getDataTracker().get(GB_OF_RAM_IN_SLOT_1); }
-	public int getCpuDividedBy() { return this.getDataTracker().get(CPU_DIVIDED_BY); }
-	public boolean getGpuInstalled() { return this.getDataTracker().get(GPU_IN_PCI_SLOT); }
-	public boolean getMotherboardInstalled() { return this.getDataTracker().get(MOTHERBOARD_INSTALLED); }
-	public boolean getGlassSidepanel() { return this.getDataTracker().get(GLASS_SIDEPANEL); }
-	public boolean get64Bit() { return this.getDataTracker().get(SIXTY_FOUR_BIT); }
+	public String getHardDriveFileName() { return this.getEntityData().get(HARD_DRIVE_FILE_NAME); }
+	public String getIsoFileName() { return this.getEntityData().get(ISO_FILE_NAME); }
+	public String getOwner() { return this.getEntityData().get(OWNER_UUID); }
+	public int getGigsOfRamInSlot0() { return this.getEntityData().get(GB_OF_RAM_IN_SLOT_0); }
+	public int getGigsOfRamInSlot1() { return this.getEntityData().get(GB_OF_RAM_IN_SLOT_1); }
+	public int getCpuDividedBy() { return this.getEntityData().get(CPU_DIVIDED_BY); }
+	public boolean getGpuInstalled() { return this.getEntityData().get(GPU_IN_PCI_SLOT); }
+	public boolean getMotherboardInstalled() { return this.getEntityData().get(MOTHERBOARD_INSTALLED); }
+	public boolean getGlassSidepanel() { return this.getEntityData().get(GLASS_SIDEPANEL); }
+	public boolean get64Bit() { return this.getEntityData().get(SIXTY_FOUR_BIT); }
 
-	public void setOwner(String uid) { this.getDataTracker().set(OWNER_UUID, uid); }
-	public void setGigsOfRamInSlot0(int gb) { this.getDataTracker().set(GB_OF_RAM_IN_SLOT_0, gb); }
-	public void setGigsOfRamInSlot1(int gb) { this.getDataTracker().set(GB_OF_RAM_IN_SLOT_1, gb); }
-	public void setGpuInstalled(boolean installed) { this.getDataTracker().set(GPU_IN_PCI_SLOT, installed); }
-	public void setCpuDividedBy(int dividedBy) { this.getDataTracker().set(CPU_DIVIDED_BY, dividedBy); }
-	public void setHardDriveFileName(String fileName) { this.getDataTracker().set(HARD_DRIVE_FILE_NAME, fileName); }
-	public void setIsoFileName(String fileName) { this.getDataTracker().set(ISO_FILE_NAME, fileName); }
-	public void setMotherboardInstalled(boolean installed) { this.getDataTracker().set(MOTHERBOARD_INSTALLED, installed); }
-	public void set64Bit(boolean sixtyFourBit) { this.getDataTracker().set(SIXTY_FOUR_BIT, sixtyFourBit); }
+	public void setOwner(String uid) { this.getEntityData().set(OWNER_UUID, uid); }
+	public void setGigsOfRamInSlot0(int gb) { this.getEntityData().set(GB_OF_RAM_IN_SLOT_0, gb); }
+	public void setGigsOfRamInSlot1(int gb) { this.getEntityData().set(GB_OF_RAM_IN_SLOT_1, gb); }
+	public void setGpuInstalled(boolean installed) { this.getEntityData().set(GPU_IN_PCI_SLOT, installed); }
+	public void setCpuDividedBy(int dividedBy) { this.getEntityData().set(CPU_DIVIDED_BY, dividedBy); }
+	public void setHardDriveFileName(String fileName) { this.getEntityData().set(HARD_DRIVE_FILE_NAME, fileName); }
+	public void setIsoFileName(String fileName) { this.getEntityData().set(ISO_FILE_NAME, fileName); }
+	public void setMotherboardInstalled(boolean installed) { this.getEntityData().set(MOTHERBOARD_INSTALLED, installed); }
+	public void set64Bit(boolean sixtyFourBit) { this.getEntityData().set(SIXTY_FOUR_BIT, sixtyFourBit); }
 
 	@Override
-	public ActionResult interact(PlayerEntity player, Hand hand) {
-		
-		if(!player.getWorld().isClient) {
-			if(player.isSneaking() && player.getUuid().toString().equals(this.getOwner())) {
-				if(this.getGlassSidepanel()) {
-					player.getWorld().spawnEntity(new ItemEntity(player.getWorld(),
-							this.getPos().x, this.getPos().y, this.getPos().z,
+	public InteractionResult interact(Player player, InteractionHand hand) {
+		if (!player.level().isClientSide) {
+			if (player.isShiftKeyDown() && player.getStringUUID().equals(this.getOwner())) {
+				if (this.getGlassSidepanel()) {
+					player.level().addFreshEntity(new ItemEntity(player.level(),
+							this.getX(), this.getY(), this.getZ(),
 							ItemPCCaseSidepanel.createPCStackByEntity(this)));
-				}else {
-					player.getWorld().spawnEntity(new ItemEntity(player.getWorld(),
-							this.getPos().x, this.getPos().y, this.getPos().z,
+				} else {
+					player.level().addFreshEntity(new ItemEntity(player.level(),
+							this.getX(), this.getY(), this.getZ(),
 							ItemPCCase.createPCStackByEntity(this)));
 				}
-				this.kill();
+				this.discard();
 			}
-		}else {
-			if(!player.isSneaking())
-				if(this.getOwner().equals(player.getUuid().toString())) {
+		} else {
+			if (!player.isShiftKeyDown()) {
+				if (this.getOwner().equals(player.getStringUUID())) {
 					ClientMod.currentPC = this;
 					MainMod.pcOpenGui.run();
-				}else {
-					
-					player.sendMessage(Text.translatable("newvmcomputers.not_your_computer").formatted(Formatting.RED),false);
+				} else {
+					player.sendSystemMessage(Component.translatable("newvmcomputers.not_your_computer").withStyle(ChatFormatting.RED));
 				}
+			}
 		}
-		return ActionResult.SUCCESS;
+		return InteractionResult.SUCCESS;
 	}
 
-	
 	@Override
-	public boolean canHit() {
+	public boolean isPickable() {
 		return true;
 	}
 
-	
 	@Override
-	public Packet<ClientPlayPacketListener> createSpawnPacket() {
-		return new EntitySpawnS2CPacket(this);
+	public Packet<ClientGamePacketListener> getAddEntityPacket() {
+		return new ClientboundAddEntityPacket(this);
 	}
-
 }
+

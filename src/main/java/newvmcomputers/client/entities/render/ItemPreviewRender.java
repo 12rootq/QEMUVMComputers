@@ -5,47 +5,47 @@ import org.joml.Quaternionf;
 import newvmcomputers.entities.EntityItemPreview;
 import newvmcomputers.item.PlacableOrderableItem;
 import newvmcomputers.utils.MVCUtils;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.world.item.ItemDisplayContext;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.phys.Vec3;
 
 public class ItemPreviewRender extends EntityRenderer<EntityItemPreview> {
 
-	public ItemPreviewRender(EntityRendererFactory.Context ctx) {
+	public ItemPreviewRender(EntityRendererProvider.Context ctx) {
 		super(ctx);
 	}
 
 	@Override
-	public Identifier getTexture(EntityItemPreview entity) {
+	public ResourceLocation getTextureLocation(EntityItemPreview entity) {
 		return null;
 	}
 
 	@Override
-	public void render(EntityItemPreview entity, float yaw, float tickDelta, MatrixStack matrices,
-					   VertexConsumerProvider vertexConsumers, int light) {
+	public void render(EntityItemPreview entity, float yaw, float tickDelta, PoseStack matrices,
+					   MultiBufferSource vertexConsumers, int light) {
 
-		MinecraftClient mcc = MinecraftClient.getInstance();
+		Minecraft mcc = Minecraft.getInstance();
 
 		
 		if (mcc.player == null) {
 			return;
 		}
 
-		matrices.push();
+		matrices.pushPose();
 		matrices.translate(0, 0.5, 0);
 
-		Vec3d v = mcc.player.getPos();
+		Vec3 v = mcc.player.position();
 		
-		Quaternionf look = MVCUtils.lookAt(entity.getPos(), new Vec3d(v.x, entity.getY(), v.z));
-		matrices.multiply(look);
+		Quaternionf look = MVCUtils.lookAt(entity.position(), new Vec3(v.x, entity.getY(), v.z));
+		matrices.mulPose(look);
 
-		matrices.push();
+		matrices.pushPose();
 
 		
 		if (entity.getPreviewedItemStack().getItem() instanceof PlacableOrderableItem placableItem) {
@@ -56,20 +56,22 @@ public class ItemPreviewRender extends EntityRenderer<EntityItemPreview> {
 
 		
 		
-		MinecraftClient.getInstance().getItemRenderer().renderItem(
+		Minecraft.getInstance().getItemRenderer().renderStatic(
 				entity.getPreviewedItemStack(),
-				ModelTransformationMode.NONE,
+				ItemDisplayContext.NONE,
 				15728880,
-				OverlayTexture.DEFAULT_UV,
+				OverlayTexture.NO_OVERLAY,
 				matrices,
 				vertexConsumers,
-				entity.getWorld(),
+				entity.level(),
 				entity.getId()
 		);
 
-		matrices.pop();
-		matrices.pop();
+		matrices.popPose();
+		matrices.popPose();
 
 		super.render(entity, yaw, tickDelta, matrices, vertexConsumers, light);
 	}
 }
+
+

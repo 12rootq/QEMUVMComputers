@@ -5,55 +5,57 @@ import org.joml.Quaternionf;
 import newvmcomputers.entities.EntityMouse;
 import newvmcomputers.item.ItemList;
 import newvmcomputers.utils.MVCUtils;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.world.item.ItemDisplayContext;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
 
 public class MouseRender extends EntityRenderer<EntityMouse> {
 
-	public MouseRender(EntityRendererFactory.Context ctx) {
+	public MouseRender(EntityRendererProvider.Context ctx) {
 		super(ctx);
 	}
 
 	@Override
-	public Identifier getTexture(EntityMouse entity) {
+	public ResourceLocation getTextureLocation(EntityMouse entity) {
 		return null;
 	}
 
 	@Override
-	public void render(EntityMouse entity, float yaw, float tickDelta, MatrixStack matrices,
-					   VertexConsumerProvider vertexConsumers, int light) {
+	public void render(EntityMouse entity, float yaw, float tickDelta, PoseStack matrices,
+					   MultiBufferSource vertexConsumers, int light) {
 
-		matrices.push();
+		matrices.pushPose();
 		matrices.translate(0, 0.5, 0);
 
 		
-		Quaternionf look = MVCUtils.lookAt(entity.getPos(), entity.getLookAtPos());
-		matrices.multiply(look);
+		Quaternionf look = MVCUtils.lookAt(entity.position(), entity.getLookAtPos());
+		matrices.mulPose(look);
 
 		
 		
 		
-		MinecraftClient.getInstance().getItemRenderer().renderItem(
-				new ItemStack(ItemList.ITEM_MOUSE),
-				ModelTransformationMode.NONE,
+		Minecraft.getInstance().getItemRenderer().renderStatic(
+				new ItemStack(ItemList.ITEM_MOUSE.get()),
+				ItemDisplayContext.NONE,
 				light,
-				OverlayTexture.DEFAULT_UV,
+				OverlayTexture.NO_OVERLAY,
 				matrices,
 				vertexConsumers,
-				entity.getWorld(),
+				entity.level(),
 				entity.getId()
 		);
 
-		matrices.pop();
+		matrices.popPose();
 
 		
 		super.render(entity, yaw, tickDelta, matrices, vertexConsumers, light);
 	}
 }
+
+
