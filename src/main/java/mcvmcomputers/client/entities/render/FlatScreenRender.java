@@ -1,0 +1,70 @@
+package mcvmcomputers.client.entities.render;
+
+import java.util.UUID;
+
+
+
+import mcvmcomputers.client.ClientMod;
+import mcvmcomputers.entities.EntityFlatScreen;
+import mcvmcomputers.item.ItemList;
+import mcvmcomputers.utils.MVCUtils;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
+
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexConsumerProvider;
+
+import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.render.entity.EntityRendererFactory;
+import net.minecraft.client.render.model.json.ModelTransformationMode;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Identifier;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+
+public class FlatScreenRender extends EntityRenderer<EntityFlatScreen>{
+
+
+	public FlatScreenRender(EntityRendererFactory.Context context) {
+		super(context);
+	}
+
+	@Override
+	public Identifier getTexture(EntityFlatScreen entity) {
+		return null;
+	}
+	
+	@Override
+	public void render(EntityFlatScreen entity, float yaw, float tickDelta, MatrixStack matrices,
+			VertexConsumerProvider vertexConsumers, int light) {
+		if(entity.getOwnerUUID().isEmpty()) {
+			return;
+		}
+		
+		matrices.push();
+		matrices.translate(0, 0.5, 0);
+		Quaternionf look = MVCUtils.lookAt(entity.getPos(), entity.getLookAtPos());
+		matrices.multiply(look);
+		MinecraftClient.getInstance().getItemRenderer().renderItem(new ItemStack(ItemList.ITEM_FLATSCREEN), ModelTransformationMode.NONE, light, OverlayTexture.DEFAULT_UV, matrices, vertexConsumers, entity.getWorld(), 0);
+		if(ClientMod.vmScreenTextures.containsKey(UUID.fromString(entity.getOwnerUUID()))) {
+			matrices.push();
+			matrices.scale(0.006f, 0.006f, 0.006f);
+			matrices.multiply(new Quaternionf());
+			matrices.multiply(new Quaternionf().rotationZ((float)Math.toRadians(180)));
+			matrices.translate(-59.4f, -18.3f, -13f);
+			matrices.scale(0.8079f, 0.488f, 1f);
+			matrices.translate(10, 5.4f, 7.76f);
+			Matrix4f matrix4f = matrices.peek().getPositionMatrix();
+			VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayer.getText(ClientMod.vmScreenTextures.get(UUID.fromString(entity.getOwnerUUID()))));
+			vertexConsumer.vertex(matrix4f, 0.0F, 128.0F, -0.01F).color(255, 255, 255, 255).texture(0.0F, 1.0F).light(light).next();
+	        vertexConsumer.vertex(matrix4f, 128.0F, 128.0F, -0.01F).color(255, 255, 255, 255).texture(1.0F, 1.0F).light(light).next();
+	        vertexConsumer.vertex(matrix4f, 128.0F, 0.0F, -0.01F).color(255, 255, 255, 255).texture(1.0F, 0.0F).light(light).next();
+	        vertexConsumer.vertex(matrix4f, 0.0F, 0.0F, -0.01F).color(255, 255, 255, 255).texture(0.0F, 0.0F).light(light).next();
+			matrices.pop();
+		}
+		matrices.pop();
+	}
+
+}

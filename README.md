@@ -1,8 +1,10 @@
-<h2>THIS IS A FAN MADE PORT OF VM COMPUTERS BY Delta2Force TO 1.20.1<h2>
-<h3> IF YOU HAVE PROBLEMS WITH THIS MOD PLEASE SUBMIT THEM TO MY GITHUB<h3>
-<p align="center"><img src="https://raw.githubusercontent.com/FasterBranch527/new-vm-computers/main/src/main/resources/assets/newvmcomputers/icon.png" height="320"></p>
+> [!IMPORTANT]
+> The project is actively developing! We have moved to a new development branch structure (see details below).
+> All important updates are now published in our [Discord](https://discord.gg/gNgaxZa4yX).
 
-<a href="https://discord.gg/gNgaxZa4yX">Join the vmcomputers Discord Server!</a>
+<p align="center"><img src="https://raw.githubusercontent.com/y2k04/MCVmComputers/master/src/main/resources/assets/mcvmcomputers/icon.png" height="320"></p>
+
+<a href="https://discord.gg/gNgaxZa4yX">Join the MCVmComputers Discord Server!</a>
 
 <details>
 	<summary>Donate to the original creator (<a href="https://github.com/Delta2Force">Delta2Force</a>)<br><sub><i>Note: Only accepts Bitcoin and BitcoinCash</i></sub></summary>
@@ -11,10 +13,10 @@
 
 <h3>Dependencies</h3>
 <ul>
-	<li>Minecraft 1.20.1</li>
+	<li>Minecraft 1.16.5</li>
 	<ul>
 		<li><a href="https://fabricmc.net/use">Fabric</a></li>
-		<li><a href="https://modrinth.com/mod/fabric-api/version/0.92.7+1.20.1">Fabric API <i>(0.92.7+1.20.1)</i></a></li>
+		<li><a href="https://modrinth.com/mod/fabric-api/version/0.42.0+1.16">Fabric API <i>(0.42.0+1.16)</i></a></li>
 	</ul>
 	<li><a href="https://www.virtualbox.org/wiki/Download_Old_Builds_6_1">VirtualBox 6.1</a></li>
 </ul>
@@ -74,8 +76,18 @@
 	<ul>
 		<li>Where it says <i>'Update [insert file name here]'</i> should be replaced with a short overview of what was changed. Use the optional extended description to explain the specific changes that were made.</li>
 	</ul>
-	<li>When making a pull request, make sure that you have made all of the changes you have wanted to before posting the pull request.</li>
+    <li>When making a pull request, make sure that you have made all of the changes you have wanted to before posting the pull request.</li>
 	<ul>
 		<li>It gets messy when you create a pull request and continue to make changes after the fact.</li>
 	</ul>
 </ol>
+
+<hr>
+
+## Development Branches
+1.  **Legacy**
+    Already released versions or versions declared obsolete due to critical bugs or architectural changes.
+2.  **Port/Rewrite (Versions 1.x.x)**
+    Porting the original mod to new Minecraft versions with implementation and fixes of the original author's ideas.
+3.  **Reimagining (Versions 2.x.x)**
+    Author's reimagining of the mod: adding custom components, new devices, and expanding functionality beyond the original.

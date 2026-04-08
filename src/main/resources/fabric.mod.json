@@ -1,35 +1,37 @@
 {
   "schemaVersion": 1,
-  "id": "newvmcomputers",
+  "id": "mcvmcomputers",
   "version": "${version}",
-
-  "name": "*NEW* VM Computers",
-  "description": "Build computers that actually work using the VirtualBox API! Now on 1.20.1!",
+  "name": "New VM Computers",
+  "description": "Build computers that actually work using the VirtualBox API!, Now in MC 1.20.1",
   "authors": [
     "DeltaTwoForce",
     "FB527"
   ],
-
+  "contact": {
+    "homepage": "https://modrinth.com/mod/new-vm-computers",
+    "curseforge": "https://www.curseforge.com/minecraft/mc-mods/new-vm-computers",
+    "sources": "https://github.com/FasterBranch527/new-vm-computers/tree/1.20.1-fabric/src/main/resources/assets/newvmcomputers"
+  },
   "license": "CC0-1.0",
-  "icon": "assets/newvmcomputers/icon.png",
-
+  "icon": "assets/mcvmcomputers/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": [
-      "newvmcomputers.MainMod"
+      "mcvmcomputers.MainMod"
     ],
     "client": [
-      "newvmcomputers.client.ClientMod"
+      "mcvmcomputers.client.ClientMod"
     ]
   },
   "mixins": [
-    "newvmcomputers.mixins.json"
+    "mcvmcomputers.mixins.json"
   ],
-
   "depends": {
-    "fabricloader": ">=0.10.0",
-    "fabric": "*",
-    "minecraft": "1.20.1"
+    "fabricloader": ">=0.14.0",
+    "fabric": ">=0.87.0",
+    "minecraft": "~1.20.1",
+    "java": ">=17"
   },
   "suggests": {
     "flamingo": "*"
