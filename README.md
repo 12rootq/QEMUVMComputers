@@ -6,7 +6,7 @@ Check out the original **VM Computers** mod by Delta2Force:
 https://www.curseforge.com/minecraft/mc-mods/vm-computers
 
 If you have problems with this port, please submit them to my GitHub.
-<p align="center"><img src="https://raw.githubusercontent.com/FasterBranch527/new-vm-computers/blob/1.20.1-fabric/icon.png" height="320"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/FasterBranch527/new-vm-computers/1.20.1-fabric/icon.png" height="320"></p>
 
 <a href="https://discord.gg/gNgaxZa4yX">Join the vmcomputers Discord Server!</a>
 
