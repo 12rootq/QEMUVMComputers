@@ -16,28 +16,28 @@ public class MVCUtils {
 		if(Math.abs(dot - (1.0f)) < 0.000001f) {
 			return new Quaternionf();
 		}
-		
+
 		double rotAngle = Math.acos(dot);
 		Vec3d rotAxis = forward.crossProduct(fwd);
 		rotAxis = rotAxis.normalize();
 		return createFromAxisAngle(rotAxis, rotAngle);
 	}
-	
+
 	public static Quaternionf createFromAxisAngle(Vec3d axis, double angle) {
 		double halfAngle = angle * .5;
 	    float s = (float)Math.sin(halfAngle);
 	    Quaternionf q = new Quaternionf((float) axis.x * s, (float) axis.y * s, (float) axis.z * s, (float)Math.cos(halfAngle));
 	    return q;
 	}
-	
+
 	public static float lerp(float a, float b, float t) {
 		return a + (b-a) * t;
 	}
-	
+
 	public static double lerp(double a, double b, double t) {
 		return a + (b-a) * t;
 	}
-	
+
 	public static final char COLOR_CHAR = (char) (0xfeff00a7);
 	public static String getColorChar(char color) {
 		return COLOR_CHAR + "" + color;

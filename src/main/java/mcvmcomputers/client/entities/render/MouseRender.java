@@ -23,7 +23,7 @@ public class MouseRender extends EntityRenderer<EntityMouse>{
 	public Identifier getTexture(EntityMouse entity) {
 		return null;
 	}
-	
+
 	@Override
 	public void render(EntityMouse entity, float yaw, float tickDelta, MatrixStack matrices,
 			VertexConsumerProvider vertexConsumers, int light) {

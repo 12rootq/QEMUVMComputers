@@ -20,7 +20,7 @@ public class ItemPackage extends Item{
 	public ItemPackage(Settings settings) {
 		super(settings);
 	}
-	
+
 	@Override
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
 		if(!world.isClient){
@@ -34,7 +34,7 @@ public class ItemPackage extends Item{
 		}
 		return super.use(world, user, hand);
 	}
-	
+
 	@Override
 	public Text getName(ItemStack stack) {
 		if(stack.getNbt() != null) {
@@ -44,12 +44,12 @@ public class ItemPackage extends Item{
 		}
 		return Text.translatable("mcvmcomputers.invalid_package").formatted(Formatting.RED);
 	}
-	
+
 	@Override
 	public void appendTooltip(ItemStack stack, World world, List<Text> tooltip, TooltipContext context) {
 		tooltip.add(Text.translatable("mcvmcomputers.open_with_right_click").formatted(Formatting.GRAY));
 	}
-	
+
 	public static ItemStack createPackage(Identifier id) {
 		ItemStack is = new ItemStack(ItemList.ITEM_PACKAGE);
 		NbtCompound ct = is.getOrCreateNbt();

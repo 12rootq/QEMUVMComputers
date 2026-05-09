@@ -13,12 +13,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.virtualbox_6_1.IMachine;
-import org.virtualbox_6_1.IProgress;
-import org.virtualbox_6_1.ISession;
-import org.virtualbox_6_1.LockType;
-import org.virtualbox_6_1.MachineState;
-import org.virtualbox_6_1.VBoxException;
 
 import mcvmcomputers.client.gui.setup.GuiSetup;
 import mcvmcomputers.client.tablet.TabletOS;
@@ -42,25 +36,25 @@ import net.minecraft.util.math.Vec3d;
 public class GameloopMixin {
 	@Shadow
 	public ClientPlayerEntity player;
-	
+
 	@Shadow
 	public HitResult crosshairTarget;
-	
+
 	@Shadow
 	public ClientWorld world;
-	
+
 	@Shadow
 	public Screen currentScreen;
-	
+
 	@Shadow
 	private boolean paused;
-	
+
 	@Shadow
 	private float pausedTickDelta;
-	
+
 	@Shadow
 	private RenderTickCounter renderTickCounter;
-	
+
 	@Inject(at = @At("HEAD"), method = "run")
 	private void run(CallbackInfo info) {
 		MinecraftClient mcc = MinecraftClient.getInstance();
@@ -69,7 +63,7 @@ public class GameloopMixin {
 		vhdDirectory.mkdirs();
 		isoDirectory = new File(mcc.runDirectory, "vm_computers/isos");
 		isoDirectory.mkdirs();
-		
+
 		File num = new File(vhdDirectory.getParentFile(), "vhdnum");
 		if(num.exists()) {
 			try {
@@ -80,7 +74,7 @@ public class GameloopMixin {
 			}
 		}
 	}
-	
+
 	@Inject(at = @At("HEAD"), method = "render")
 	private void render(CallbackInfo info) {
 		if(lastDeltaTimeTime == 0) {
@@ -89,10 +83,10 @@ public class GameloopMixin {
 			long now = System.currentTimeMillis();
 			long diff = now - lastDeltaTimeTime;
 			lastDeltaTimeTime = now;
-			
+
 			deltaTime = (float) diff / 1000f;
 		}
-		
+
 		if(tabletOS != null) {
 			tabletOS.generateTexture();
 		}else {
@@ -102,7 +96,14 @@ public class GameloopMixin {
 					@Override
 					public void run() {
 						while(true) {
-							try {tabletOS.render();}catch(ConcurrentModificationException e) {}
+							try {
+								tabletOS.render();
+								Thread.sleep(33);
+							} catch(ConcurrentModificationException e) {
+
+							} catch(InterruptedException e) {
+								break;
+							}
 						}
 					}
 				}, "Tablet Renderer");
@@ -111,26 +112,18 @@ public class GameloopMixin {
 				e.printStackTrace();
 			}
 		}
-		if(vboxWebSrv != null) {
-			try {
-				while(vboxWebSrv.getInputStream().available() > 0) {
-					discardAllBytes.write(vboxWebSrv.getInputStream().read()); //Not doing this made the web service time out.
-				}
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-		}
-		
+
+
 		if(vmTurnedOn) {
 			if(player == null) {
-				vmUpdateThread.interrupt();
-				
-				IMachine m = vb.findMachine("VmComputersVm");
-				ISession sess = vbManager.getSessionObject();
-				m.lockMachine(sess, LockType.Shared);
-				IProgress pg = sess.getConsole().powerDown();
-				pg.waitForCompletion(-1);
-				sess.unlockMachine();
+				if(vmUpdateThread != null) {
+					vmUpdateThread.interrupt();
+				}
+
+
+				if(vbox != null) {
+					vbox.powerOffVm("VmComputersVm");
+				}
 				vmTurnedOn = false;
 				vmTurningOff = false;
 				vmTurningOn = false;
@@ -139,11 +132,11 @@ public class GameloopMixin {
 					vmUpdateThread = new Thread(new VMRunnable(), "VM Update Thread");
 					vmUpdateThread.start();
 				}
-				
+
 				generatePCScreen();
 			}
 		}
-		
+
 		if(player != null) {
 			if(player.getActiveItem() != null) {
 				boolean tabletOut = false;
@@ -155,23 +148,23 @@ public class GameloopMixin {
 						}
 					}
 				}
-				
+
 				if(tabletOut != tabletOS.tabletOn) {
 					tabletOS.tabletOn = tabletOut;
-					
+
 					if(tabletOut) {
 						tabletOS.tabletTakenOut();
 					}else {
 						tabletOS.tabletUnequipped();
 					}
 				}
-				
+
 				for(ItemStack is : player.getHandItems()) {
 					if(is.getItem() != null) {
 						if(ItemList.PLACABLE_ITEMS.contains(is.getItem())) {
 							if(thePreviewEntity != null) {
 								thePreviewEntity.setItem(is);
-								if(crosshairTarget != null) { 
+								if(crosshairTarget != null) {
 									Vec3d hit = crosshairTarget.getPos();
 									thePreviewEntity.updatePosition(hit.x, hit.y, hit.z);
 								}else {
@@ -206,39 +199,19 @@ public class GameloopMixin {
 		vmTurnedOn = false;
 		vmTurningOff = false;
 
-		if(vbManager != null) {
-			boolean vmExists = false;
-			IMachine mach = null;
-			try {
-				mach = vb.findMachine("VmComputersVm");
-				vmExists = true;
-			}catch(VBoxException e) {}
+		if(vbox != null) {
+			boolean vmExists = vbox.vmExists("VmComputersVm");
 
 			if(vmExists) {
-				if(mach.getState() == MachineState.Running || mach.getState() == MachineState.Starting) {
-					if(vmSession != null) {
-						IProgress ip = vmSession.getConsole().powerDown();
-						ip.waitForCompletion(-1);
-						vmSession.unlockMachine();
-					}else {
-						ISession sess = vbManager.getSessionObject();
-						mach.lockMachine(sess, LockType.Shared);
-						IProgress ip = sess.getConsole().powerDown();
-						ip.waitForCompletion(-1);
-						sess.unlockMachine();
-					}
-				} else if(mach.getState() == MachineState.Saved) {
-					ISession sess = vbManager.getSessionObject();
-					mach.lockMachine(sess, LockType.Shared);
-					sess.getMachine().discardSavedState(true);
-					sess.unlockMachine();
+				String state = vbox.getVmState("VmComputersVm");
+				if("running".equals(state) || "starting".equals(state) || "firstonline".equals(state)) {
+					vbox.powerOffVm("VmComputersVm");
+				} else if("saved".equals(state)) {
+					vbox.discardSavedState("VmComputersVm");
 				}
 			}
-			vbManager.cleanup();
 		}
-		if(vboxWebSrv != null) {
-			vboxWebSrv.destroy();
-		}
+
 	}
 
 	@Inject(at = @At("HEAD"), method = "close")
@@ -259,44 +232,25 @@ public class GameloopMixin {
 		if(tabletThread != null) {
 			tabletThread.interrupt();
 		}
-		
+
 		vmTurningOn = false;
 		vmTurnedOn = false;
 		vmTurningOff = false;
-		
-		if(vbManager != null) {
-			boolean vmExists = false;
-			IMachine mach = null;
-			try {
-				mach = vb.findMachine("VmComputersVm");
-				vmExists = true;
-			}catch(VBoxException e) {}
-			
+
+		if(vbox != null) {
+			boolean vmExists = vbox.vmExists("VmComputersVm");
+
 			if(vmExists) {
-				if(mach.getState() == MachineState.Running || mach.getState() == MachineState.Starting) {
-					if(vmSession != null) {
-						IProgress ip = vmSession.getConsole().powerDown();
-						ip.waitForCompletion(-1);
-						vmSession.unlockMachine();
-					}else {
-						ISession sess = vbManager.getSessionObject();
-						mach.lockMachine(sess, LockType.Shared);
-						IProgress ip = sess.getConsole().powerDown();
-						ip.waitForCompletion(-1);
-						sess.unlockMachine();
-					}
-				} else if(mach.getState() == MachineState.Saved) {
-					ISession sess = vbManager.getSessionObject();
-					mach.lockMachine(sess, LockType.Shared);
-					sess.getMachine().discardSavedState(true);
-					sess.unlockMachine();
+				String state = vbox.getVmState("VmComputersVm");
+				if("running".equals(state) || "starting".equals(state) || "firstonline".equals(state)) {
+					vbox.powerOffVm("VmComputersVm");
+				} else if("saved".equals(state)) {
+					vbox.discardSavedState("VmComputersVm");
 				}
 			}
-			vbManager.cleanup();
+
 		}
-		if(vboxWebSrv != null) {
-			vboxWebSrv.destroy();
-		}
+
 		System.out.println("Stopped VM Computers Mod.");
 	}
 }

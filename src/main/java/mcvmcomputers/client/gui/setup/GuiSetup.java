@@ -37,27 +37,27 @@ public class GuiSetup extends Screen{
 	public String virtualBoxDirectory = "";
 	private Language language = Language.getInstance();
 	private MinecraftClient minecraft = MinecraftClient.getInstance();
-	
+
 	public GuiSetup() {
 		super(Text.literal("Setup"));
 	}
-	
+
 	public <T extends Element & Selectable> void addElement(T e) {
 		this.addSelectableChild(e);
 	}
-	
+
 	public void clearElements() {
 		this.clearChildren();
 	}
-	
+
 	public void clearButtons() {
 		this.clearChildren();
 	}
-	
+
 	public void addButton(ButtonWidget bw) {
 		this.addDrawableChild(bw);
 	}
-	
+
 	public void nextPage() {
 		if(setupIndex < setupPages.size()) {
 			setupIndex++;
@@ -65,16 +65,16 @@ public class GuiSetup extends Screen{
 			this.init();
 		}
 	}
-	
+
 	@Override
 	public boolean shouldCloseOnEsc() {
 		return false;
 	}
-	
+
 	public String translation(String in) {
 		return language.get(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
 	}
-	
+
 	public void lastPage() {
 		startVb = true;
 		setupIndex = setupPages.size() - 1;
@@ -88,7 +88,7 @@ public class GuiSetup extends Screen{
 		currentSetupPage = setupPages.get(0);
 		this.init();
 	}
-	
+
 	@Override
 	public void init() {
 		language = Language.getInstance();
@@ -136,7 +136,7 @@ public class GuiSetup extends Screen{
 		this.clearChildren();
 		currentSetupPage.init();
 	}
-	
+
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		this.renderBackground(context);

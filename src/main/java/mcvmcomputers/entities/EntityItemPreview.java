@@ -16,22 +16,22 @@ import net.minecraft.world.World;
 public class EntityItemPreview extends Entity{
 	private static final TrackedData<ItemStack> PREVIEWED_STACK =
 				DataTracker.registerData(EntityItemPreview.class, TrackedDataHandlerRegistry.ITEM_STACK);
-	
+
 	public EntityItemPreview(EntityType<?> type, World world) {
 		super(type, world);
 	}
-	
+
 	public EntityItemPreview(World world, double x, double y, double z, ItemStack stack) {
 		this(EntityList.ITEM_PREVIEW, world);
 		this.updatePosition(x, y, z);
 		this.getDataTracker().set(PREVIEWED_STACK, stack);
 	}
-	
+
 	public EntityItemPreview(World world, double x, double y, double z) {
 		this(EntityList.ITEM_PREVIEW, world);
 		this.updatePosition(x, y, z);
 	}
-	
+
 	@Override
 	public void tick() {
 		if(this.getWorld().isClient) {
@@ -42,11 +42,11 @@ public class EntityItemPreview extends Entity{
 			this.kill();
 		}
 	}
-	
+
 	public void setItem(ItemStack is) {
 		this.getDataTracker().set(PREVIEWED_STACK, is);
 	}
-	
+
 	public ItemStack getPreviewedItemStack() {
 		return this.getDataTracker().get(PREVIEWED_STACK);
 	}

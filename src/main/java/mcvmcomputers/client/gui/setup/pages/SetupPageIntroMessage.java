@@ -17,9 +17,9 @@ public class SetupPageIntroMessage extends SetupPage{
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		if(!setupGui.loadedConfiguration) {
 			String text = setupGui.translation("mcvmcomputers.setup.intro_message");
-			
+
 			int offY = -36;
-			
+
 			for(String s : text.split("\n")) {
 				context.drawTextWithShadow(this.textRender, s, setupGui.width/2 - this.textRender.getWidth(s)/2, setupGui.height/2 + offY, -1);
 				offY+=10;

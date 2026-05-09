@@ -14,7 +14,7 @@ public class MouseMixin {
 	private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
 		ClientMod.mouseDeltaScroll = (int) vertical;
 	}
-	
+
 	@Inject(at = @At("TAIL"), method = "onMouseButton")
 	private void onMouseButton(long window, int button, int action, int mods, CallbackInfo ci) {
 		ClientMod.leftMouseButton = button == 0 && action == 1;

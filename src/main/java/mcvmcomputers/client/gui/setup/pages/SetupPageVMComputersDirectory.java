@@ -15,7 +15,7 @@ public class SetupPageVMComputersDirectory extends SetupPage{
 	private TextFieldWidget vmComputersDirectory;
 	private ButtonWidget next;
 	private String vboxStatus;
-	
+
 	public SetupPageVMComputersDirectory(GuiSetup setupGui, TextRenderer textRender) {
 		super(setupGui, textRender);
 	}
@@ -28,7 +28,7 @@ public class SetupPageVMComputersDirectory extends SetupPage{
 		context.drawTextWithShadow(this.textRender, setupGui.translation("mcvmcomputers.setup.dontchange1"), setupGui.width/2-160, 70, -1);
 		this.vmComputersDirectory.render(context, mouseX, mouseY, delta);
 	}
-	
+
 	private void next(ButtonWidget bw) {
 		if(checkDirectory(vmComputersDirectory.getText())) {
 			File parent = new File(vmComputersDirectory.getText());
@@ -50,7 +50,7 @@ public class SetupPageVMComputersDirectory extends SetupPage{
 			this.setupGui.nextPage();
 		}
 	}
-	
+
 	private boolean checkDirectory(String s) {
 		if(s.isEmpty()) {
 			vboxStatus = setupGui.translation("mcvmcomputers.input_empty");

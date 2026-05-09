@@ -21,17 +21,21 @@ public class KeyConverter {
 				}
 				ints.add(ts);
 			}
+		}else if(action == GLFW_REPEAT) {
+
+			for(int s : sck) {
+				ints.add(s);
+			}
 		}else {
 			return new ArrayList<Integer>();
 		}
 		return ints;
 	}
-	
-	//is this good practice? it seems absolutely horrendous to me but
-	//i dont know how else to solve it
+
+
 	public static int[] scancodeFromGLFWKey(int glfwKey) {
-		//US Layout only
-		//Missing some keys
+
+
 		switch(glfwKey) {
 		case GLFW_KEY_ESCAPE:
 			return new int[] {0x01};

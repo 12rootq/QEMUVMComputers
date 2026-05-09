@@ -23,7 +23,7 @@ public class PCRender extends EntityRenderer<EntityPC>{
 	public Identifier getTexture(EntityPC entity) {
 		return null;
 	}
-	
+
 	@Override
 	public void render(EntityPC entity, float yaw, float tickDelta, MatrixStack matrices,
 			VertexConsumerProvider vertexConsumers, int light) {
@@ -32,11 +32,11 @@ public class PCRender extends EntityRenderer<EntityPC>{
 		Quaternionf look = MVCUtils.lookAt(entity.getPos(), entity.getLookAtPos());
 		matrices.multiply(look);
 		MinecraftClient.getInstance().getItemRenderer().renderItem(new ItemStack(ItemList.PC_CASE_NO_PANEL), ModelTransformationMode.NONE, light, OverlayTexture.DEFAULT_UV, matrices, vertexConsumers, entity.getWorld(), 0);
-		
+
 		matrices.push();
 		matrices.multiply(new Quaternionf().rotationZ((float)Math.toRadians(-90)));
 		matrices.multiply(new Quaternionf().rotationY((float)Math.toRadians(-90)));
-		
+
 		matrices.scale(0.55f, 0.55f, 0.55f);
 		matrices.translate(0.06f, 0.28f, -0.29f);
 		if(entity.getMotherboardInstalled()) {
@@ -77,7 +77,7 @@ public class PCRender extends EntityRenderer<EntityPC>{
 			matrices.pop();
 		}
 		matrices.pop();
-		
+
 		if(entity.getGlassSidepanel()) {
 			matrices.push();
 			MinecraftClient.getInstance().getItemRenderer().renderItem(new ItemStack(ItemList.PC_CASE_GLASS_PANEL), ModelTransformationMode.NONE, light, OverlayTexture.DEFAULT_UV, matrices, vertexConsumers, entity.getWorld(), 0);

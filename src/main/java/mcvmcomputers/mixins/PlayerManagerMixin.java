@@ -7,7 +7,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.entities.EntityPC;
 import mcvmcomputers.networking.PacketList;
@@ -25,7 +25,7 @@ public class PlayerManagerMixin {
 		EntityPC pc = MainMod.computers.remove(player.getUuid());;
 		if(pc != null){
 			Collection<ServerPlayerEntity> watchingPlayers = PlayerLookup.tracking(pc);
-			PacketByteBuf b = new PacketByteBuf(Unpooled.buffer());
+			PacketByteBuf b = PacketByteBufs.create();
 			b.writeUuid(player.getUuid());
 			watchingPlayers.forEach((p) -> {
 				ServerPlayNetworking.send(p, PacketList.S2C_STOP_SCREEN, b);

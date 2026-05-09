@@ -66,14 +66,14 @@ public class ItemList {
 	public static final Item PC_CASE_NO_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
 	public static final Item PC_CASE_ONLY_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
 	public static final Item PC_CASE_GLASS_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
-	
+
 	public static final List<Item> PLACABLE_ITEMS = Arrays.asList(PC_CASE, PC_CASE_SIDEPANEL, ITEM_KEYBOARD, ITEM_MOUSE, ITEM_CRTSCREEN, ITEM_FLATSCREEN, ITEM_WALLTV);
-	
+
 	public static void init() {
 		Registry.register(Registries.ITEM_GROUP, PARTS_KEY, MOD_ITEM_GROUP_PARTS);
 		Registry.register(Registries.ITEM_GROUP, PERIPHERALS_KEY, MOD_ITEM_GROUP_PERIPHERALS);
 		Registry.register(Registries.ITEM_GROUP, OTHERS_KEY, MOD_ITEM_GROUP_OTHERS);
-		
+
 		registerItem("pc_case_sidepanel", PC_CASE_SIDEPANEL);
 		registerItem("pc_case", PC_CASE);
 		registerItem("motherboard", ITEM_MOTHERBOARD);
@@ -97,13 +97,13 @@ public class ItemList {
 		registerItem("gpu", ITEM_GPU);
 		registerItem("ordering_tablet", ITEM_TABLET);
 		registerItem("package", ITEM_PACKAGE);
-		
-		//Visual items - used for rendering only!
+
+
 		registerItem("pc_case_no_panel", PC_CASE_NO_PANEL);
 		registerItem("pc_case_only_panel", PC_CASE_ONLY_PANEL);
 		registerItem("pc_case_only_glass_sidepanel", PC_CASE_GLASS_PANEL);
-		
-		// Add items to groups via ItemGroupEvents
+
+
 		ItemGroupEvents.modifyEntriesEvent(PARTS_KEY).register(content -> {
 			content.add(PC_CASE_SIDEPANEL);
 			content.add(PC_CASE);
@@ -122,7 +122,7 @@ public class ItemList {
 			content.add(ITEM_CPU6);
 			content.add(ITEM_GPU);
 		});
-		
+
 		ItemGroupEvents.modifyEntriesEvent(PERIPHERALS_KEY).register(content -> {
 			content.add(ITEM_FLATSCREEN);
 			content.add(ITEM_WALLTV);
@@ -130,12 +130,12 @@ public class ItemList {
 			content.add(ITEM_KEYBOARD);
 			content.add(ITEM_MOUSE);
 		});
-		
+
 		ItemGroupEvents.modifyEntriesEvent(OTHERS_KEY).register(content -> {
 			content.add(ITEM_TABLET);
 		});
 	}
-	
+
 	private static Item registerItem(String id, Item it) {
 		Registry.register(Registries.ITEM, new Identifier("mcvmcomputers", id), it);
 		return it;

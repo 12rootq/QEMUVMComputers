@@ -24,16 +24,16 @@ public class EntityMouse extends Entity{
 			DataTracker.registerData(EntityMouse.class, TrackedDataHandlerRegistry.FLOAT);
 	private static final TrackedData<Float> LOOK_AT_POS_Z =
 			DataTracker.registerData(EntityMouse.class, TrackedDataHandlerRegistry.FLOAT);
-	
+
 	public EntityMouse(EntityType<?> type, World world) {
 		super(type, world);
 	}
-	
+
 	public EntityMouse(World world, double x, double y, double z) {
 		this(EntityList.MOUSE, world);
 		this.updatePosition(x, y, z);
 	}
-	
+
 	public EntityMouse(World world, Double x, Double y, Double z, Vec3d lookAt, String uuid) {
 		this(EntityList.MOUSE, world);
 		this.updatePosition(x, y, z);
@@ -41,7 +41,7 @@ public class EntityMouse extends Entity{
 		this.getDataTracker().set(LOOK_AT_POS_Y, (float)lookAt.y);
 		this.getDataTracker().set(LOOK_AT_POS_Z, (float)lookAt.z);
 	}
-	
+
 	public Vec3d getLookAtPos() {
 		return new Vec3d(this.getDataTracker().get(LOOK_AT_POS_X), this.getDataTracker().get(LOOK_AT_POS_Y), this.getDataTracker().get(LOOK_AT_POS_Z));
 	}
@@ -64,7 +64,7 @@ public class EntityMouse extends Entity{
 		tag.putFloat("LookAtY", this.getDataTracker().get(LOOK_AT_POS_Y));
 		tag.putFloat("LookAtZ", this.getDataTracker().get(LOOK_AT_POS_Z));
 	}
-	
+
 	@Override
 	public ActionResult interact(PlayerEntity player, Hand hand) {
 		if(!player.getWorld().isClient) {
@@ -77,12 +77,12 @@ public class EntityMouse extends Entity{
 		}
 		return ActionResult.SUCCESS;
 	}
-	
+
 	@Override
 	public boolean isCollidable() {
 		return true;
 	}
-	
+
 	@Override
 	public boolean canHit() {
 		return true;

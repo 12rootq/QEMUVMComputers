@@ -3,7 +3,6 @@ package mcvmcomputers.client.entities.render;
 import java.util.UUID;
 
 
-
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.entities.EntityCRTScreen;
 import mcvmcomputers.item.ItemList;
@@ -35,14 +34,14 @@ public class CRTScreenRender extends EntityRenderer<EntityCRTScreen>{
 	public Identifier getTexture(EntityCRTScreen entity) {
 		return null;
 	}
-	
+
 	@Override
 	public void render(EntityCRTScreen entity, float yaw, float tickDelta, MatrixStack matrices,
 			VertexConsumerProvider vertexConsumers, int light) {
 		if(entity.getOwnerUUID().isEmpty()) {
 			return;
 		}
-		
+
 		matrices.push();
 		matrices.translate(0, 0.5, 0);
 		Quaternionf look = MVCUtils.lookAt(entity.getPos(), entity.getLookAtPos());

@@ -22,14 +22,14 @@ public class ItemPreviewRender extends EntityRenderer<EntityItemPreview>{
 	public Identifier getTexture(EntityItemPreview entity) {
 		return null;
 	}
-	
+
 	@Override
 	public void render(EntityItemPreview entity, float yaw, float tickDelta, MatrixStack matrices,
 			VertexConsumerProvider vertexConsumers, int light) {
 		MinecraftClient mcc = MinecraftClient.getInstance();
-		
+
 		matrices.push();
-		
+
 		matrices.translate(0, 0.5, 0);
 		Vec3d v = mcc.player.getPos();
 		Quaternionf look = MVCUtils.lookAt(entity.getPos(), new Vec3d(v.x, entity.getY(), v.z));

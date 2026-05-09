@@ -22,7 +22,7 @@ public class KeyboardMixin {
 		MinecraftClient mcc = MinecraftClient.getInstance();
 		if (window == mcc.getWindow().getHandle()) {
 			if (ClientMod.vmTurnedOn && mcc.currentScreen instanceof GuiFocus) {
-				if (i != 2) {
+				if (i == GLFW.GLFW_PRESS || i == GLFW.GLFW_REPEAT) {
 					ClientMod.vmKeyboardScancodes.addAll(KeyConverter.toVBKey(key, i));
 				}
 			} else if (SetupPageUnfocusBinding.changeBinding) {

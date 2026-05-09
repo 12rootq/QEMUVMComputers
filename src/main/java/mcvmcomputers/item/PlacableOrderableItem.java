@@ -19,7 +19,7 @@ public class PlacableOrderableItem extends OrderableItem{
 	private Constructor<? extends Entity> constructor;
 	private SoundEvent placeSound;
 	public final boolean wallTV;
-	
+
 	public PlacableOrderableItem(Settings settings, Class<? extends Entity> entityPlaced, SoundEvent placeSound, int price, boolean wallTV) {
 		super(settings, price);
 		this.wallTV = wallTV;
@@ -30,11 +30,11 @@ public class PlacableOrderableItem extends OrderableItem{
 			e.printStackTrace();
 		}
 	}
-	
+
 	public PlacableOrderableItem(Settings settings, Class<? extends Entity> entityPlaced, SoundEvent placeSound, int price) {
 		this(settings, entityPlaced, placeSound, price, false);
 	}
-	
+
 	@Override
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
 		if(!world.isClient && hand == Hand.MAIN_HAND) {
@@ -42,7 +42,7 @@ public class PlacableOrderableItem extends OrderableItem{
 			HitResult hr = user.raycast(5, 0f, false);
 			Entity ek;
 			try {
-				ek = constructor.newInstance(world, 
+				ek = constructor.newInstance(world,
 											hr.getPos().getX(),
 											hr.getPos().getY(),
 											hr.getPos().getZ(),
@@ -54,7 +54,7 @@ public class PlacableOrderableItem extends OrderableItem{
 				e.printStackTrace();
 			}
 		}
-		
+
 		if(world.isClient) {
 			world.playSound(ClientMod.thePreviewEntity.getX(),
 							ClientMod.thePreviewEntity.getY(),
@@ -62,7 +62,7 @@ public class PlacableOrderableItem extends OrderableItem{
 							placeSound,
 							SoundCategory.BLOCKS, 1, 1, true);
 		}
-		
+
 		return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, user.getStackInHand(hand));
 	}
 

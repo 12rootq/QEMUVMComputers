@@ -12,11 +12,12 @@ public class TabletOrder {
 	public boolean entitySpawned;
 	public String orderUUID;
 	public float tickCount;
-	
+	public OrderStatus lastSyncedStatus = null;
+
 	public TabletOrder() {
 		orderUUID = UUID.randomUUID().toString();
 	}
-	
+
 	public enum OrderStatus{
 		PAYMENT_CHEST_ARRIVAL_SOON,
 		PAYMENT_CHEST_ARRIVED,
