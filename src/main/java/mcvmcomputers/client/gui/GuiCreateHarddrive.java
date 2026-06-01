@@ -132,8 +132,16 @@ public class GuiCreateHarddrive extends Screen{
 	private void createNew(ButtonWidget wdgt) {
 		if(!status.startsWith(COLOR_CHAR + "c")) {
 			long sizeMB = Long.parseLong(hddSize.getText());
+			// Skip any numbers whose file already exists (e.g. leftover from a failed
+			// previous attempt that VirtualBox already registered in its media library).
 			int i = ClientMod.latestVHDNum;
 			File vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "." + extension);
+			while (vhd.exists()) {
+				i++;
+				vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "." + extension);
+			}
+			// Sync the in-memory counter so the next creation starts from the right number.
+			ClientMod.latestVHDNum = i;
 			try {
 				ClientMod.vbox.createHardDisk(vhd.getPath(), sizeMB, extension.name());
 			} catch (Exception e) {

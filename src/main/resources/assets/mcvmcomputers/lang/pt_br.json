@@ -35,7 +35,7 @@
   "mcvmcomputers.hdd_doesnt_exist": "O disco rígido inserido não existe em seu computador!",
   "mcvmcomputers.iso_doesnt_exist": "A ISO inserida não existe em seu computador!",
   "mcvmcomputers.failed_to_start": "Falha ao iniciar VM, erro: %s",
-  "mcvmcomputers.contact_me": "Caso não consiga resolver por conta própria, contate o desenvolver pelo Reddit (u/DeltaTwoForce).",
+  "mcvmcomputers.contact_me": "Caso não consiga resolver por conta própria, contate-me (FB527) no nosso Discord (MCVmComputers).",
   "mcvmcomputers.click_with_ingots": "Você precisa clicar no baú segurando barras de ferro!",
   "mcvmcomputers.not_your_computer": "Este computador não é seu!",
   "mcvmcomputers.hdd_item_name": "Disco rídigo (%s)",

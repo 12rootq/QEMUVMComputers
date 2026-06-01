@@ -17,8 +17,13 @@ public class VBoxManage {
     private int cachedHostCpuCount = -1;
     private String cachedVersion = null;
 
+    // Mouse input is delivered through the VirtualBox web service because the
+    // CLI "controlvm mouseputmevent" sub-command was removed in VirtualBox 7.2.
+    private final VBoxWebMouse webMouse;
+
     public VBoxManage(String vboxDirectory) {
         this.vboxDirectory = vboxDirectory;
+        this.webMouse = new VBoxWebMouse(vboxDirectory);
         if (SystemUtils.IS_OS_WINDOWS) {
             vboxmanageCmd = vboxDirectory + "\\VBoxManage.exe";
         } else if (SystemUtils.IS_OS_MAC) {
@@ -102,6 +107,9 @@ public class VBoxManage {
     }
 
     public void powerOffVm(String name) {
+        // Drop the web-service mouse session before the VM stops so a stale
+        // session can't block the next start.
+        webMouse.disconnect();
         executeSilent("controlvm", name, "poweroff");
 
         try { Thread.sleep(500); } catch (InterruptedException e) {}
@@ -122,6 +130,49 @@ public class VBoxManage {
         cmd[1] = name;
         System.arraycopy(options, 0, cmd, 2, options.length);
         execute(cmd);
+    }
+
+    /**
+     * Returns true when {@code message} is non-null and contains the VirtualBox
+     * error markers that indicate the host graphics controller does not support
+     * 3D acceleration ({@code VBOX_E_NOT_SUPPORTED} or
+     * {@code "does not support the given feature"}).
+     *
+     * This is a pure, side-effect-free helper intended for unit and property testing.
+     */
+    public static boolean isAccelerate3dUnsupportedError(String message) {
+        if (message == null) return false;
+        return message.contains("VBOX_E_NOT_SUPPORTED")
+                || message.contains("does not support the given feature");
+    }
+
+    /**
+     * Calls {@link #modifyVm(String, String...)} with the supplied options (which
+     * must end with {@code "--accelerate3d", "on"}).  If the call throws and the
+     * exception message indicates that the host graphics controller does not support
+     * 3D acceleration, the trailing {@code "on"} value is swapped to {@code "off"}
+     * and {@code modifyVm} is retried exactly once.  If the retry succeeds the
+     * method returns normally.  If the original exception is NOT the 3D-unsupported
+     * error it is re-thrown unchanged so the caller's existing error handler runs.
+     *
+     * @param name                    VM name passed to {@code modifyvm}
+     * @param optionsEndingWith3dAccel options array whose last two elements are
+     *                                {@code "--accelerate3d"} and {@code "on"}
+     * @throws Exception the original exception when it is not a 3D-unsupported error,
+     *                   or any exception thrown by the fallback {@code modifyVm} call
+     */
+    public void modifyVmWith3dAccelFallback(String name, String... optionsEndingWith3dAccel) throws Exception {
+        try {
+            modifyVm(name, optionsEndingWith3dAccel);
+        } catch (Exception ex) {
+            if (!isAccelerate3dUnsupportedError(ex.getMessage())) {
+                throw ex;
+            }
+            // Swap the trailing "--accelerate3d" value from "on" to "off" and retry once.
+            String[] fallbackOptions = optionsEndingWith3dAccel.clone();
+            fallbackOptions[fallbackOptions.length - 1] = "off";
+            modifyVm(name, fallbackOptions);
+        }
     }
 
 
@@ -236,10 +287,19 @@ public class VBoxManage {
 
 
     public void putMouseEvent(String vmName, int dx, int dy, int dz, int buttons) {
-        executeSilent("controlvm", vmName, "mouseputmevent",
-                String.valueOf(dx), String.valueOf(dy),
-                String.valueOf(dz), "0",
-                String.valueOf(buttons));
+        // VirtualBox 7.2 removed the "controlvm mouseputmevent" CLI command, so the
+        // mouse is driven through the web service instead (see VBoxWebMouse).
+        webMouse.putMouseEvent(dx, dy, dz, buttons);
+    }
+
+    /** Releases the web-service mouse session (called when the VM powers off). */
+    public void releaseMouse() {
+        webMouse.disconnect();
+    }
+
+    /** Stops the web-service mouse session and its helper process. */
+    public void shutdownMouse() {
+        webMouse.shutdown();
     }
 
 

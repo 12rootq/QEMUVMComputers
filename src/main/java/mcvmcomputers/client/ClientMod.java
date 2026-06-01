@@ -87,9 +87,12 @@ public class ClientMod implements ClientModInitializer{
 	public static double mouseCurX = 0;
 	public static double mouseCurY = 0;
 	public static int mouseDeltaScroll;
-	public static boolean leftMouseButton;
-	public static boolean middleMouseButton;
-	public static boolean rightMouseButton;
+	// Mouse button bits: left=0x01, right=0x02, middle=0x04 (VBox buttonState convention).
+	// mouseButtonMask  = real-time held state.
+	// mouseButtonPressedLatch = bits pressed since the VM loop last consumed them, so a
+	// fast click (press+release within one ~66ms VM tick) is never lost.
+	public static volatile int mouseButtonMask;
+	public static volatile int mouseButtonPressedLatch;
 	public static List<Integer> vmKeyboardScancodes = new ArrayList<>();
 	public static boolean releaseKeys = false;
 	public static File vhdDirectory;

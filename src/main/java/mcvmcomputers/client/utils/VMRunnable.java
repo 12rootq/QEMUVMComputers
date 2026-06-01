@@ -49,12 +49,23 @@ public class VMRunnable implements Runnable {
 				if ("running".equals(state) || "firstonline".equals(state)) {
 
 					if (mcc.currentScreen instanceof GuiFocus) {
-						int val = 0x00;
-						if (leftMouseButton) val += 0x01;
-						if (middleMouseButton) val += 0x04;
-						if (rightMouseButton) val += 0x02;
-						vbox.putMouseEvent("VmComputersVm", (int) deltaX, (int) deltaY, mouseDeltaScroll, val);
+						// Consume any presses that happened since the last tick so a fast
+						// click (press+release within one tick) is never dropped.
+						int latch = mouseButtonPressedLatch;
+						mouseButtonPressedLatch = 0;
+						int held = mouseButtonMask;
+
+						// First event includes every button that is held OR was just pressed.
+						int downState = held | latch;
+						vbox.putMouseEvent("VmComputersVm", (int) deltaX, (int) deltaY, mouseDeltaScroll, downState);
 						mouseDeltaScroll = 0;
+
+						// If a button was pressed-and-released within this tick, the press is
+						// in the latch but not in the held mask. Emit a matching release so the
+						// guest registers a complete click.
+						if ((latch & ~held) != 0) {
+							vbox.putMouseEvent("VmComputersVm", 0, 0, 0, held);
+						}
 					}
 
 
@@ -62,11 +73,25 @@ public class VMRunnable implements Runnable {
 
 						List<Integer> releaseCodes = Arrays.asList(0x1d + 0x80, 0xe0, 0x1d + 0x80, 0x0e + 0x80);
 						vbox.putScancodes("VmComputersVm", releaseCodes);
-						vmKeyboardScancodes.clear();
+						synchronized (vmKeyboardScancodes) {
+							vmKeyboardScancodes.clear();
+						}
 						releaseKeys = false;
-					} else if (!vmKeyboardScancodes.isEmpty()) {
-						vbox.putScancodes("VmComputersVm", vmKeyboardScancodes);
-						vmKeyboardScancodes.clear();
+					} else {
+						// Atomically snapshot and clear the buffer under the same lock the
+						// keyboard callback uses. Sending happens outside the lock so the
+						// render thread is never blocked, and any key typed after this point
+						// stays queued for the next tick instead of being wiped by clear().
+						List<Integer> toSend = null;
+						synchronized (vmKeyboardScancodes) {
+							if (!vmKeyboardScancodes.isEmpty()) {
+								toSend = new java.util.ArrayList<>(vmKeyboardScancodes);
+								vmKeyboardScancodes.clear();
+							}
+						}
+						if (toSend != null) {
+							vbox.putScancodes("VmComputersVm", toSend);
+						}
 					}
 
 

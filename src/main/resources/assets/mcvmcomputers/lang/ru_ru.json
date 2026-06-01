@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "Выбранный жёсткий диск не найден на вашем ПК!",
     "mcvmcomputers.iso_doesnt_exist": "Выбранный ISO-файл не найден на вашем ПК!",
     "mcvmcomputers.failed_to_start": "Ошибка старта VM: %s",
-    "mcvmcomputers.contact_me": "Если вы не можете это исправить, напишите мне на Reddit (u/DeltaTwoForce).",
+    "mcvmcomputers.contact_me": "Если вы не можете это исправить, напишите мне (FB527) в нашем Discord (MCVmComputers).",
     "mcvmcomputers.click_with_ingots": "Вам нужно нажать на сундук со слитком в руке!",
     "mcvmcomputers.not_your_computer": "Этот компьютер не ваш!",
     "mcvmcomputers.hdd_item_name": "Жёсткий диск (%s)",

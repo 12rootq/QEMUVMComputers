@@ -238,6 +238,9 @@ public class KeyConverter {
 		case GLFW_KEY_MENU:
 			return new int[] {0xe0, 0x5d};
 		}
-		return new int[] {0x00};
+		// Unknown / unmapped key: return no scancodes. Returning 0x00 here is harmful -
+		// 0x00 is the PS/2 "keyboard error / buffer overrun" code and can trigger a
+		// guest-side "Keyboard error" (especially once break codes are also sent).
+		return new int[] {};
 	}
 }

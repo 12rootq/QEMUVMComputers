@@ -22,8 +22,16 @@ public class KeyboardMixin {
 		MinecraftClient mcc = MinecraftClient.getInstance();
 		if (window == mcc.getWindow().getHandle()) {
 			if (ClientMod.vmTurnedOn && mcc.currentScreen instanceof GuiFocus) {
-				if (i == GLFW.GLFW_PRESS || i == GLFW.GLFW_REPEAT) {
-					ClientMod.vmKeyboardScancodes.addAll(KeyConverter.toVBKey(key, i));
+				// Forward press, repeat AND release. Without the release, the guest sees the
+				// key as still held down and its auto-repeat spams the key (e.g. Enter).
+				if (i == GLFW.GLFW_PRESS || i == GLFW.GLFW_REPEAT || i == GLFW.GLFW_RELEASE) {
+					// This callback runs on the render thread while VMRunnable drains the
+					// buffer on the VM thread. Synchronize so a press/release is never lost
+					// to a concurrent clear() (dropped key) and so we never iterate the list
+					// while it is being mutated (ConcurrentModificationException -> stuck key).
+					synchronized (ClientMod.vmKeyboardScancodes) {
+						ClientMod.vmKeyboardScancodes.addAll(KeyConverter.toVBKey(key, i));
+					}
 				}
 			} else if (SetupPageUnfocusBinding.changeBinding) {
 				if (i == GLFW.GLFW_PRESS) {

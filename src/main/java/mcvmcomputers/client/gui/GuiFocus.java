@@ -81,9 +81,13 @@ public class GuiFocus extends Screen{
 		mY.clear();
 		ClientMod.mouseCurX = mouseX;
 		ClientMod.mouseCurY = mouseY;
-		ClientMod.leftMouseButton = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-		ClientMod.middleMouseButton = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS;
-		ClientMod.rightMouseButton = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+		// Poll real-time held state (covers holding a button across frames). The press
+		// latch itself is set by MouseMixin's event handler so fast clicks aren't lost.
+		int mask = 0;
+		if (GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS) mask |= 0x01;
+		if (GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS) mask |= 0x02;
+		if (GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS) mask |= 0x04;
+		ClientMod.mouseButtonMask = mask;
 
 		context.drawTextWithShadow(this.textRenderer, lang.get("mcvmcomputers.focus.lose").replace("%s", keyString), 4, 4, -1);
 		GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);

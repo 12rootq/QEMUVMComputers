@@ -596,7 +596,7 @@ public class GuiPCEditing extends Screen{
 							long ramMB = Math.min(ClientMod.maxRam, (pc_case.getGigsOfRamInSlot0() + pc_case.getGigsOfRamInSlot1()));
 							int cpuCount = Math.max(1, ClientMod.vbox.getHostProcessorCount() / pc_case.getCpuDividedBy());
 
-							ClientMod.vbox.modifyVm("VmComputersVm",
+							ClientMod.vbox.modifyVmWith3dAccelFallback("VmComputersVm",
 									"--ostype", OSType,
 									"--memory", String.valueOf(ramMB),
 									"--cpus", String.valueOf(cpuCount),
@@ -640,7 +640,7 @@ public class GuiPCEditing extends Screen{
 							long ramMB = Math.min(ClientMod.maxRam, (pc_case.getGigsOfRamInSlot0() + pc_case.getGigsOfRamInSlot1()));
 							int cpuCount = Math.max(1, ClientMod.vbox.getHostProcessorCount() / pc_case.getCpuDividedBy());
 
-							ClientMod.vbox.modifyVm("VmComputersVm",
+							ClientMod.vbox.modifyVmWith3dAccelFallback("VmComputersVm",
 									"--memory", String.valueOf(ramMB),
 									"--cpus", String.valueOf(cpuCount),
 									"--vram", String.valueOf(ClientMod.videoMem),

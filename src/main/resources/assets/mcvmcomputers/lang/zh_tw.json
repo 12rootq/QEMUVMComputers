@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "無法從您的電腦找到所插入的硬碟！",
     "mcvmcomputers.iso_doesnt_exist": "無法從您的電腦找到所插入的 ISO 檔案！",
     "mcvmcomputers.failed_to_start": "無法啟動虛擬機器, 錯誤︰ %s",
-    "mcvmcomputers.contact_me": "如果您無法自行解決這個問題， 請在 Reddit 與我聯絡 (u/DeltaTwoForce)。",
+    "mcvmcomputers.contact_me": "如果您無法自行解決這個問題， 請在我們的 Discord 與我聯絡 (FB527, 群組 MCVmComputers)。",
     "mcvmcomputers.click_with_ingots": "您需要以持有鐵錠的手來點擊儲物箱！",
     "mcvmcomputers.not_your_computer": "這台電腦並不是您的！",
     "mcvmcomputers.hdd_item_name": "硬碟 (%s)",
