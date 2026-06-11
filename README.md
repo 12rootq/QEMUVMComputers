@@ -22,7 +22,7 @@ If you have problems with this port, please submit them to my GitHub.
 		<li><a href="https://fabricmc.net/use">Fabric</a></li>
 		<li><a href="https://modrinth.com/mod/fabric-api/version/0.92.7+1.20.1">Fabric API <i>(0.92.7+1.20.1)</i></a></li>
 	</ul>
-	<li><a href="https://www.virtualbox.org/wiki/Download_Old_Builds_6_1">VirtualBox 6.1</a></li>
+	<li><a href="https://www.virtualbox.org/wiki/Downloads">Latest VirtualBox</a></li>
 </ul>
 
 <h2>How to use</h2>
