@@ -7,11 +7,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 import org.apache.commons.lang3.math.NumberUtils;
-import org.virtualbox_6_1.AccessMode;
-import org.virtualbox_6_1.DeviceType;
-import org.virtualbox_6_1.IMedium;
-import org.virtualbox_6_1.IProgress;
-import org.virtualbox_6_1.MediumVariant;
 
 import io.netty.buffer.Unpooled;
 import mcvmcomputers.client.ClientMod;
@@ -37,7 +32,7 @@ public class GuiCreateHarddrive extends Screen{
 	private ButtonWidget AA;
 	private ButtonWidget BB;
 	private MinecraftClient minecraft = MinecraftClient.getInstance();
-	
+
 	public enum State{
 		MENU,
 		CREATE_NEW,
@@ -48,15 +43,15 @@ public class GuiCreateHarddrive extends Screen{
 		vdi,
 		vmdk
 	}
-	
+
 	public GuiCreateHarddrive() {
 		super(Text.translatable("Create Harddrive"));
 	}
-	
+
 	public String translation(String in) {
 		return lang.get(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
 	}
-	
+
 	@Override
 	public void init() {
 		if(currentState == State.CREATE_NEW) {
@@ -100,7 +95,7 @@ public class GuiCreateHarddrive extends Screen{
 				this.addDrawableChild(ButtonWidget.builder(Text.literal("x"), (wdgt) -> removevhd(f.getName())).dimensions(this.width/2 + 92, lastY, 14, 14).build());
 				lastY += 16;
 			}
-			
+
 			int menuWidth = textRenderer.getWidth(translation("mcvmcomputers.vhd_setup.menu"))+40;
 			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("mcvmcomputers.vhd_setup.menu")), (wdgt) -> switchState(State.MENU)).dimensions(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
 		}
@@ -123,47 +118,56 @@ public class GuiCreateHarddrive extends Screen{
 		currentState = newState;
 		this.init();
 	}
-	
+
 	private void selectOld(ButtonWidget wdgt) {
-		String fileName = wdgt.getMessage().getString().split(" | ")[0];
+		String buttonText = wdgt.getMessage().getString();
+		int sepIdx = buttonText.indexOf(" | ");
+		String fileName = sepIdx >= 0 ? buttonText.substring(0, sepIdx) : buttonText;
 		PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
 		pb.writeString(fileName);
 		ClientPlayNetworking.send(PacketList.C2S_CHANGE_HDD, pb);
 		minecraft.setScreen(null);
 	}
-	
+
 	private void createNew(ButtonWidget wdgt) {
 		if(!status.startsWith(COLOR_CHAR + "c")) {
-			Long size = Long.parseLong(hddSize.getText())*1024L*1024L;
+			long sizeMB = Long.parseLong(hddSize.getText());
+			// Skip any numbers whose file already exists (e.g. leftover from a failed
+			// previous attempt that VirtualBox already registered in its media library).
 			int i = ClientMod.latestVHDNum;
-			File vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "."+extension);
-			IMedium hdd = null;
-			if(extension == Ext.vdi){
-				hdd = ClientMod.vb.createMedium("vdi", vhd.getPath(), AccessMode.ReadWrite, DeviceType.HardDisk);
-			}else if(extension == Ext.vmdk){
-				hdd = ClientMod.vb.createMedium("vmdk", vhd.getPath(), AccessMode.ReadWrite, DeviceType.HardDisk);
+			File vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "." + extension);
+			while (vhd.exists()) {
+				i++;
+				vhd = new File(ClientMod.vhdDirectory, "vhd" + i + "." + extension);
 			}
-			IProgress pr = hdd.createBaseStorage(size, Arrays.asList(MediumVariant.Standard));
-			pr.waitForCompletion(-1);
-			
+			// Sync the in-memory counter so the next creation starts from the right number.
+			ClientMod.latestVHDNum = i;
+			try {
+				ClientMod.vbox.createHardDisk(vhd.getPath(), sizeMB, extension.name());
+			} catch (Exception e) {
+				e.printStackTrace();
+				status = COLOR_CHAR + "c" + translation("mcvmcomputers.failed_to_start").replace("%s", e.getMessage());
+				return;
+			}
+
 			try {
 				ClientMod.increaseVHDNum();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
+
 			PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
 			pb.writeString(vhd.getName());
 			ClientPlayNetworking.send(PacketList.C2S_CHANGE_HDD, pb);
 			minecraft.setScreen(null);
 		}
 	}
-	
+
 	private void removevhd(String name) {
 		new File(ClientMod.vhdDirectory, name).delete();
 		minecraft.setScreen(null);
 	}
-	
+
 	private void hddSizeUpdate(String in) {
 		if(NumberUtils.isDigits(in)) {
 			long i = 0;
@@ -174,11 +178,11 @@ public class GuiCreateHarddrive extends Screen{
 				return;
 			}
 			if(i > 0) {
-				if(i*1024*1024 < 0) { //Buffer overflow
+				if(i*1024*1024 < 0) {
 					status = translation("mcvmcomputers.input_too_much").replace("%s", ""+Long.MAX_VALUE/1024L/1024L);
 					return;
 				}
-				
+
 				if(i*1024*1024 >= ClientMod.vhdDirectory.getFreeSpace()) {
 					status = translation("mcvmcomputers.vhd_setup.space");
 					return;
@@ -195,7 +199,7 @@ public class GuiCreateHarddrive extends Screen{
 			return;
 		}
 	}
-	
+
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		this.renderBackground(context);

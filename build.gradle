@@ -20,16 +20,20 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	 
-	implementation files('lib/vboxjws.jar')
-	shadow files('lib/vboxjws.jar')
+	// No longer need vboxjws.jar or JWS dependencies
+	// VirtualBox is now controlled via VBoxManage CLI
 
-	implementation 'jakarta.xml.ws:jakarta.xml.ws-api:2.3.3'
-	shadow 'jakarta.xml.ws:jakarta.xml.ws-api:2.3.3'
-	implementation 'com.sun.xml.ws:jaxws-rt:2.3.5'
-	shadow 'com.sun.xml.ws:jaxws-rt:2.3.5'
+	// Test dependencies
+	testImplementation "org.junit.jupiter:junit-jupiter-api:5.10.1"
+	testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.1"
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.10.1"
+	testImplementation "net.jqwik:jqwik:1.8.2"
+}
 
-	implementation 'xml-resolver:xml-resolver:1.2'
-	shadow 'xml-resolver:xml-resolver:1.2'
+test {
+	useJUnitPlatform {
+		includeEngines 'junit-jupiter', 'jqwik'
+	}
 }
 
 shadowJar {
@@ -37,8 +41,6 @@ shadowJar {
 	 archiveBaseName = "${project.archives_base_name}"
 	 archiveClassifier = 'dev'
 	 archiveVersion = "${project.mod_version}"
-
-	 relocate 'com.sun.org.apache.xml.internal.resolver', 'org.apache.xml.resolver'
 }
 
 remapJar {

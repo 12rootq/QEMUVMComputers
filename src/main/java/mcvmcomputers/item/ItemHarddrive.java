@@ -14,9 +14,8 @@ public class ItemHarddrive extends OrderableItem{
 	public ItemHarddrive(Settings settings) {
 		super(settings, 6);
 	}
-	
 
-	
+
 	@Override
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
 		if(world.isClient) {
@@ -24,7 +23,7 @@ public class ItemHarddrive extends OrderableItem{
 		}
 		return super.use(world, user, hand);
 	}
-	
+
 	@Override
 	public Text getName(ItemStack stack) {
 		if(stack.getNbt() != null) {
@@ -34,7 +33,7 @@ public class ItemHarddrive extends OrderableItem{
 		}
 		return Text.translatable("mcvmcomputers.hdd_item_name", Text.translatable("mcvmcomputers.hdd_right_click").getString()).formatted(Formatting.WHITE);
 	}
-	
+
 	public static ItemStack createHardDrive(String fileName) {
 		ItemStack is = new ItemStack(ItemList.ITEM_HARDDRIVE);
 		NbtCompound ct = is.getOrCreateNbt();

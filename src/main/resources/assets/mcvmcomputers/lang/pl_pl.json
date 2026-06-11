@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "Włożony dysk twardy nie istnieje na twoim komputerze!",
     "mcvmcomputers.iso_doesnt_exist": "Włożony plik ISO nie istnieje na twoim komputerze!",
     "mcvmcomputers.failed_to_start": "Nie udało się uruchomić wirtualnej maszyny, błąd: %s",
-    "mcvmcomputers.contact_me": "Jeśli nie możesz naprawić tego sam/sama, skontaktuj mnie na Reddicie (u/DeltaTwoForce).",
+    "mcvmcomputers.contact_me": "Jeśli nie możesz naprawić tego sam/sama, skontaktuj się ze mną (FB527) na naszym Discordzie (MCVmComputers).",
     "mcvmcomputers.click_with_ingots": "Musisz kliknąć na skrzynie z sztabkami żelaza w ręce!",
     "mcvmcomputers.not_your_computer": "To nie jest twój komputer!",
     "mcvmcomputers.hdd_item_name": "Dysk Twardy (%s)",

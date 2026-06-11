@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import io.netty.buffer.Unpooled;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.entities.EntityDeliveryChest;
 import mcvmcomputers.item.OrderableItem;
@@ -29,22 +29,23 @@ import net.minecraft.world.World;
 @Mixin(MinecraftServer.class)
 public class ServerMixin {
 	private static final Logger LOGGER = LogManager.getLogger();
-	
+
 	@Shadow
 	private float tickTime;
-	
+
 	@Shadow
 	private PlayerManager playerManager;
-	
+
 	@Inject(at = @At("HEAD"), method = "shutdown")
 	protected void shutdown(CallbackInfo ci) {
 		LOGGER.info("Stopping VM Computers");
 		MainMod.computers.clear();
 		MainMod.orders.clear();
 	}
-	
+
 	@Inject(at = @At("HEAD"), method = "tick")
 	protected void tick(CallbackInfo ci) {
+		java.util.List<java.util.UUID> toRemove = new java.util.ArrayList<>();
 		for(TabletOrder order : MainMod.orders.values()) {
 			if(order.currentStatus == OrderStatus.ORDER_CHEST_ARRIVAL_SOON) {
 				order.tickCount += tickTime / 1000f;
@@ -61,11 +62,12 @@ public class ServerMixin {
 			}else if(order.currentStatus == OrderStatus.ORDER_CHEST_RECEIVED) {
 				order.tickCount += tickTime / 1000f;
 				if(order.tickCount > 0.25) {
-					MainMod.orders.remove(UUID.fromString(order.orderUUID));
+					toRemove.add(UUID.fromString(order.orderUUID));
 				}
 			}else if(order.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
 				if(!order.entitySpawned) {
 					PlayerEntity p = playerManager.getPlayer(UUID.fromString(order.orderUUID));
+					if(p == null) { continue; }
 					World w = p.getWorld();
 					w.spawnEntity(new EntityDeliveryChest(w, new Vec3d(p.getX(), p.getY(), p.getZ()), p.getUuid()));
 					order.entitySpawned = true;
@@ -73,13 +75,14 @@ public class ServerMixin {
 			}else if(order.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
 				if(!order.entitySpawned) {
 					PlayerEntity p = playerManager.getPlayer(UUID.fromString(order.orderUUID));
+					if(p == null) { continue; }
 					World w = p.getWorld();
 					w.spawnEntity(new EntityDeliveryChest(w, new Vec3d(p.getX(), p.getY(), p.getZ()), p.getUuid()));
 					order.entitySpawned = true;
 				}
 			}
-			
-			PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
+
+			PacketByteBuf pb = PacketByteBufs.create();
 			pb.writeInt(order.items.size());
 			for(OrderableItem oi : order.items) {
 				pb.writeItemStack(new ItemStack(oi));

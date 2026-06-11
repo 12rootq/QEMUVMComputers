@@ -23,7 +23,7 @@ public class KeyboardRender extends EntityRenderer<EntityKeyboard>{
 	public Identifier getTexture(EntityKeyboard entity) {
 		return null;
 	}
-	
+
 	@Override
 	public void render(EntityKeyboard entity, float yaw, float tickDelta, MatrixStack matrices,
 			VertexConsumerProvider vertexConsumers, int light) {

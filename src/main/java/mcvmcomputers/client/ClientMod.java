@@ -18,11 +18,10 @@ import java.util.zip.Inflater;
 
 import org.apache.commons.lang3.SystemUtils;
 import org.lwjgl.glfw.GLFW;
-import org.virtualbox_6_1.ISession;
-import org.virtualbox_6_1.IVirtualBox;
-import org.virtualbox_6_1.VirtualBoxManager;
 
-import io.netty.buffer.Unpooled;
+import mcvmcomputers.client.utils.VBoxManage;
+
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.client.entities.render.CRTScreenRender;
 import mcvmcomputers.client.entities.render.DeliveryChestRender;
@@ -46,6 +45,8 @@ import mcvmcomputers.entities.EntityMouse;
 import mcvmcomputers.entities.EntityPC;
 import mcvmcomputers.entities.EntityWallTV;
 import mcvmcomputers.item.OrderableItem;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.TabletOrder;
 import mcvmcomputers.utils.TabletOrder.OrderStatus;
@@ -66,31 +67,32 @@ public class ClientMod implements ClientModInitializer{
 	public static Map<UUID, NativeImage> vmScreenTextureNI;
 	public static Map<UUID, NativeImageBackedTexture> vmScreenTextureNIBT;
 	public static EntityItemPreview thePreviewEntity;
-	public static boolean vmTurnedOn;
-	public static boolean vmTurningOff;
-	public static boolean vmTurningOn;
-	public static ISession vmSession;
-	
+	public static final Object VM_TURNING_ON_LOCK = new Object();
+	public static volatile boolean vmTurnedOn;
+	public static volatile boolean vmTurningOff;
+	public static volatile boolean vmTurningOn;
 	public static int maxRam = 8192;
 	public static int videoMem = 256;
-	
-	public static VirtualBoxManager vbManager;
-	public static IVirtualBox vb;
-	
-	public static Process vboxWebSrv;
-	public static Thread vmUpdateThread;
-	public static byte[] vmTextureBytes;
-	public static int vmTextureBytesSize;
+	public static VBoxManage vbox;
+
+	public static String vboxDirectory = "";
+	public static volatile Thread vmUpdateThread;
+	public static final Object VM_TEXTURE_LOCK = new Object();
+	public static volatile byte[] vmTextureBytes;
+	public static volatile int vmTextureBytesSize;
 	public static boolean failedSend;
-	
+
 	public static double mouseLastX = 0;
 	public static double mouseLastY = 0;
 	public static double mouseCurX = 0;
 	public static double mouseCurY = 0;
 	public static int mouseDeltaScroll;
-	public static boolean leftMouseButton;
-	public static boolean middleMouseButton;
-	public static boolean rightMouseButton;
+	// Mouse button bits: left=0x01, right=0x02, middle=0x04 (VBox buttonState convention).
+	// mouseButtonMask  = real-time held state.
+	// mouseButtonPressedLatch = bits pressed since the VM loop last consumed them, so a
+	// fast click (press+release within one ~66ms VM tick) is never lost.
+	public static volatile int mouseButtonMask;
+	public static volatile int mouseButtonPressedLatch;
 	public static List<Integer> vmKeyboardScancodes = new ArrayList<>();
 	public static boolean releaseKeys = false;
 	public static File vhdDirectory;
@@ -99,17 +101,17 @@ public class ClientMod implements ClientModInitializer{
 	public static TabletOS tabletOS;
 	public static TabletOrder myOrder;
 	public static int vmEntityID = -1;
-	
+
 	public static Thread tabletThread;
-	
+
 	public static float deltaTime;
 	public static long lastDeltaTimeTime;
-	
+
 	public static int glfwUnfocusKey1;
 	public static int glfwUnfocusKey2;
 	public static int glfwUnfocusKey3;
 	public static int glfwUnfocusKey4;
-	
+
 	static {
 		if(SystemUtils.IS_OS_MAC) {
 			glfwUnfocusKey1 = GLFW.GLFW_KEY_LEFT_ALT;
@@ -123,10 +125,10 @@ public class ClientMod implements ClientModInitializer{
 			glfwUnfocusKey4 = -1;
 		}
 	}
-	
+
 	public static EntityDeliveryChest currentDeliveryChest;
 	public static EntityPC currentPC;
-	
+
 	public static String getKeyName(int key) {
 		if (key < 0) {
 			return "None";
@@ -134,7 +136,7 @@ public class ClientMod implements ClientModInitializer{
 			return glfwKey(key);
 		}
 	}
-	
+
 	private static String glfwKey(int key) {
 		switch(key) {
 		case GLFW.GLFW_KEY_LEFT_CONTROL:
@@ -161,14 +163,14 @@ public class ClientMod implements ClientModInitializer{
 			return GLFW.glfwGetKeyName(key, 0);
 		}
 	}
-	
+
 	public static void getVHDNum() throws NumberFormatException, IOException {
 		File f = new File(vhdDirectory.getParentFile(), "vhdnum");
 		if(f.exists()) {
 			latestVHDNum = Integer.parseInt(Files.readAllLines(f.toPath()).get(0));
 		}
 	}
-	
+
 	public static void increaseVHDNum() throws IOException {
 		latestVHDNum++;
 		File f = new File(vhdDirectory.getParentFile(), "vhdnum");
@@ -176,30 +178,37 @@ public class ClientMod implements ClientModInitializer{
 			f.delete();
 		}
 		f.createNewFile();
-		FileWriter fw = new FileWriter(f);
-		fw.append(""+latestVHDNum);
-		fw.flush();
-		fw.close();
+		try (FileWriter fw = new FileWriter(f)) {
+			fw.append(""+latestVHDNum);
+			fw.flush();
+		}
 	}
-	
+
 	public static void generatePCScreen() {
 		MinecraftClient mcc = MinecraftClient.getInstance();
 		if(mcc.player == null) {
 			return;
 		}
-		if(vmTextureBytes != null) {
+		byte[] localTextureBytes;
+		int localTextureBytesSize;
+		synchronized (VM_TEXTURE_LOCK) {
+			localTextureBytes = vmTextureBytes;
+			localTextureBytesSize = vmTextureBytesSize;
+			vmTextureBytes = null;
+		}
+		if(localTextureBytes != null) {
 			if(vmScreenTextures.containsKey(mcc.player.getUuid())) {
 				MinecraftClient.getInstance().getTextureManager().destroyTexture(vmScreenTextures.get(mcc.player.getUuid()));
 				vmScreenTextures.remove(mcc.player.getUuid());
 			}
-			
+
 			Deflater def = new Deflater();
-			def.setInput(vmTextureBytes);
+			def.setInput(localTextureBytes);
 			def.finish();
-			byte[] deflated = new byte[vmTextureBytesSize];
+			byte[] deflated = new byte[localTextureBytesSize];
 			int sz = def.deflate(deflated);
 			def.end();
-			
+
 			if(sz > 32766) {
 				if(!failedSend){
 					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_too_big_mp").formatted(Formatting.RED), false);
@@ -210,17 +219,17 @@ public class ClientMod implements ClientModInitializer{
 					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_ok_mp").formatted(Formatting.GREEN), false);
 					failedSend = false;
 				}
-				
-				PacketByteBuf p = new PacketByteBuf(Unpooled.buffer());
+
+				PacketByteBuf p = PacketByteBufs.create();
 				p.writeByteArray(Arrays.copyOfRange(deflated, 0, sz));
 				p.writeInt(sz);
-				p.writeInt(vmTextureBytesSize);
+				p.writeInt(localTextureBytesSize);
 				ClientPlayNetworking.send(PacketList.C2S_SCREEN, p);
 			}
-			
+
 			NativeImage ni = null;
 			try {
-				ni = NativeImage.read(new ByteArrayInputStream(vmTextureBytes));
+				ni = NativeImage.read(new ByteArrayInputStream(localTextureBytes));
 			} catch (IOException e) {
 			}
 			if(ni != null) {
@@ -240,28 +249,28 @@ public class ClientMod implements ClientModInitializer{
 			vmTextureBytes = null;
 		}
 	}
-	
+
 	public static void registerClientPackets() {
 		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_SCREEN, (client, handler, attachedData, responseSender) -> {
 			byte[] screen = attachedData.readByteArray();
 			int compressedDataSize = attachedData.readInt();
 			int dataSize = attachedData.readInt();
 			UUID pcOwner = attachedData.readUuid();
-			
+
 			client.execute(() -> {
 				MinecraftClient mcc = MinecraftClient.getInstance();
 				if(!pcOwner.equals(mcc.player.getUuid())) {
 					if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
 						mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
-						vmScreenTextures.remove(mcc.player.getUuid());
+						vmScreenTextures.remove(pcOwner);
 					}
 					if(ClientMod.vmScreenTextureNI.containsKey(pcOwner)) {
 						ClientMod.vmScreenTextureNI.get(pcOwner).close();
-						vmScreenTextureNI.remove(mcc.player.getUuid());
+						vmScreenTextureNI.remove(pcOwner);
 					}
 					if(ClientMod.vmScreenTextureNIBT.containsKey(pcOwner)) {
-						ClientMod.vmScreenTextureNI.get(pcOwner).close();
-						vmScreenTextureNIBT.remove(mcc.player.getUuid());
+						ClientMod.vmScreenTextureNIBT.get(pcOwner).close();
+						vmScreenTextureNIBT.remove(pcOwner);
 					}
 					try {
 						Inflater inf = new Inflater();
@@ -280,36 +289,41 @@ public class ClientMod implements ClientModInitializer{
 				}
 			});
 		});
-		
+
 		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_STOP_SCREEN, (client, handler, attachedData, responseSender) -> {
 			UUID pcOwner = attachedData.readUuid();
-			
+
 			client.execute(() -> {
 				MinecraftClient mcc = MinecraftClient.getInstance();
 				if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
 					mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
-					vmScreenTextures.remove(mcc.player.getUuid());
+					vmScreenTextures.remove(pcOwner);
 				}
 				if(ClientMod.vmScreenTextureNI.containsKey(pcOwner)) {
 					ClientMod.vmScreenTextureNI.get(pcOwner).close();
-					vmScreenTextureNI.remove(mcc.player.getUuid());
+					vmScreenTextureNI.remove(pcOwner);
 				}
 				if(ClientMod.vmScreenTextureNIBT.containsKey(pcOwner)) {
 					ClientMod.vmScreenTextureNIBT.get(pcOwner).close();
-					vmScreenTextureNIBT.remove(mcc.player.getUuid());
+					vmScreenTextureNIBT.remove(pcOwner);
 				}
 			});
 		});
-		
+
 		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_SYNC_ORDER, (client, handler, attachedData, responseSender) -> {
 			int arraySize = attachedData.readInt();
 			OrderableItem[] arr = new OrderableItem[arraySize];
 			for(int i = 0;i<arraySize;i++) {
-				arr[i] = (OrderableItem) attachedData.readItemStack().getItem();
+				Item readItem = attachedData.readItemStack().getItem();
+				if (readItem instanceof OrderableItem) {
+					arr[i] = (OrderableItem) readItem;
+				} else {
+					arr[i] = null;
+				}
 			}
 			int price = attachedData.readInt();
-			OrderStatus status = OrderStatus.values()[attachedData.readInt()]; //send ordinal
-			
+			OrderStatus status = OrderStatus.values()[attachedData.readInt()];
+
 			client.execute(() -> {
 				if(ClientMod.myOrder == null) {
 					ClientMod.myOrder = new TabletOrder();
@@ -321,7 +335,7 @@ public class ClientMod implements ClientModInitializer{
 			});
 		});
 	}
-	
+
 	@Override
 	public void onInitializeClient() {
 		MainMod.pcOpenGui = new Runnable() {
@@ -350,13 +364,13 @@ public class ClientMod implements ClientModInitializer{
 				}
 			}
 		};
-		
+
 		registerClientPackets();
-		
+
 		vmScreenTextures = new HashMap<UUID, Identifier>();
 		vmScreenTextureNI = new HashMap<UUID, NativeImage>();
 		vmScreenTextureNIBT = new HashMap<UUID, NativeImageBackedTexture>();
-		
+
 		EntityRendererRegistry.register(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
 		EntityRendererRegistry.register(EntityList.KEYBOARD, KeyboardRender::new);
 		EntityRendererRegistry.register(EntityList.MOUSE, MouseRender::new);

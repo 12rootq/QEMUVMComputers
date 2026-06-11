@@ -9,13 +9,13 @@ public abstract class SetupPage {
 	protected final GuiSetup setupGui;
 	protected final TextRenderer textRender;
 	protected final MinecraftClient minecraft;
-	
+
 	public SetupPage(GuiSetup setupGui, TextRenderer textRender) {
 		this.setupGui = setupGui;
 		this.textRender = textRender;
 		this.minecraft = MinecraftClient.getInstance();
 	}
-	
+
 	public abstract void render(DrawContext context, int mouseX, int mouseY, float delta);
 	public abstract void init();
 }

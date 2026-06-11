@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "Il disco rigido selezionato non esiste sul tuo computer!",
     "mcvmcomputers.iso_doesnt_exist": "L'immagine ISO selezionata non esiste sul tuo computer!",
     "mcvmcomputers.failed_to_start": "Impossibile avviare la Macchina Virtuale, Errore: %s",
-    "mcvmcomputers.contact_me": "Se non riesci a sistemarlo, contattami su Reddit scrivendo in Inglese (u/DeltaTwoForce).",
+    "mcvmcomputers.contact_me": "Se non riesci a sistemarlo, contattami (FB527) sul nostro Discord (MCVmComputers).",
     "mcvmcomputers.click_with_ingots": "Devi cliccare la cassa con i lingotti in mano!",
     "mcvmcomputers.not_your_computer": "Questo computer non è tuo!",
     "mcvmcomputers.hdd_item_name": "Disco Rigido (%s)",

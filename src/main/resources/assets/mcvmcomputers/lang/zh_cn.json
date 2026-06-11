@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "无法从读取您选择的虚拟硬盘文件！",
     "mcvmcomputers.iso_doesnt_exist": "无法从读取您选择的虚拟光盘文件！",
     "mcvmcomputers.failed_to_start": "无法启动虚拟机, 错误︰ %s",
-    "mcvmcomputers.contact_me": "如果您无法自行解决这个问题， 请在 Reddit 与我联络 (u/DeltaTwoForce)。",
+    "mcvmcomputers.contact_me": "如果您无法自行解决这个问题， 请在我们的 Discord 与我联络 (FB527, 群组 MCVmComputers)。",
     "mcvmcomputers.click_with_ingots": "您需要手持铁锭点击储物箱！",
     "mcvmcomputers.not_your_computer": "这台计算机并不是您的！",
     "mcvmcomputers.hdd_item_name": "硬盘 (%s)",

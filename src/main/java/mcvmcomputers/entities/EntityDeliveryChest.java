@@ -39,8 +39,8 @@ public class EntityDeliveryChest extends Entity{
 			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.BOOLEAN);
 	private static final TrackedData<String> DELIVERY_UUID =
 			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.STRING);
-	
-	//Client vars
+
+
 	public float renderRot = 90f;
 	public float upLeg01Rot = 3f;
 	public float uLeg01Rot = -2.7f;
@@ -52,16 +52,15 @@ public class EntityDeliveryChest extends Entity{
 	public float renderOffZ = -80;
 	public boolean fire = false;
 	public SoundInstance rocketSound;
-	
-	//Server vars
+
+
 	public float takeOffTime = 0f;
-	
-	//z -80 y 80 starting position from target
-	
+
+
 	public EntityDeliveryChest(EntityType<?> type, World world) {
 		super(type, world);
 	}
-	
+
 	public EntityDeliveryChest(World world, Vec3d target, UUID owner) {
 		super(EntityList.DELIVERY_CHEST, world);
 		this.getDataTracker().set(TARGET_X, (float)target.x);
@@ -70,7 +69,7 @@ public class EntityDeliveryChest extends Entity{
 		this.getDataTracker().set(DELIVERY_UUID, owner.toString());
 		this.updatePosition(target.x, target.y, target.z);
 	}
-	
+
 	public EntityDeliveryChest(World world, double targetX, double targetY, double targetZ) {
 		super(EntityList.DELIVERY_CHEST, world);
 		this.getDataTracker().set(TARGET_X, (float)targetX);
@@ -87,7 +86,7 @@ public class EntityDeliveryChest extends Entity{
 		this.getDataTracker().startTracking(DELIVERY_UUID, "");
 		this.getDataTracker().startTracking(TAKING_OFF, false);
 	}
-	
+
 	@Override
 	protected void readCustomDataFromNbt(NbtCompound tag) {
 		this.getDataTracker().set(TARGET_X, tag.getFloat("TargetX"));
@@ -102,7 +101,7 @@ public class EntityDeliveryChest extends Entity{
 		tag.putFloat("TargetZ", this.getDataTracker().get(TARGET_Z));
 		tag.putString("DeliveryUUID", this.getDataTracker().get(DELIVERY_UUID));
 	}
-	
+
 	@Override
 	public void tick() {
 		super.tick();
@@ -128,7 +127,7 @@ public class EntityDeliveryChest extends Entity{
 			}
 		}
 	}
-	
+
 	@Override
 	public ActionResult interact(PlayerEntity player, Hand hand) {
 		if(player.getWorld().isClient) {
@@ -141,28 +140,32 @@ public class EntityDeliveryChest extends Entity{
 			TabletOrder to = MainMod.orders.get(UUID.fromString(getDeliveryUUID()));
 			if(to.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
 				ItemStack is = player.getMainHandStack();
-				
+
 				boolean flag = false;
-				
+
 				if(is != null) {
 					if(is.getItem().equals(Items.IRON_INGOT)) {
-						to.price -= is.getCount();
-						is.decrement(is.getCount());
+						int count = is.getCount();
+						to.price -= count;
+						is.decrement(count);
 						flag = true;
 					}
 				}
-				
+
 				if(!flag) {
 					player.sendMessage(Text.translatable("mcvmcomputers.click_with_ingots").formatted(Formatting.RED), false);
 				}else {
 					if(to.price < 0) {
-						is.increment(to.price * -1);
+
+						ItemStack refund = new ItemStack(Items.IRON_INGOT, to.price * -1);
+						player.getInventory().offerOrDrop(refund);
+						to.price = 0;
 						to.currentStatus = OrderStatus.PAYMENT_CHEST_RECEIVING;
 					}else if(to.price == 0) {
 						to.currentStatus = OrderStatus.PAYMENT_CHEST_RECEIVING;
 					}
 				}
-				
+
 				return flag ? ActionResult.SUCCESS : ActionResult.FAIL;
 			}else if(to.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
 			player.getWorld().spawnEntity(new ItemEntity(player.getWorld(), this.getX(), this.getY()+1.5, this.getZ(), ItemPackage.createPackage(Registries.ITEM.getId(to.items.get(0)))));
@@ -172,10 +175,10 @@ public class EntityDeliveryChest extends Entity{
 				}
 			}
 		}
-		
+
 		return super.interact(player, hand);
 	}
-	
+
 	public float getTargetX() {
 		return this.getDataTracker().get(TARGET_X);
 	}
@@ -191,23 +194,23 @@ public class EntityDeliveryChest extends Entity{
 	public Boolean getTakingOff() {
 		return this.getDataTracker().get(TAKING_OFF);
 	}
-	
+
 	public void updateRenderPos(double x, double y, double z) {
 		this.renderOffY = (float) (y - this.getY());
 		this.renderOffZ = (float) (z - this.getZ());
 	}
 
-	
+
 	@Override
 	public boolean isCollidable() {
 		return true;
 	}
-	
+
 	@Override
 	public boolean canHit() {
 		return true;
 	}
-	
+
 	@Override
 	public void remove(Entity.RemovalReason reason) {
 		super.remove(reason);

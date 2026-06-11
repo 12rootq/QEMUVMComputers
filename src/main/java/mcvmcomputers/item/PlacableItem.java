@@ -19,7 +19,7 @@ import net.minecraft.world.World;
 public class PlacableItem extends Item{
 	private Constructor<? extends Entity> constructor;
 	private SoundEvent placeSound;
-	
+
 	public PlacableItem(Settings settings, Class<? extends Entity> entityPlaced, SoundEvent placeSound) {
 		super(settings);
 		this.placeSound = placeSound;
@@ -29,7 +29,7 @@ public class PlacableItem extends Item{
 			e.printStackTrace();
 		}
 	}
-	
+
 	@Override
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
 		if(!world.isClient && hand == Hand.MAIN_HAND) {
@@ -37,7 +37,7 @@ public class PlacableItem extends Item{
 			HitResult hr = user.raycast(10, 0f, false);
 			Entity ek;
 			try {
-				ek = constructor.newInstance(world, 
+				ek = constructor.newInstance(world,
 											hr.getPos().getX(),
 											hr.getPos().getY(),
 											hr.getPos().getZ(),
@@ -49,7 +49,7 @@ public class PlacableItem extends Item{
 				e.printStackTrace();
 			}
 		}
-		
+
 		if(world.isClient) {
 			world.playSound(ClientMod.thePreviewEntity.getX(),
 							ClientMod.thePreviewEntity.getY(),
@@ -57,7 +57,7 @@ public class PlacableItem extends Item{
 							placeSound,
 							SoundCategory.BLOCKS, 1, 1, true);
 		}
-		
+
 		return new TypedActionResult<ItemStack>(ActionResult.SUCCESS, user.getStackInHand(hand));
 	}
 

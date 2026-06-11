@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "Die eingesetzte Festplatte ist auf deinem Computer nicht vorhanden!",
     "mcvmcomputers.iso_doesnt_exist": "Die eingefügte ISO existiert nicht auf deinem Computer!",
     "mcvmcomputers.failed_to_start": "VM konnte nicht gestartet werden, Fehler: %s",
-    "mcvmcomputers.contact_me": "Wenn du das nicht selbst in Ordnung bringen kannst, kontaktiere mich auf Reddit (u/DeltaTwoForce).",
+    "mcvmcomputers.contact_me": "Wenn du das nicht selbst in Ordnung bringen kannst, kontaktiere mich (FB527) auf unserem Discord (MCVmComputers).",
     "mcvmcomputers.click_with_ingots": "Du musst die Truhe mit Barren in der Hand anklicken!",
     "mcvmcomputers.not_your_computer": "Dieser Computer gehört dir nicht!",
     "mcvmcomputers.hdd_item_name": "Festplatte (%s)",

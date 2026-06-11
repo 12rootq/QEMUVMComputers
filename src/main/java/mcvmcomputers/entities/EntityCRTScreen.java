@@ -25,19 +25,19 @@ public class EntityCRTScreen extends Entity{
 			DataTracker.registerData(EntityCRTScreen.class, TrackedDataHandlerRegistry.FLOAT);
 	private static final TrackedData<Float> LOOK_AT_POS_Z =
 			DataTracker.registerData(EntityCRTScreen.class, TrackedDataHandlerRegistry.FLOAT);
-	
+
 	private static final TrackedData<String> OWNER_UUID =
 			DataTracker.registerData(EntityCRTScreen.class, TrackedDataHandlerRegistry.STRING);
-	
+
 	public EntityCRTScreen(EntityType<?> type, World world) {
 		super(type, world);
 	}
-	
+
 	public EntityCRTScreen(World world, double x, double y, double z) {
 		this(EntityList.CRT_SCREEN, world);
 		this.updatePosition(x, y, z);
 	}
-	
+
 	public EntityCRTScreen(World world, Double x, Double y, Double z, Vec3d lookAt, String uuid) {
 		this(EntityList.CRT_SCREEN, world);
 		this.updatePosition(x, y, z);
@@ -46,7 +46,7 @@ public class EntityCRTScreen extends Entity{
 		this.getDataTracker().set(LOOK_AT_POS_Z, (float)lookAt.z);
 		this.getDataTracker().set(OWNER_UUID, uuid);
 	}
-	
+
 	public Vec3d getLookAtPos() {
 		return new Vec3d(this.getDataTracker().get(LOOK_AT_POS_X),
 						 this.getDataTracker().get(LOOK_AT_POS_Y),
@@ -74,7 +74,7 @@ public class EntityCRTScreen extends Entity{
 		tag.putFloat("LookAtZ", this.getDataTracker().get(LOOK_AT_POS_Z));
 		tag.putString("Owner", this.getDataTracker().get(OWNER_UUID));
 	}
-	
+
 	@Override
 	public ActionResult interact(PlayerEntity player, Hand hand) {
 		if(!player.getWorld().isClient) {
@@ -93,24 +93,24 @@ public class EntityCRTScreen extends Entity{
 		}
 		return ActionResult.SUCCESS;
 	}
-	
+
 	@Override
 	public void tick() {
 		if(getOwnerUUID().isEmpty()) {
 			this.kill();
 		}
 	}
-	
+
 	@Override
 	public boolean isCollidable() {
 		return true;
 	}
-	
+
 	@Override
 	public boolean canHit() {
 		return true;
 	}
-	
+
 	public String getOwnerUUID() {
 		return this.getDataTracker().get(OWNER_UUID);
 	}

@@ -3,95 +3,124 @@ package mcvmcomputers.client.utils;
 import static mcvmcomputers.client.ClientMod.*;
 
 import java.util.Arrays;
-
-import org.virtualbox_6_1.BitmapFormat;
-import org.virtualbox_6_1.GuestMonitorStatus;
-import org.virtualbox_6_1.Holder;
-import org.virtualbox_6_1.IConsole;
-import org.virtualbox_6_1.IMachine;
-import org.virtualbox_6_1.IProgress;
-import org.virtualbox_6_1.ISession;
-import org.virtualbox_6_1.LockType;
-import org.virtualbox_6_1.MachineState;
+import java.util.List;
 
 import mcvmcomputers.client.gui.GuiFocus;
 import net.minecraft.client.MinecraftClient;
 
-public class VMRunnable implements Runnable{
+public class VMRunnable implements Runnable {
 	@Override
 	public void run() {
 		MinecraftClient mcc = MinecraftClient.getInstance();
-		while(true) {
+		while (true) {
 			try {
 				double deltaX = 0;
 				double deltaY = 0;
-				
+
 				deltaX = mouseCurX - mouseLastX;
 				deltaY = mouseCurY - mouseLastY;
 				mouseLastX = mouseCurX;
 				mouseLastY = mouseCurY;
-				
-				IMachine m = vb.findMachine("VmComputersVm");
-				if(m.getState() == MachineState.Saved) {
-					ISession sess = vbManager.getSessionObject();
-					m.lockMachine(sess, LockType.Shared);
-					sess.getMachine().discardSavedState(true);
-					sess.unlockMachine();
+
+
+				String state = vbox.getVmState("VmComputersVm");
+
+				if ("saved".equals(state)) {
+					vbox.discardSavedState("VmComputersVm");
+					state = "poweroff";
 				}
-				if(m.getState() == MachineState.PoweredOff) {
-					if(!vmTurningOff && vmTurnedOn) {
-						IProgress pr = m.launchVMProcess(vbManager.getSessionObject(), "headless", Arrays.asList());
-						pr.waitForCompletion(-1);
-					}else {
+
+				if ("poweroff".equals(state)) {
+					if (!vmTurningOff && vmTurnedOn) {
+						try {
+							vbox.startVm("VmComputersVm");
+						} catch (Exception e) {
+
+							vmUpdateThread = null;
+							return;
+						}
+					} else {
 						vmUpdateThread = null;
 						return;
 					}
 				}
-					ISession ns = vbManager.getSessionObject();
-					m.lockMachine(ns, LockType.Shared);
-					IConsole console = ns.getConsole();
-					if(mcc.currentScreen instanceof GuiFocus) {
-						int val = 0x00;
-						if(leftMouseButton) {
-							val += 0x01;
+
+
+				if ("running".equals(state) || "firstonline".equals(state)) {
+
+					if (mcc.currentScreen instanceof GuiFocus) {
+						// Consume any presses that happened since the last tick so a fast
+						// click (press+release within one tick) is never dropped.
+						int latch = mouseButtonPressedLatch;
+						mouseButtonPressedLatch = 0;
+						int held = mouseButtonMask;
+
+						// First event includes every button that is held OR was just pressed.
+						int downState = held | latch;
+						vbox.putMouseEvent("VmComputersVm", (int) deltaX, (int) deltaY, mouseDeltaScroll, downState);
+						mouseDeltaScroll = 0;
+
+						// If a button was pressed-and-released within this tick, the press is
+						// in the latch but not in the held mask. Emit a matching release so the
+						// guest registers a complete click.
+						if ((latch & ~held) != 0) {
+							vbox.putMouseEvent("VmComputersVm", 0, 0, 0, held);
 						}
-						if(middleMouseButton) {
-							val += 0x04;
-						}
-						if(rightMouseButton) {
-							val += 0x02;
-						}
-						console.getMouse().putMouseEvent((int)deltaX, (int)deltaY, mouseDeltaScroll, 0, val);
 					}
-					if(releaseKeys) {
-						console.getKeyboard().putScancodes(Arrays.asList(0x1d + 0x80, 0xe0, 0x1d + 0x80, 0x0e + 0x80));
-						vmKeyboardScancodes.clear();
+
+
+					if (releaseKeys) {
+
+						List<Integer> releaseCodes = Arrays.asList(0x1d + 0x80, 0xe0, 0x1d + 0x80, 0x0e + 0x80);
+						vbox.putScancodes("VmComputersVm", releaseCodes);
+						synchronized (vmKeyboardScancodes) {
+							vmKeyboardScancodes.clear();
+						}
 						releaseKeys = false;
-					}else {
-						console.getKeyboard().putScancodes(vmKeyboardScancodes);
-						vmKeyboardScancodes.clear();
+					} else {
+						// Atomically snapshot and clear the buffer under the same lock the
+						// keyboard callback uses. Sending happens outside the lock so the
+						// render thread is never blocked, and any key typed after this point
+						// stays queued for the next tick instead of being wiped by clear().
+						List<Integer> toSend = null;
+						synchronized (vmKeyboardScancodes) {
+							if (!vmKeyboardScancodes.isEmpty()) {
+								toSend = new java.util.ArrayList<>(vmKeyboardScancodes);
+								vmKeyboardScancodes.clear();
+							}
+						}
+						if (toSend != null) {
+							vbox.putScancodes("VmComputersVm", toSend);
+						}
 					}
-					Holder<Long> width = new Holder<Long>();
-					Holder<Long> height = new Holder<Long>();
-					Holder<Long> bitsPP = new Holder<Long>();
-					Holder<Integer> xOrigin = new Holder<Integer>();
-					Holder<Integer> yOrigin = new Holder<Integer>();
-					Holder<GuestMonitorStatus> status = new Holder<GuestMonitorStatus>();
-					console.getDisplay().getScreenResolution(0L, width, height, bitsPP, xOrigin, yOrigin, status);
-					Long w = width.value;
-					Long h = height.value;
-					byte[] image = null;
-					try {
-						image = console.getDisplay().takeScreenShotToArray(0L, w, h, BitmapFormat.PNG);
-					}catch(Exception ex) {
-						ns.unlockMachine();
-						continue;
+
+
+					byte[] image = vbox.takeScreenshot("VmComputersVm");
+					if (image != null && image.length > 0) {
+						synchronized (VM_TEXTURE_LOCK) {
+							vmTextureBytesSize = image.length;
+							vmTextureBytes = image;
+						}
 					}
-					ns.unlockMachine();
-					vmTextureBytesSize = image.length;
-					vmTextureBytes = image;
-			}catch(Exception ex) {} //TERRIBLE PRACTICE BTW
+				}
+
+
+				try {
+					Thread.sleep(66);
+				} catch (InterruptedException e) {
+					vmUpdateThread = null;
+					return;
+				}
+
+			} catch (Exception ex) {
+
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException ie) {
+					vmUpdateThread = null;
+					return;
+				}
+			}
 		}
 	}
-
 }

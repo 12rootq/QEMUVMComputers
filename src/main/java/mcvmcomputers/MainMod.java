@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -36,6 +37,7 @@ import net.minecraft.util.collection.DefaultedList;
 import static mcvmcomputers.networking.PacketList.*;
 
 public class MainMod implements ModInitializer {
+	private static final org.apache.logging.log4j.Logger LOGGER = org.apache.logging.log4j.LogManager.getLogger();
 	public static Map<UUID, TabletOrder> orders;
 	public static Map<UUID, EntityPC> computers;
 
@@ -76,7 +78,13 @@ public class MainMod implements ModInitializer {
 					OrderableItem[] items = new OrderableItem[arraySize];
 					int price = 0;
 					for (int i = 0; i < arraySize; i++) {
-						items[i] = (OrderableItem) attachedData.readItemStack().getItem();
+						Item readItem = attachedData.readItemStack().getItem();
+					if (readItem instanceof OrderableItem) {
+						items[i] = (OrderableItem) readItem;
+					} else {
+						LOGGER.warn("C2S_ORDER: received non-OrderableItem, ignoring");
+						items[i] = null;
+					}
 						price += items[i].getPrice();
 					}
 
@@ -236,7 +244,7 @@ public class MainMod implements ModInitializer {
 						} else if (dividedBy == 6) {
 							lookingFor = ItemList.ITEM_CPU6;
 						}
-						if (player.getInventory().contains(new ItemStack(lookingFor))) {
+						if (lookingFor != null && player.getInventory().contains(new ItemStack(lookingFor))) {
 							Entity e = player.getWorld().getEntityById(entityId);
 							if (e != null) {
 								if (e instanceof EntityPC) {
@@ -251,7 +259,7 @@ public class MainMod implements ModInitializer {
 							}
 						} else {
 							player.sendMessage(
-									Text.translatable("mcvmcomputers.cpu_not_present").formatted(Formatting.RED),
+									Text.translatable("mcvmcomputers.ram_not_present").formatted(Formatting.RED),
 									false);
 						}
 					});
@@ -279,7 +287,7 @@ public class MainMod implements ModInitializer {
 						} else if (mb == 4096) {
 							lookingFor = ItemList.ITEM_RAM4G;
 						}
-						if (player.getInventory().contains(new ItemStack(lookingFor))) {
+						if (lookingFor != null && player.getInventory().contains(new ItemStack(lookingFor))) {
 							Entity e = player.getWorld().getEntityById(entityId);
 							if (e != null) {
 								if (e instanceof EntityPC) {
@@ -297,7 +305,7 @@ public class MainMod implements ModInitializer {
 							}
 						} else {
 							player.sendMessage(
-									Text.translatable("mcvmcomputers.cpu_not_present").formatted(Formatting.RED),
+									Text.translatable("mcvmcomputers.hdd_not_present").formatted(Formatting.RED),
 									false);
 						}
 					});
@@ -325,7 +333,7 @@ public class MainMod implements ModInitializer {
 							}
 						} else {
 							player.sendMessage(
-									Text.translatable("mcvmcomputers.cpu_not_present").formatted(Formatting.RED),
+									Text.translatable("mcvmcomputers.hdd_not_present").formatted(Formatting.RED),
 									false);
 						}
 					});
@@ -475,6 +483,24 @@ public class MainMod implements ModInitializer {
 		UnmodifiableIterator<DefaultedList<ItemStack>> var2 = ImmutableList.of(inv.main, inv.armor, inv.offHand)
 				.iterator();
 
+
+		if (is.getNbt() != null) {
+			while (var2.hasNext()) {
+				List<ItemStack> list = (List<ItemStack>) var2.next();
+				Iterator<ItemStack> var4 = list.iterator();
+
+				while (var4.hasNext()) {
+					ItemStack itemStack = (ItemStack) var4.next();
+					if (!itemStack.isEmpty() && itemStack.isOf(is.getItem()) && Objects.equals(itemStack.getNbt(), is.getNbt())) {
+						itemStack.decrement(1);
+						return;
+					}
+				}
+			}
+
+			var2 = ImmutableList.of(inv.main, inv.armor, inv.offHand).iterator();
+		}
+
 		while (var2.hasNext()) {
 			List<ItemStack> list = (List<ItemStack>) var2.next();
 			Iterator<ItemStack> var4 = list.iterator();
@@ -487,6 +513,7 @@ public class MainMod implements ModInitializer {
 				}
 			}
 		}
-		throw new RuntimeException("Doesn't contain item!");
+		LOGGER.error("removeStck: item not found in inventory (desync?)");
+		return;
 	}
 }

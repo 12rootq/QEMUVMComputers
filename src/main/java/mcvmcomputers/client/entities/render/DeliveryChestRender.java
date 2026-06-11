@@ -32,7 +32,7 @@ import static mcvmcomputers.utils.MVCUtils.*;
 public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 	private DeliveryChestModel deliveryChestModel;
 	private MinecraftClient mcc;
-	
+
 	public DeliveryChestRender(EntityRendererFactory.Context context) {
 		super(context);
 		mcc = MinecraftClient.getInstance();
@@ -42,7 +42,7 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 	public Identifier getTexture(EntityDeliveryChest entity) {
 		return null;
 	}
-	
+
 	private void checkModel() {
 		if(deliveryChestModel == null) {
 			try {
@@ -52,27 +52,27 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 			}
 		}
 	}
-	
+
 	private void applyRotations(EntityDeliveryChest entity) {
 		deliveryChestModel.setRotationAngle(deliveryChestModel.upleg0, 0, 0, entity.upLeg01Rot);
 		deliveryChestModel.setRotationAngle(deliveryChestModel.upleg1, 0, 0, entity.upLeg01Rot);
 		deliveryChestModel.setRotationAngle(deliveryChestModel.upleg2, 0, 0, entity.upLeg23Rot);
 		deliveryChestModel.setRotationAngle(deliveryChestModel.upleg3, 0, 0, entity.upLeg23Rot);
-		
+
 		deliveryChestModel.setRotationAngle(deliveryChestModel.uleg0, 0, 0, entity.uLeg01Rot);
 		deliveryChestModel.setRotationAngle(deliveryChestModel.uleg1, 0, 0, entity.uLeg01Rot);
 		deliveryChestModel.setRotationAngle(deliveryChestModel.uleg2, 0, 0, entity.uLeg23Rot);
 		deliveryChestModel.setRotationAngle(deliveryChestModel.uleg3, 0, 0, entity.uLeg23Rot);
-		
+
 		deliveryChestModel.setRotationAngle(deliveryChestModel.opening, entity.openingRot, 0, 0);
-		
+
 		deliveryChestModel.fireYes = entity.fire;
 	}
-	
+
 	private Vec3d renderPos(EntityDeliveryChest entity) {
 		return new Vec3d(entity.getX(), entity.getY()+entity.renderOffY, entity.getZ()+entity.renderOffZ);
 	}
-	
+
 	private void changeRotations(EntityDeliveryChest entity) {
 		if(entity.fire) {
 			if(entity.rocketSound == null) {
@@ -114,18 +114,18 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 				dist = -dist;
 			}
 			double prog = Math.min(dist / 40f, 1f);
-			
+
 			prog -= 2;
 			prog = -prog;
-			
+
 			entity.renderRot = (float) (90f + (45f * prog));
-			
+
 			if(dist > 25) {
 				entity.fire = false;
 			}else {
 				entity.fire = true;
 			}
-			
+
 			if(dist < 3) {
 				entity.upLeg01Rot = lerp(entity.upLeg01Rot, 0f, deltaTime);
 				entity.upLeg23Rot = lerp(entity.upLeg23Rot, 0f, deltaTime);
@@ -142,14 +142,14 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 			Vec3d curPos = renderPos(entity);
 			Vec3d v = new Vec3d(curPos.getX(),curPos.getY()+entity.takeOffSpeed, curPos.getZ());
 			entity.updateRenderPos(v.x, v.y, v.z);
-			
+
 			entity.upLeg01Rot = lerp(entity.upLeg01Rot, 3f, deltaTime);
 			entity.upLeg23Rot = lerp(entity.upLeg23Rot, 3.3f, deltaTime);
 			entity.uLeg01Rot = lerp(entity.uLeg01Rot, -2.7f, deltaTime);
 			entity.uLeg23Rot = lerp(entity.uLeg23Rot, -2.7f, deltaTime);
 			entity.openingRot = lerp(entity.openingRot, 0f, deltaTime);
 			entity.fire = true;
-			
+
 			if(curPos.getY() > 250) {
 				if(entity.rocketSound != null) {
 					if(mcc.getSoundManager().isPlaying(entity.rocketSound)) {
@@ -160,7 +160,7 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 			}
 		}
 	}
-	
+
 	private void smokeParticle(World w, Vec3d pos, int amount) {
 		for(int i = 0;i<amount;i++) {
 			if(amount == 3) {
@@ -172,19 +172,19 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 			}
 		}
 	}
-	
+
 	private void doParticlesForFire(EntityDeliveryChest entity) {
 		Vec3d curPos = renderPos(entity);
-		
+
 		smokeParticle(entity.getWorld(), curPos, 3);
 		smokeParticle(entity.getWorld(), curPos, 6);
-		
+
 		Vec3d ground = new Vec3d(curPos.getX(), entity.getWorld().getTopY(Type.MOTION_BLOCKING, (int)curPos.getX(), (int)curPos.getZ()), curPos.getZ());
 		double dist = ground.distanceTo(curPos);
 		if(dist < 0) {
 			dist = -dist;
 		}
-		
+
 		if(dist < 5) {
 			if(dist > 4 && dist < 5) {
 				smokeParticle(entity.getWorld(), ground, 1);
@@ -203,12 +203,12 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 			}
 		}
 	}
-	
+
 	@Override
 	public boolean shouldRender(EntityDeliveryChest entity, Frustum visibleRegion, double cameraX, double cameraY, double cameraZ) {
 		return true;
 	}
-	
+
 	@Override
 	public void render(EntityDeliveryChest entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light) {
 		this.checkModel();
@@ -217,10 +217,10 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 		if(entity.fire) {
 			this.doParticlesForFire(entity);
 		}
-		
+
 		matrices.push();
 		matrices.translate(0, entity.renderOffY, entity.renderOffZ);
-		
+
 		matrices.push();
 			matrices.multiply(new Quaternionf().rotationX((float)Math.toRadians(entity.renderRot)));
 			matrices.translate(0, -1.5, 0);
@@ -229,7 +229,7 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 				matrices.multiply(new Quaternionf().rotationX((float)Math.toRadians(-90)));
 				matrices.scale(0.02f, 0.02f, 0.02f);
 				matrices.translate(-15.63, -15.63, 6.22);
-				matrices.push();   
+				matrices.push();
 					matrices.scale(0.4f, 0.4f, 0.4f);
 					if(ClientMod.myOrder != null) {
 						if(entity.getDeliveryUUID().equals(ClientMod.myOrder.orderUUID)) {
@@ -262,9 +262,9 @@ public class DeliveryChestRender extends EntityRenderer<EntityDeliveryChest>{
 				matrices.pop();
 			matrices.pop();
 		matrices.pop();
-		
+
 		matrices.pop();
-		
+
 		super.render(entity, yaw, tickDelta, matrices, vertexConsumers, light);
 	}
 

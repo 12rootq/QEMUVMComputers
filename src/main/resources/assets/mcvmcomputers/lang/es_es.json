@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "El disco duro insertado no existe en tu computadora.",
     "mcvmcomputers.iso_doesnt_exist": "El ISO insertado no existe en tu computadora.",
     "mcvmcomputers.failed_to_start": "No se pudo iniciar la máquina virtual, error: %s",
-    "mcvmcomputers.contact_me": "Si no puedes arreglar esto por tu cuenta, contactame en Reddit (u/DeltaTwoForce).",
+    "mcvmcomputers.contact_me": "Si no puedes arreglar esto por tu cuenta, contactame (FB527) en nuestro Discord (MCVmComputers).",
     "mcvmcomputers.click_with_ingots": "Necesitas tener lingotes en la mano!",
     "mcvmcomputers.not_your_computer": "¡Esta computadora no es tuya!",
     "mcvmcomputers.hdd_item_name": "Disco duro (%s)",

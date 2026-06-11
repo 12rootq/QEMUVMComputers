@@ -13,7 +13,7 @@ public class SetupPageUnfocusBinding extends SetupPage{
 	public static boolean changeBinding;
 	public static int bindingToBeChangedNum;
 	public static boolean bindingJustChanged;
-	
+
 	public SetupPageUnfocusBinding(GuiSetup setupGui, TextRenderer textRender) {
 		super(setupGui, textRender);
 	}
@@ -27,14 +27,14 @@ public class SetupPageUnfocusBinding extends SetupPage{
 		String s = setupGui.translation("mcvmcomputers.setup.unfocusCombo");
 		context.drawTextWithShadow(this.textRender, s, setupGui.width/2-this.textRender.getWidth(s)/2, setupGui.height/2-20, -1);
 	}
-	
+
 	private void changeBinding(int num) {
 		changeBinding = true;
 		bindingToBeChangedNum = num;
 		bindingJustChanged = false;
 		setupGui.init();
 	}
-	
+
 	private void clearBinding(int num) {
 		switch(num) {
 		case 1:
@@ -66,12 +66,12 @@ public class SetupPageUnfocusBinding extends SetupPage{
 			setupGui.addButton(ButtonWidget.builder(Text.literal(getKeyName(glfwUnfocusKey3)), (bw) -> changeBinding(3)).dimensions(setupGui.width/2+3, setupGui.height/2-10, 60, 20).build());
 			setupGui.addButton(ButtonWidget.builder(Text.literal(getKeyName(glfwUnfocusKey4)), (bw) -> changeBinding(4)).dimensions(setupGui.width/2+70, setupGui.height/2-10, 60, 20).build());
 		}
-		
+
 		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("mcvmcomputers.setup.clearButton")), (bw) -> clearBinding(1)).dimensions(setupGui.width/2-130, setupGui.height/2+12, 60, 12).build());
 		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("mcvmcomputers.setup.clearButton")), (bw) -> clearBinding(2)).dimensions(setupGui.width/2-64, setupGui.height/2+12, 60, 12).build());
 		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("mcvmcomputers.setup.clearButton")), (bw) -> clearBinding(3)).dimensions(setupGui.width/2+3, setupGui.height/2+12, 60, 12).build());
 		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("mcvmcomputers.setup.clearButton")), (bw) -> clearBinding(4)).dimensions(setupGui.width/2+70, setupGui.height/2+12, 60, 12).build());
-		
+
 		int nextButtonW = textRender.getWidth(setupGui.translation("mcvmcomputers.setup.nextButton"))+40;
 		setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("mcvmcomputers.setup.nextButton")), (bw) -> this.setupGui.nextPage()).dimensions(setupGui.width/2 - (nextButtonW/2), setupGui.height - 40, nextButtonW, 20).build());
 	}

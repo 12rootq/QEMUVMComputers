@@ -35,7 +35,7 @@
     "mcvmcomputers.hdd_doesnt_exist": "The inserted hard drive does not exist on your computer!",
     "mcvmcomputers.iso_doesnt_exist": "The inserted ISO does not exist on your computer!",
     "mcvmcomputers.failed_to_start": "Failed to start VM, error: %s",
-    "mcvmcomputers.contact_me": "If you can't fix this on your own, contact me on Reddit (u/DeltaTwoForce).",
+    "mcvmcomputers.contact_me": "If you can't fix this on your own, contact me (FB527) on our Discord (MCVmComputers).",
     "mcvmcomputers.click_with_ingots": "You need to click the chest with ingots in your hand!",
     "mcvmcomputers.not_your_computer": "This computer is not yours!",
     "mcvmcomputers.hdd_item_name": "Hard Drive (%s)",

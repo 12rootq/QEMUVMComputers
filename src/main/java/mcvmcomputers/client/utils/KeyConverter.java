@@ -21,17 +21,21 @@ public class KeyConverter {
 				}
 				ints.add(ts);
 			}
+		}else if(action == GLFW_REPEAT) {
+
+			for(int s : sck) {
+				ints.add(s);
+			}
 		}else {
 			return new ArrayList<Integer>();
 		}
 		return ints;
 	}
-	
-	//is this good practice? it seems absolutely horrendous to me but
-	//i dont know how else to solve it
+
+
 	public static int[] scancodeFromGLFWKey(int glfwKey) {
-		//US Layout only
-		//Missing some keys
+
+
 		switch(glfwKey) {
 		case GLFW_KEY_ESCAPE:
 			return new int[] {0x01};
@@ -234,6 +238,9 @@ public class KeyConverter {
 		case GLFW_KEY_MENU:
 			return new int[] {0xe0, 0x5d};
 		}
-		return new int[] {0x00};
+		// Unknown / unmapped key: return no scancodes. Returning 0x00 here is harmful -
+		// 0x00 is the PS/2 "keyboard error / buffer overrun" code and can trigger a
+		// guest-side "Keyboard error" (especially once break codes are also sent).
+		return new int[] {};
 	}
 }

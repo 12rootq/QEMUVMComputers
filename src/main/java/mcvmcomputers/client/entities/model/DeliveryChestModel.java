@@ -29,16 +29,16 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 	public final ModelPart uleg3;
 	public final ModelPart engine;
 	public final ModelPart fire;
-	
+
 	private final NativeImage baseTexture;
 	private final MinecraftClient mcc;
-	
+
 	public static final Random TEX_RANDOM = new Random();
-	
+
 	private NativeImage ni;
 	private NativeImageBackedTexture nibt;
 	private Identifier texId;
-	
+
 	public boolean fireYes = true;
 
 	public DeliveryChestModel() throws IOException {
@@ -48,7 +48,7 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 	public DeliveryChestModel(ModelPart root) throws IOException {
 		this.mcc = MinecraftClient.getInstance();
 		this.baseTexture = NativeImage.read(mcc.getResourceManager().getResourceOrThrow(new Identifier("mcvmcomputers", "textures/entity/delivery_chest.png")).getInputStream());
-		
+
 		this.model = root.getChild("model");
 		this.opening = this.model.getChild("opening");
 		this.upleg0 = this.model.getChild("upleg0");
@@ -67,61 +67,61 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 		ModelData modelData = new ModelData();
 		ModelPartData root = modelData.getRoot();
 
-		// model (root part) - main body
+
 		ModelPartData modelData_part = root.addChild("model", ModelPartBuilder.create()
 			.uv(0, 0).cuboid(-6.0F, -5.0F, -6.0F, 12.0F, 8.0F, 12.0F),
 			ModelTransform.pivot(0.0F, 7.0F, 0.0F));
 
-		// opening - child of model
+
 		modelData_part.addChild("opening", ModelPartBuilder.create()
 			.uv(0, 20).cuboid(-6.0F, -2.0F, -12.0F, 12.0F, 2.0F, 12.0F),
 			ModelTransform.of(0.0F, -5.0F, 6.0F, -1.1345F, 0.0F, 0.0F));
 
-		// upleg0 - child of model
+
 		ModelPartData upleg0Data = modelData_part.addChild("upleg0", ModelPartBuilder.create()
 			.uv(24, 34).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
 			ModelTransform.of(-6.0F, 3.0F, 6.0F, 0.0F, 0.7854F, 0.0F));
 
-		// uleg0 - child of upleg0
+
 		upleg0Data.addChild("uleg0", ModelPartBuilder.create()
 			.uv(0, 46).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
 			.uv(0, 20).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
 			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
 
-		// upleg1 - child of model
+
 		ModelPartData upleg1Data = modelData_part.addChild("upleg1", ModelPartBuilder.create()
 			.uv(0, 34).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
 			ModelTransform.of(-6.0F, 3.0F, -6.0F, 0.0F, -0.7854F, 0.0F));
 
-		// uleg1 - child of upleg1
+
 		upleg1Data.addChild("uleg1", ModelPartBuilder.create()
 			.uv(44, 44).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
 			.uv(0, 8).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
 			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
 
-		// upleg2 - child of model
+
 		ModelPartData upleg2Data = modelData_part.addChild("upleg2", ModelPartBuilder.create()
 			.uv(6, 24).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
 			ModelTransform.of(6.0F, 3.0F, -6.0F, 0.0F, -2.3562F, 0.0F));
 
-		// uleg2 - child of upleg2
+
 		upleg2Data.addChild("uleg2", ModelPartBuilder.create()
 			.uv(38, 43).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
 			.uv(0, 4).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
 			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
 
-		// upleg3 - child of model
+
 		ModelPartData upleg3Data = modelData_part.addChild("upleg3", ModelPartBuilder.create()
 			.uv(0, 24).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
 			ModelTransform.of(6.0F, 3.0F, 6.0F, 0.0F, 2.3562F, 0.0F));
 
-		// uleg3 - child of upleg3
+
 		upleg3Data.addChild("uleg3", ModelPartBuilder.create()
 			.uv(32, 43).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
 			.uv(0, 0).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
 			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
 
-		// engine - child of model
+
 		ModelPartData engineData = modelData_part.addChild("engine", ModelPartBuilder.create()
 			.uv(0, 34).cuboid(-4.0F, 8.0F, -4.0F, 8.0F, 4.0F, 8.0F)
 			.uv(36, 0).cuboid(-3.0F, 5.0F, -3.0F, 6.0F, 3.0F, 6.0F)
@@ -132,19 +132,19 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 			.uv(34, 34).cuboid(3.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F),
 			ModelTransform.pivot(0.0F, 0.0F, 0.0F));
 
-		// fire - child of engine
+
 		engineData.addChild("fire", ModelPartBuilder.create()
 			.uv(32, 34).cuboid(-3.0F, -1.0F, -3.0F, 6.0F, 3.0F, 6.0F),
 			ModelTransform.pivot(0.0F, 13.0F, 0.0F));
 
 		return TexturedModelData.of(modelData, 64, 64);
 	}
-	
+
 	private void generateTexture() {
 		if(ni != null) {ni.close(); ni = null;}
 		if(nibt != null) {nibt.close(); nibt = null;}
 		if(texId != null) {mcc.getTextureManager().destroyTexture(texId); texId = null;};
-		
+
 		ni = new NativeImage(64, 64, true);
 		ni.copyFrom(baseTexture);
 		for(int x = 38;x<50;x++) {
@@ -160,7 +160,7 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 		nibt = new NativeImageBackedTexture(ni);
 		texId = mcc.getTextureManager().registerDynamicTexture("delivery_chest_fire", nibt);
 	}
-	
+
 	private int randomColor() {
 		if(fireYes) {
 			Color r = new Color(0,0,255);
@@ -184,12 +184,12 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 	public void render(MatrixStack matrixStack, VertexConsumer buffer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha){
 		model.render(matrixStack, buffer, packedLight, packedOverlay);
 	}
-	
+
 	public void render(MatrixStack matrixStack, VertexConsumerProvider provider, int packedLight, int packedOverlay){
 		this.generateTexture();
 		model.render(matrixStack, provider.getBuffer(RenderLayer.getEntityCutout(texId)), packedLight, packedOverlay);
 	}
-	
+
 	public void setRotationAngle(ModelPart modelRenderer, float x, float y, float z) {
 		modelRenderer.pitch = x;
 		modelRenderer.yaw = y;
