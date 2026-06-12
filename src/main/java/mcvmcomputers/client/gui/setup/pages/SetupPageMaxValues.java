@@ -11,24 +11,26 @@ import com.google.gson.Gson;
 
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.client.gui.setup.GuiSetup;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Button;
 import mcvmcomputers.client.utils.VBoxManage;
 import mcvmcomputers.client.utils.VMSettings;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+
+
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.network.chat.Component;
 
 public class SetupPageMaxValues extends SetupPage{
 	private String statusMaxRam;
 	private String statusVideoMemory;
-	private TextFieldWidget maxRam;
-	private TextFieldWidget videoMemory;
+	private EditBox maxRam;
+	private EditBox videoMemory;
 	private String status;
 	private boolean onlyStatusMessage = false;
 
-	public SetupPageMaxValues(GuiSetup setupGui, TextRenderer textRender) {
+	public SetupPageMaxValues(GuiSetup setupGui, Font textRender) {
 		super(setupGui, textRender);
 	}
 
@@ -68,8 +70,8 @@ public class SetupPageMaxValues extends SetupPage{
 		return true;
 	}
 
-	private void confirmButton(ButtonWidget in) {
-		boolean[] bools = new boolean[] {checkMaxRam(maxRam.getText()), videoMemory(videoMemory.getText())};
+	private void confirmButton(Button in) {
+		boolean[] bools = new boolean[] {checkMaxRam(maxRam.getValue()), videoMemory(videoMemory.getValue())};
 		for(boolean b : bools) {
 			if(!b) {
 				return;
@@ -78,8 +80,8 @@ public class SetupPageMaxValues extends SetupPage{
 		this.setupGui.clearElements();
 		this.setupGui.clearButtons();
 		onlyStatusMessage = true;
-		ClientMod.maxRam = Integer.parseInt(maxRam.getText());
-		ClientMod.videoMem = Integer.parseInt(videoMemory.getText());
+		ClientMod.maxRam = Integer.parseInt(maxRam.getValue());
+		ClientMod.videoMem = Integer.parseInt(videoMemory.getValue());
 		status = setupGui.translation("mcvmcomputers.setup.startingStatus");
 		new Thread(new Runnable() {
 			@Override
@@ -105,7 +107,7 @@ public class SetupPageMaxValues extends SetupPage{
 					set.unfocusKey4 = ClientMod.glfwUnfocusKey4;
 					set.maxRam = ClientMod.maxRam;
 					set.videoMem = ClientMod.videoMem;
-					File f = new File(minecraft.runDirectory, "vm_computers/setup.json");
+					File f = new File(minecraft.gameDirectory, "vm_computers/setup.json");
 					if(f.exists()) {
 						f.delete();
 					}
@@ -147,21 +149,21 @@ public class SetupPageMaxValues extends SetupPage{
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 		if(!onlyStatusMessage) {
-			context.drawTextWithShadow(this.textRender, setupGui.translation("mcvmcomputers.setup.max_ram_input"), setupGui.width/2 - 160, setupGui.height/2-30, -1);
-			context.drawTextWithShadow(this.textRender, setupGui.translation("mcvmcomputers.setup.vram_input"), setupGui.width/2 + 10, setupGui.height/2-30, -1);
+			context.drawString(this.textRender, setupGui.translation("mcvmcomputers.setup.max_ram_input"), setupGui.width/2 - 160, setupGui.height/2-30, -1);
+			context.drawString(this.textRender, setupGui.translation("mcvmcomputers.setup.vram_input"), setupGui.width/2 + 10, setupGui.height/2-30, -1);
 			String s = setupGui.translation("mcvmcomputers.setup.ram_input_help");
-			context.drawTextWithShadow(this.textRender, s, setupGui.width/2 - textRender.getWidth(s)/2, setupGui.height/2+30, -1);
-			context.drawTextWithShadow(this.textRender, statusMaxRam, setupGui.width / 2 - 160, setupGui.height/2 + 3, -1);
-			context.drawTextWithShadow(this.textRender, statusVideoMemory, setupGui.width / 2 + 10, setupGui.height/2 + 3, -1);
+			context.drawString(this.textRender, s, setupGui.width/2 - textRender.width(s)/2, setupGui.height/2+30, -1);
+			context.drawString(this.textRender, statusMaxRam, setupGui.width / 2 - 160, setupGui.height/2 + 3, -1);
+			context.drawString(this.textRender, statusVideoMemory, setupGui.width / 2 + 10, setupGui.height/2 + 3, -1);
 			this.maxRam.render(context, mouseX, mouseY, delta);
 			this.videoMemory.render(context, mouseX, mouseY, delta);
 		}else {
-			int yOff = -((this.textRender.fontHeight * status.split("\n").length)/2);
+			int yOff = -((this.textRender.lineHeight * status.split("\n").length)/2);
 			for(String s : status.split("\n")) {
-				context.drawTextWithShadow(this.textRender, s, setupGui.width/2 - this.textRender.getWidth(s)/2, (setupGui.height/2-this.textRender.fontHeight/2)+yOff, -1);
-				yOff+=this.textRender.fontHeight+1;
+				context.drawString(this.textRender, s, setupGui.width/2 - this.textRender.width(s)/2, (setupGui.height/2-this.textRender.lineHeight/2)+yOff, -1);
+				yOff+=this.textRender.lineHeight+1;
 			}
 		}
 	}
@@ -170,25 +172,25 @@ public class SetupPageMaxValues extends SetupPage{
 	public void init() {
 		String maxRamText = ""+ClientMod.maxRam;
 		if(maxRam != null) {
-			maxRamText = maxRam.getText();
+			maxRamText = maxRam.getValue();
 		}
 		String videoMemoryText = ""+ClientMod.videoMem;
 		if(videoMemory != null) {
-			videoMemoryText = videoMemory.getText();
+			videoMemoryText = videoMemory.getValue();
 		}
 		if(!onlyStatusMessage) {
-			maxRam = new TextFieldWidget(this.textRender, setupGui.width/2-160, setupGui.height/2-20, 150, 20, Text.literal(""));
-			maxRam.setText(maxRamText);
-			maxRam.setChangedListener((str) -> checkMaxRam(str));
-			videoMemory = new TextFieldWidget(this.textRender, setupGui.width/2+10, setupGui.height/2-20, 150, 20, Text.literal(""));
-			videoMemory.setText(videoMemoryText);
-			videoMemory.setChangedListener((str) -> videoMemory(str));
-			checkMaxRam(maxRam.getText());
-			videoMemory(videoMemory.getText());
+			maxRam = new EditBox(this.textRender, setupGui.width/2-160, setupGui.height/2-20, 150, 20, Component.literal(""));
+			maxRam.setValue(maxRamText);
+			maxRam.setResponder((str) -> checkMaxRam(str));
+			videoMemory = new EditBox(this.textRender, setupGui.width/2+10, setupGui.height/2-20, 150, 20, Component.literal(""));
+			videoMemory.setValue(videoMemoryText);
+			videoMemory.setResponder((str) -> videoMemory(str));
+			checkMaxRam(maxRam.getValue());
+			videoMemory(videoMemory.getValue());
 			setupGui.addElement(maxRam);
 			setupGui.addElement(videoMemory);
-			int confirmW = textRender.getWidth(setupGui.translation("mcvmcomputers.setup.confirmButton"))+40;
-			setupGui.addButton(ButtonWidget.builder(Text.literal(setupGui.translation("mcvmcomputers.setup.confirmButton")), (btn) -> confirmButton(btn)).dimensions(setupGui.width/2 - (confirmW/2), setupGui.height - 40, confirmW, 20).build());
+			int confirmW = textRender.width(setupGui.translation("mcvmcomputers.setup.confirmButton"))+40;
+			setupGui.addButton(Button.builder(Component.literal(setupGui.translation("mcvmcomputers.setup.confirmButton")), (btn) -> confirmButton(btn)).bounds(setupGui.width/2 - (confirmW/2), setupGui.height - 40, confirmW, 20).build());
 
 			if(setupGui.startVb) {
 				confirmButton(null);

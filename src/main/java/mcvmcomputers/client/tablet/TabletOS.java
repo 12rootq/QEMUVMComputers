@@ -29,18 +29,35 @@ import mcvmcomputers.sound.SoundList;
 import mcvmcomputers.sound.TabletSoundInstance;
 import mcvmcomputers.utils.MVCUtils;
 import mcvmcomputers.utils.TabletOrder.OrderStatus;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Identifier;
 
+
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
+
+import io.netty.buffer.Unpooled;
+
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.resources.ResourceLocation;
+
+/**
+ * The tablet's "operating system" - the on-screen UI rendered in real time.
+ *
+ * <p>Works as a small state machine ({@code State}): looking for a satellite (radar),
+ * shop intro, shop (selecting and adding components to the cart), outro and showing
+ * the order status. Each frame in {@link #render()} (called from a separate thread in
+ * {@code GameloopMixin}) the UI is drawn with AWT into a {@link BufferedImage}, then
+ * {@link #generateTexture()} turns it into a {@link DynamicTexture}
+ * ({@link #textureIdentifier}) that {@link mcvmcomputers.client.HeldTabletRenderer}
+ * overlays onto the tablet model held in hand.</p>
+ *
+ * <p>Keyboard input (arrows/Enter) is handled only while the tablet is on
+ * ({@code tabletOn}); the radar/shop sounds are played via {@link TabletSoundInstance}.</p>
+ */
 /**
  * Renders the ordering tablet's on-screen "OS": the satellite-search radar,
  * the animated VMcorp store front and the order-status display. Each frame is
@@ -49,8 +66,8 @@ import net.minecraft.util.Identifier;
 public class TabletOS {
 
 	public NativeImage renderedImage;
-	public NativeImageBackedTexture nibt;
-	public Identifier textureIdentifier;
+	public DynamicTexture nibt;
+	public ResourceLocation textureIdentifier;
 	public ByteArrayInputStream byteArrayInputStream;
 	public final Object TEXTURE_SYNC = new Object();
 
@@ -70,8 +87,8 @@ public class TabletOS {
 	private SoundInstance shopMusicSound;
 	private SoundInstance shopOutroSound;
 	private ArrayList<OrderableItem> shoppingCart;
-	private static final List<OrderableItem> PC_PARTS = Arrays.asList(ItemList.PC_CASE, ItemList.PC_CASE_SIDEPANEL, ItemList.ITEM_MOTHERBOARD, ItemList.ITEM_MOTHERBOARD64, ItemList.ITEM_RAM64M, ItemList.ITEM_RAM128M, ItemList.ITEM_RAM256M, ItemList.ITEM_RAM512M, ItemList.ITEM_RAM1G, ItemList.ITEM_RAM2G, ItemList.ITEM_RAM4G, ItemList.ITEM_CPU2, ItemList.ITEM_CPU4, ItemList.ITEM_CPU6, ItemList.ITEM_GPU, ItemList.ITEM_HARDDRIVE);
-	private static final List<OrderableItem> PERIPHERALS = Arrays.asList(ItemList.ITEM_KEYBOARD, ItemList.ITEM_MOUSE, ItemList.ITEM_CRTSCREEN, ItemList.ITEM_FLATSCREEN, ItemList.ITEM_WALLTV);
+	private static final List<OrderableItem> PC_PARTS = List.of((OrderableItem)ItemList.PC_CASE, (OrderableItem)ItemList.PC_CASE_SIDEPANEL, (OrderableItem)ItemList.ITEM_MOTHERBOARD, (OrderableItem)ItemList.ITEM_MOTHERBOARD64, (OrderableItem)ItemList.ITEM_RAM64M, (OrderableItem)ItemList.ITEM_RAM128M, (OrderableItem)ItemList.ITEM_RAM256M, (OrderableItem)ItemList.ITEM_RAM512M, (OrderableItem)ItemList.ITEM_RAM1G, (OrderableItem)ItemList.ITEM_RAM2G, (OrderableItem)ItemList.ITEM_RAM4G, (OrderableItem)ItemList.ITEM_CPU2, (OrderableItem)ItemList.ITEM_CPU4, (OrderableItem)ItemList.ITEM_CPU6, (OrderableItem)ItemList.ITEM_GPU, (OrderableItem)ItemList.ITEM_HARDDRIVE);
+	private static final List<OrderableItem> PERIPHERALS = List.of((OrderableItem)ItemList.ITEM_KEYBOARD, (OrderableItem)ItemList.ITEM_MOUSE, (OrderableItem)ItemList.ITEM_CRTSCREEN, (OrderableItem)ItemList.ITEM_FLATSCREEN, (OrderableItem)ItemList.ITEM_WALLTV);
 	private BufferedImage lastShopImage;
 
 
@@ -94,16 +111,17 @@ public class TabletOS {
 	public boolean tabletOn = false;
 	private final Font font;
 	public State tabletState = State.LOOKING_FOR_SATELLITE;
-	private MinecraftClient mcc = MinecraftClient.getInstance();
+	private Minecraft mcc = Minecraft.getInstance();
 
 	public TabletOS() throws FontFormatException, IOException {
 		radarSound = new TabletSoundInstance(SoundList.RADAR_SOUND);
 		shopIntroSound = new TabletSoundInstance(SoundList.SHOPINTRO_SOUND);
 		shopOutroSound = new TabletSoundInstance(SoundList.SHOPOUTRO_SOUND);
-		shopMusicSound = PositionedSoundInstance.master(SoundEvents.MUSIC_DISC_FAR.value(), 0.6f, 0.2f);
-		displayOrderMusicSound = PositionedSoundInstance.master(SoundEvents.MUSIC_DISC_STRAD.value(), 0.6f, 0.2f);
-		font = Font.createFont(Font.PLAIN, mcc.getResourceManager().getResource(Identifier.of("mcvmcomputers", "font/tabletfont.ttf")).get().getInputStream());
+		shopMusicSound = SimpleSoundInstance.forMusic(SoundEvents.MUSIC_DISC_FAR.value());
+		displayOrderMusicSound = SimpleSoundInstance.forMusic(SoundEvents.MUSIC_DISC_STRAD.value());
+		font = Font.createFont(Font.PLAIN, mcc.getResourceManager().getResource(ResourceLocation.fromNamespaceAndPath("mcvmcomputers", "font/tabletfont.ttf")).get().open());
 		radarRadius = new ArrayList<Float>();
+		shoppingCart = new ArrayList<OrderableItem>();
 	}
 
 	public void tabletTakenOut() {
@@ -149,7 +167,7 @@ public class TabletOS {
 		Graphics2D g2d = bi.createGraphics();
 
 		if(tabletState == State.LOOKING_FOR_SATELLITE) {
-			if(mcc.world != null) {
+			if(mcc.level != null) {
 				totalTimeRadar += deltaTime;
 				if(totalTimeRadar >= 4.396f) {
 					totalTimeRadar = 0;
@@ -167,7 +185,7 @@ public class TabletOS {
 					radarRadius.remove(f);
 				}
 				removeIndices.clear();
-				float satelliteAngle = ((float)mcc.world.getSkyAngle(deltaTime)*5f);
+				float satelliteAngle = ((float)mcc.level.getTimeOfDay(deltaTime)*5f);
 				satelliteAngle %= 1f;
 				boolean canSee = satelliteAngle < 0.22249603 || satelliteAngle > 0.78432274;
 				satelliteVisible = canSee;
@@ -197,7 +215,7 @@ public class TabletOS {
 				lastRadarImage = bi;
 			}
 		}else if(tabletState == State.SHOP_INTRO) {
-			if(!mcc.getSoundManager().isPlaying(shopIntroSound)) {
+			if(!mcc.getSoundManager().isActive(shopIntroSound)) {
 				mcc.getSoundManager().play(shopIntroSound);
 			}
 			g2d.drawImage(lastRadarImage, 0, 0, null);
@@ -235,7 +253,7 @@ public class TabletOS {
 					}
 				}
 		}else if(tabletState == State.SHOP) {
-			if(!mcc.getSoundManager().isPlaying(shopMusicSound) && tabletOn) {
+			if(!mcc.getSoundManager().isActive(shopMusicSound) && tabletOn) {
 				mcc.getSoundManager().play(shopMusicSound);
 			}
 			shopGradientEndValue = MVCUtils.lerp(shopGradientEndValue, 0.3f, deltaTime*2.5f);
@@ -274,7 +292,7 @@ public class TabletOS {
 				for(OrderableItem oi : PC_PARTS) {
 					int offX = 0;
 					g2d.setFont(font.deriveFont(23f)); offY += 20;
-					g2d.drawString(oi.getName().getString(), (270+offX)-shopPx, offY-shopPy);
+					g2d.drawString(oi.getName(new ItemStack(oi)).getString(), (270+offX)-shopPx, offY-shopPy);
 					g2d.setFont(font.deriveFont(16f)); offY += 10; offX = 10;
 					int inCart = 0;
 					for(OrderableItem io : shoppingCart) {
@@ -319,7 +337,7 @@ public class TabletOS {
 				for(OrderableItem oi : shoppingCart) {
 					int offX = 0;
 					g2d.setFont(font.deriveFont(23f)); offY += 20;
-					g2d.drawString(oi.getName().getString(), (270+offX)-shopPx, offY-shopPy);
+					g2d.drawString(oi.getName(new ItemStack(oi)).getString(), (270+offX)-shopPx, offY-shopPy);
 					g2d.setFont(font.deriveFont(16f)); offY += 10; offX = 10;
 					g2d.drawString(oi.getPrice() + " Iron Ingots | enter to remove", (270+offX)-shopPx, offY-shopPy);
 					sum += oi.getPrice();
@@ -372,7 +390,7 @@ public class TabletOS {
 				for(OrderableItem oi : PERIPHERALS) {
 					int offX = 0;
 					g2d.setFont(font.deriveFont(23f)); offY += 20;
-					g2d.drawString(oi.getName().getString(), (270+offX)-shopPx, offY-shopPy);
+					g2d.drawString(oi.getName(new ItemStack(oi)).getString(), (270+offX)-shopPx, offY-shopPy);
 					g2d.setFont(font.deriveFont(16f)); offY += 10; offX = 10;
 					int inCart = 0;
 					for(OrderableItem io : shoppingCart) {
@@ -427,7 +445,7 @@ public class TabletOS {
 			float fourthPercentage = Math.max(0f, Math.min(1f, (totalTimeRadar-1.167f)/0.117f));
 			float fifthPercentage = Math.max(0f, Math.min(1f, (totalTimeRadar-1.284f)/0.18f));
 
-			if(fifthPercentage == 1f && mcc.getSoundManager().isPlaying(shopOutroSound)) {
+			if(fifthPercentage == 1f && mcc.getSoundManager().isActive(shopOutroSound)) {
 				mcc.getSoundManager().stop(shopOutroSound);
 				mcc.getSoundManager().stop(shopMusicSound);
 				tabletState = State.DISPLAY_ORDER;
@@ -446,7 +464,7 @@ public class TabletOS {
 			g2d.drawImage(lastShopImage.getSubimage(0, oneImage*3, 256, oneImage), (int) (256 * fourthPercentage),oneImage*3, null);
 			g2d.drawImage(lastShopImage.getSubimage(0, oneImage*4, 256, oneImage), (int) (256 * fifthPercentage), oneImage*4, null);
 		}else if(tabletState == State.DISPLAY_ORDER) {
-			if(!mcc.getSoundManager().isPlaying(displayOrderMusicSound) && tabletOn) {
+			if(!mcc.getSoundManager().isActive(displayOrderMusicSound) && tabletOn) {
 				mcc.getSoundManager().play(displayOrderMusicSound);
 			}
 			if(ClientMod.myOrder != null) {
@@ -458,13 +476,13 @@ public class TabletOS {
 			g2d.setColor(Color.white);
 			g2d.fillRect(64, (int)(190-shopPy), 128, 3);
 
-			float satelliteAngle = ((float)mcc.world.getSkyAngle(deltaTime)*5f);
+			float satelliteAngle = ((float)mcc.level.getTimeOfDay(deltaTime)*5f);
 			satelliteAngle %= 1f;
 			boolean canSee = satelliteAngle < 0.22249603 || satelliteAngle > 0.78432274;
 			int satX = (int)(128 + (96*Math.cos((satelliteAngle*6.3)-1.65)));
 			int satY = (int)((190 + (32*Math.sin((satelliteAngle*6.3)-1.65)))-shopPy);
 
-			if(ClientMod.myOrder.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVAL_SOON) {
+			if(ClientMod.myOrder != null && ClientMod.myOrder.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVAL_SOON) {
 				g2d.setFont(font.deriveFont(43f));
 				g2d.setColor(Color.white);
 				g2d.drawString("Payment chest", 32, 64-shopPy);
@@ -478,7 +496,7 @@ public class TabletOS {
 				g2d.drawString("you will fill with your payment.", 36, 109-shopPy);
 				g2d.drawString("The satellite needs to be over you", 36, 118-shopPy);
 				g2d.drawString("for this to work.", 36, 127-shopPy);
-			}else if(ClientMod.myOrder.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
+			}else if(ClientMod.myOrder != null && ClientMod.myOrder.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
 				g2d.setFont(font.deriveFont(43f));
 				g2d.setColor(Color.white);
 				g2d.drawString("Payment chest", 32, 64-shopPy);
@@ -492,7 +510,7 @@ public class TabletOS {
 				g2d.drawString("automatically be sent back! Don't", 36, 109-shopPy);
 				g2d.drawString("worry about the booster, it won't", 36, 118-shopPy);
 				g2d.drawString("kill you.", 36, 127-shopPy);
-			}else if(ClientMod.myOrder.currentStatus == OrderStatus.PAYMENT_CHEST_RECEIVING) {
+			}else if(ClientMod.myOrder != null && ClientMod.myOrder.currentStatus == OrderStatus.PAYMENT_CHEST_RECEIVING) {
 				g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 				g2d.setColor(Color.white);
 				g2d.fillOval((int)chestX, (int)chestY, 4, 4);
@@ -508,7 +526,7 @@ public class TabletOS {
 				g2d.setFont(font.deriveFont(16f));
 				g2d.setColor(Color.white);
 				g2d.drawString("We are receiving your payment.", 36, 100-shopPy);
-			}else if(ClientMod.myOrder.currentStatus == OrderStatus.ORDER_CHEST_ARRIVAL_SOON) {
+			}else if(ClientMod.myOrder != null && ClientMod.myOrder.currentStatus == OrderStatus.ORDER_CHEST_ARRIVAL_SOON) {
 				g2d.setFont(font.deriveFont(43f));
 				g2d.setColor(Color.white);
 				g2d.drawString("Ordered items", 34, 64-shopPy);
@@ -521,7 +539,7 @@ public class TabletOS {
 				g2d.drawString("Your items will arrive soon! A chest", 36, 100-shopPy);
 				g2d.drawString("will land and you will collect your", 36, 109-shopPy);
 				g2d.drawString("packages from it.", 36, 118-shopPy);
-			}else if(ClientMod.myOrder.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
+			}else if(ClientMod.myOrder != null && ClientMod.myOrder.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
 				if(this.drawChest) {
 					g2d.setFont(font.deriveFont(43f));
 					g2d.setColor(Color.white);
@@ -555,7 +573,7 @@ public class TabletOS {
 					g2d.drawString("Your items are at your location!", 36, 100-shopPy);
 					g2d.drawString("Collect your packages.", 36, 109-shopPy);
 				}
-			}else if(ClientMod.myOrder.currentStatus == OrderStatus.ORDER_CHEST_RECEIVED) {
+			}else if(ClientMod.myOrder != null && ClientMod.myOrder.currentStatus == OrderStatus.ORDER_CHEST_RECEIVED) {
 				totalTimeRadar += deltaTime;
 				g2d.setColor(Color.white);
 				g2d.setFont(font.deriveFont(43f));
@@ -593,7 +611,7 @@ public class TabletOS {
 	}
 
 	private boolean pressed(int key) {
-		return GLFW.glfwGetKey(mcc.getWindow().getHandle(), key) == GLFW.GLFW_PRESS;
+		return GLFW.glfwGetKey(mcc.getWindow().getWindow(), key) == GLFW.GLFW_PRESS;
 	}
 
 	private void update() {
@@ -715,12 +733,12 @@ public class TabletOS {
 								shoppingCart.remove(shopExtraIndex);
 							}else {
 								if(shoppingCart.size() > 0) {
-									PacketByteBuf p = PacketByteBufs.create();
+									FriendlyByteBuf p = new FriendlyByteBuf(Unpooled.buffer());
 									p.writeInt(shoppingCart.size());
 									for(OrderableItem i : shoppingCart) {
-										p.writeString(net.minecraft.registry.Registries.ITEM.getId(i).toString());
+										p.writeUtf(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(new ItemStack(i).getItem()).toString());
 									}
-									ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ORDER, p));
+									PacketList.sendToServer("c2s_order", p);
 
 									tabletState = State.SHOP_OUTRO;
 									totalTimeRadar = 0;
@@ -756,21 +774,19 @@ public class TabletOS {
 		if(localBais == null) {
 			return;
 		}
-		if(nibt != null) {nibt.close(); nibt = null;}
-		if(renderedImage != null) {renderedImage.close(); renderedImage = null;}
+		if(nibt != null) {nibt.close(); nibt = null; renderedImage = null;}
 		try {
 			renderedImage = NativeImage.read(localBais);
 			if(renderedImage != null) {
-				nibt = new NativeImageBackedTexture(renderedImage);
+				nibt = new DynamicTexture(renderedImage);
 				if(textureIdentifier != null) {
-					MinecraftClient.getInstance().getTextureManager().destroyTexture(textureIdentifier);
+					Minecraft.getInstance().getTextureManager().release(textureIdentifier);
 				}
-				textureIdentifier = MinecraftClient.getInstance().getTextureManager().registerDynamicTexture("tablet_display", nibt);
+				textureIdentifier = Minecraft.getInstance().getTextureManager().register("tablet_display", nibt);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		byteArrayInputStream = null;
 	}
 
 	public enum ShopState{

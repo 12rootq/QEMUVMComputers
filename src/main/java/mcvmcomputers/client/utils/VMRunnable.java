@@ -1,4 +1,7 @@
 package mcvmcomputers.client.utils;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+
 
 import static mcvmcomputers.client.ClientMod.*;
 
@@ -6,16 +9,25 @@ import java.util.Arrays;
 import java.util.List;
 
 import mcvmcomputers.client.gui.GuiFocus;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /**
  * Background virtual machine update thread (one per running VM).
  *
- * <p>Started from GameloopMixin when the VM is on. In a loop (~15 times per second) it:
- * periodically polls the VM state via VBoxManage (only every STATE_CHECK_INTERVAL
- * iterations, because each poll spawns a VBoxManage process); starts the VM if the game
- * thinks it is on but it is powered off; while the focus screen is open sends mouse and
- * keyboard input to the guest OS; and grabs a screenshot for in-world screens.</p>
+ * <p>Started from {@code GameloopMixin} when the VM is on. In a loop (~15 times per
+ * second) it does the following:</p>
+ * <ul>
+ *   <li>periodically polls the VM state via VBoxManage; if the VM is off but the game
+ *       thinks it is on, it starts it ({@code startVm});</li>
+ *   <li>while the focus screen {@link GuiFocus} is open, sends mouse movement/buttons/
+ *       scroll and the accumulated keyboard scancodes to the guest OS;</li>
+ *   <li>on the {@code releaseKeys} flag, sends release codes so "stuck" keys do not
+ *       remain held after leaving focus;</li>
+ *   <li>takes a screenshot of the VM screen and stores its bytes under
+ *       {@code VM_TEXTURE_LOCK} for subsequent rendering on in-world screens.</li>
+ * </ul>
+ * <p>All VM calls are best-effort: exceptions are logged/swallowed so the thread does
+ * not crash.</p>
  */
 /**
  * Background worker that drives the running VirtualBox VM at ~15 Hz: forwards
@@ -23,118 +35,120 @@ import net.minecraft.client.MinecraftClient;
  * framebuffer and stages it for upload as a Minecraft texture.
  */
 public class VMRunnable implements Runnable {
-// The VM state is re-checked every this many loop iterations. Polling every tick
-// would spawn a VBoxManage process ~15 times per second, which is wasteful.
-private static final int STATE_CHECK_INTERVAL = 30;
+	/** The VM state is re-checked every this many loop iterations. */
+	private static final int STATE_CHECK_INTERVAL = 30;
 
-@Override
-public void run() {
-MinecraftClient mcc = MinecraftClient.getInstance();
-int ticksSinceStateCheck = STATE_CHECK_INTERVAL;
-String cachedState = "poweroff";
+	@Override
+	public void run() {
+		Minecraft mcc = Minecraft.getInstance();
+		int ticksSinceStateCheck = STATE_CHECK_INTERVAL;
+		String cachedState = "poweroff";
 
-while (true) {
-try {
-double curX = mouseCurX;
-double curY = mouseCurY;
-double lastX = mouseLastX;
-double lastY = mouseLastY;
+		while (true) {
+			try {
+				double curX = mouseCurX;
+				double curY = mouseCurY;
+				double lastX = mouseLastX;
+				double lastY = mouseLastY;
 
-double deltaX = curX - lastX;
-double deltaY = curY - lastY;
-mouseLastX = curX;
-mouseLastY = curY;
+				double deltaX = curX - lastX;
+				double deltaY = curY - lastY;
+				mouseLastX = curX;
+				mouseLastY = curY;
 
-ticksSinceStateCheck++;
-if (ticksSinceStateCheck >= STATE_CHECK_INTERVAL) {
-ticksSinceStateCheck = 0;
-cachedState = vbox.getVmState("VmComputersVm");
-}
 
-if ("saved".equals(cachedState)) {
-vbox.discardSavedState("VmComputersVm");
-cachedState = "poweroff";
-}
+				ticksSinceStateCheck++;
+				if (ticksSinceStateCheck >= STATE_CHECK_INTERVAL) {
+					ticksSinceStateCheck = 0;
+					cachedState = vbox.getVmState("VmComputersVm");
+				}
 
-if ("poweroff".equals(cachedState)) {
-if (!vmTurningOff && vmTurnedOn) {
-try {
-vbox.startVm("VmComputersVm");
-cachedState = "running";
-} catch (Exception e) {
-vmUpdateThread = null;
-return;
-}
-} else {
-vmUpdateThread = null;
-return;
-}
-}
+				if ("saved".equals(cachedState)) {
+					vbox.discardSavedState("VmComputersVm");
+					cachedState = "poweroff";
+				}
 
-if ("running".equals(cachedState) || "firstonline".equals(cachedState)) {
+				if ("poweroff".equals(cachedState)) {
+					if (!vmTurningOff && vmTurnedOn) {
+						try {
+							vbox.startVm("VmComputersVm");
+							cachedState = "running";
+						} catch (Exception e) {
+							vmUpdateThread = null;
+							return;
+						}
+					} else {
+						vmUpdateThread = null;
+						return;
+					}
+				}
 
-if (mcc.currentScreen instanceof GuiFocus) {
-// Consume any presses since last tick so a fast click is never dropped.
-int latch = mouseButtonPressedLatch;
-mouseButtonPressedLatch = 0;
-int held = mouseButtonMask;
 
-int scroll = mouseDeltaScroll;
-mouseDeltaScroll = 0;
+				if ("running".equals(cachedState) || "firstonline".equals(cachedState)) {
 
-int downState = held | latch;
-vbox.putMouseEvent("VmComputersVm", (int) deltaX, (int) deltaY, scroll, downState);
+					if (mcc.screen instanceof GuiFocus) {
+						int latch = mouseButtonPressedLatch;
+						mouseButtonPressedLatch = 0;
+						int held = mouseButtonMask;
 
-// If a button was pressed-and-released within this tick, emit the matching release.
-if ((latch & ~held) != 0) {
-vbox.putMouseEvent("VmComputersVm", 0, 0, 0, held);
-}
-}
+						int scroll = mouseDeltaScroll;
+						mouseDeltaScroll = 0;
 
-if (releaseKeys) {
-List<Integer> releaseCodes = Arrays.asList(0x1d + 0x80, 0xe0, 0x1d + 0x80, 0x0e + 0x80);
-vbox.putScancodes("VmComputersVm", releaseCodes);
-synchronized (vmKeyboardScancodes) {
-vmKeyboardScancodes.clear();
-}
-releaseKeys = false;
-} else {
-List<Integer> toSend = null;
-synchronized (vmKeyboardScancodes) {
-if (!vmKeyboardScancodes.isEmpty()) {
-toSend = new java.util.ArrayList<>(vmKeyboardScancodes);
-vmKeyboardScancodes.clear();
-}
-}
-if (toSend != null) {
-vbox.putScancodes("VmComputersVm", toSend);
-}
-}
+						int downState = held | latch;
+						vbox.putMouseEvent("VmComputersVm", (int) deltaX, (int) deltaY, scroll, downState);
 
-byte[] image = vbox.takeScreenshot("VmComputersVm");
-if (image != null && image.length > 0) {
-synchronized (VM_TEXTURE_LOCK) {
-vmTextureBytesSize = image.length;
-vmTextureBytes = image;
-}
-}
-}
+						if ((latch & ~held) != 0) {
+							vbox.putMouseEvent("VmComputersVm", 0, 0, 0, held);
+						}
+					}
 
-try {
-Thread.sleep(66);
-} catch (InterruptedException e) {
-vmUpdateThread = null;
-return;
-}
 
-} catch (Exception ex) {
-try {
-Thread.sleep(100);
-} catch (InterruptedException ie) {
-vmUpdateThread = null;
-return;
-}
-}
-}
-}
+					if (releaseKeys) {
+						List<Integer> releaseCodes = Arrays.asList(0x1d + 0x80, 0xe0, 0x1d + 0x80, 0x0e + 0x80);
+						vbox.putScancodes("VmComputersVm", releaseCodes);
+						synchronized (vmKeyboardScancodes) {
+							vmKeyboardScancodes.clear();
+						}
+						releaseKeys = false;
+					} else {
+						List<Integer> toSend = null;
+						synchronized (vmKeyboardScancodes) {
+							if (!vmKeyboardScancodes.isEmpty()) {
+								toSend = new java.util.ArrayList<>(vmKeyboardScancodes);
+								vmKeyboardScancodes.clear();
+							}
+						}
+						if (toSend != null) {
+							vbox.putScancodes("VmComputersVm", toSend);
+						}
+					}
+
+
+					byte[] image = vbox.takeScreenshot("VmComputersVm");
+					if (image != null && image.length > 0) {
+						synchronized (VM_TEXTURE_LOCK) {
+							vmTextureBytesSize = image.length;
+							vmTextureBytes = image;
+						}
+					}
+				}
+
+
+				try {
+					Thread.sleep(66);
+				} catch (InterruptedException e) {
+					vmUpdateThread = null;
+					return;
+				}
+
+			} catch (Exception ex) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException ie) {
+					vmUpdateThread = null;
+					return;
+				}
+			}
+		}
+	}
 }

@@ -1,4 +1,5 @@
 package mcvmcomputers.mixins;
+import net.minecraft.server.players.PlayerList;
 
 import java.util.UUID;
 
@@ -10,114 +11,111 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import io.netty.buffer.Unpooled;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.entities.EntityDeliveryChest;
 import mcvmcomputers.item.OrderableItem;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.TabletOrder;
 import mcvmcomputers.utils.TabletOrder.OrderStatus;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * Server-side lifecycle logic for tablet orders (mixin into MinecraftServer).
+ * Server-side lifecycle logic for tablet orders (mixin into {@link MinecraftServer}).
  *
- * <p>Each server tick advances every order's state machine, spawns the delivery/payment
- * chest at the right moment, and sends order status sync to the player. On shutdown it
- * clears all orders and PCs.</p>
+ * <p>Every server tick ({@code tickServer}) advances the state machine of each order
+ * in {@link MainMod#orders}: counts down chest arrival delays (payment/delivery),
+ * spawns {@link EntityDeliveryChest} at the right moment, and sends order status
+ * synchronization ({@code s2c_sync_order}) to the player. On server stop
+ * ({@code stopServer}) it clears all orders and PCs.</p>
  */
 @Mixin(MinecraftServer.class)
 public class ServerMixin {
-private static final Logger LOGGER = LogManager.getLogger();
-/** Duration of a single tick in seconds (20 TPS). */
-private static final float TICK_TIME = 0.05f;
+    private static final Logger LOGGER = LogManager.getLogger();
+    /** Duration of a single tick in seconds (20 TPS). */
+    private static final float TICK_TIME = 0.05f;
 
-@Shadow
-private PlayerManager playerManager;
+    @Shadow
+    private PlayerList playerList;
 
-@Inject(at = @At("HEAD"), method = "shutdown")
-protected void shutdown(CallbackInfo ci) {
-LOGGER.info("Stopping VM Computers");
-MainMod.computers.clear();
-MainMod.orders.clear();
-}
+    @Inject(at = @At("HEAD"), method = "stopServer")
+    protected void stopServer(CallbackInfo ci) {
+        LOGGER.info("Stopping VM Computers");
+        MainMod.computers.clear();
+        MainMod.orders.clear();
+    }
 
-@Inject(at = @At("HEAD"), method = "tick")
-protected void tick(CallbackInfo ci) {
-java.util.List<java.util.UUID> toRemove = new java.util.ArrayList<>();
-for (TabletOrder order : MainMod.orders.values()) {
-if (order.currentStatus == OrderStatus.ORDER_CHEST_ARRIVAL_SOON) {
-order.tickCount += TICK_TIME;
-if (order.tickCount > 5) {
-order.currentStatus = OrderStatus.ORDER_CHEST_ARRIVED;
-order.tickCount = 0;
-}
-} else if (order.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVAL_SOON) {
-order.tickCount += TICK_TIME;
-if (order.tickCount > 5) {
-order.currentStatus = OrderStatus.PAYMENT_CHEST_ARRIVED;
-order.tickCount = 0;
-}
-} else if (order.currentStatus == OrderStatus.ORDER_CHEST_RECEIVED) {
-order.tickCount += TICK_TIME;
-if (order.tickCount > 0.25) {
-toRemove.add(UUID.fromString(order.orderUUID));
-}
-} else if (order.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
-if (!order.entitySpawned) {
-PlayerEntity p = playerManager.getPlayer(UUID.fromString(order.orderUUID));
-if (p == null) { continue; }
-World w = p.getWorld();
-w.spawnEntity(new EntityDeliveryChest(w, new Vec3d(p.getX(), p.getY(), p.getZ()), p.getUuid()));
-order.entitySpawned = true;
-}
-} else if (order.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
-if (!order.entitySpawned) {
-PlayerEntity p = playerManager.getPlayer(UUID.fromString(order.orderUUID));
-if (p == null) { continue; }
-World w = p.getWorld();
-EntityDeliveryChest chest = new EntityDeliveryChest(w, new Vec3d(p.getX(), p.getY(), p.getZ()), p.getUuid());
-// Label the payment chest with the price (e.g. "3 Iron Ingot").
-if (order.price > 0) {
-chest.setCustomName(Text.literal(order.price + " ").append(Text.translatable("item.minecraft.iron_ingot")));
-chest.setCustomNameVisible(true);
-}
-w.spawnEntity(chest);
-order.entitySpawned = true;
-}
-}
+    @Inject(at = @At("HEAD"), method = "tickServer")
+    protected void tickServer(CallbackInfo ci) {
+        java.util.List<java.util.UUID> toRemove = new java.util.ArrayList<>();
+        for (TabletOrder order : MainMod.orders.values()) {
+            if (order.currentStatus == OrderStatus.ORDER_CHEST_ARRIVAL_SOON) {
+                order.tickCount += TICK_TIME;
+                if (order.tickCount > 5) {
+                    order.currentStatus = OrderStatus.ORDER_CHEST_ARRIVED;
+                    order.tickCount = 0;
+                }
+            } else if (order.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVAL_SOON) {
+                order.tickCount += TICK_TIME;
+                if (order.tickCount > 5) {
+                    order.currentStatus = OrderStatus.PAYMENT_CHEST_ARRIVED;
+                    order.tickCount = 0;
+                }
+            } else if (order.currentStatus == OrderStatus.ORDER_CHEST_RECEIVED) {
+                order.tickCount += TICK_TIME;
+                if (order.tickCount > 0.25) {
+                    toRemove.add(UUID.fromString(order.orderUUID));
+                }
+            } else if (order.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
+                if (!order.entitySpawned) {
+                    Player p = playerList.getPlayer(UUID.fromString(order.orderUUID));
+                    if (p == null) continue;
+                    Level w = p.level();
+                    w.addFreshEntity(new EntityDeliveryChest(w, new Vec3(p.getX(), p.getY(), p.getZ()), p.getUUID()));
+                    order.entitySpawned = true;
+                }
+            } else if (order.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
+                if (!order.entitySpawned) {
+                    Player p = playerList.getPlayer(UUID.fromString(order.orderUUID));
+                    if (p == null) continue;
+                    Level w = p.level();
+                    EntityDeliveryChest chest = new EntityDeliveryChest(w, new Vec3(p.getX(), p.getY(), p.getZ()), p.getUUID());
+                    if (order.price > 0) {
+                        chest.setCustomName(net.minecraft.network.chat.Component.literal(order.price + " ").append(net.minecraft.network.chat.Component.translatable("item.minecraft.iron_ingot")));
+                        chest.setCustomNameVisible(true);
+                    }
+                    w.addFreshEntity(chest);
+                    order.entitySpawned = true;
+                }
+            }
 
-PacketByteBuf pb = PacketByteBufs.create();
-// Skip null items so a partially-filled order can't NPE during encode.
-int validItemCount = 0;
-for (OrderableItem oi : order.items) {
-if (oi != null) validItemCount++;
-}
-pb.writeInt(validItemCount);
-for (OrderableItem oi : order.items) {
-if (oi == null) continue;
-pb.writeString(net.minecraft.registry.Registries.ITEM.getId(oi).toString());
-}
-pb.writeInt(order.price);
-pb.writeInt(order.currentStatus.ordinal());
-// Only send if the target player is online.
-ServerPlayerEntity sp = playerManager.getPlayer(UUID.fromString(order.orderUUID));
-if (sp != null) {
-ServerPlayNetworking.send(sp, new PacketList.RawBytesPayload(PacketList.S2C_SYNC_ORDER, pb));
-}
-}
-for (UUID u : toRemove) {
-MainMod.orders.remove(u);
-}
-}
+            FriendlyByteBuf pb = new FriendlyByteBuf(Unpooled.buffer());
+            pb.writeUtf(order.orderUUID);
+            int validItemCount = 0;
+            for (OrderableItem oi : order.items) {
+                if (oi != null) validItemCount++;
+            }
+            pb.writeInt(validItemCount);
+            for (OrderableItem oi : order.items) {
+                if (oi == null) continue;
+                pb.writeUtf(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(new ItemStack(oi).getItem()).toString());
+            }
+            pb.writeInt(order.price);
+            pb.writeInt(order.currentStatus.ordinal());
+            Player p = playerList.getPlayer(UUID.fromString(order.orderUUID));
+            if (p != null && p instanceof net.minecraft.server.level.ServerPlayer sp) {
+                PacketList.sendToPlayer(sp, "s2c_sync_order", pb);
+            }
+        }
+        for (UUID u : toRemove) {
+            MainMod.orders.remove(u);
+        }
+    }
 }

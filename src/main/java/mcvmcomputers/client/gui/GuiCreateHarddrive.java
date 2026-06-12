@@ -1,4 +1,6 @@
 package mcvmcomputers.client.gui;
+import net.minecraft.client.gui.screens.Screen;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -12,29 +14,31 @@ import io.netty.buffer.Unpooled;
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.MVCUtils;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.text.Text;
-import net.minecraft.util.Language;
 
-public class GuiCreateHarddrive extends Screen{
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.Button;
+
+
+
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.locale.Language;
+
+public class GuiCreateHarddrive extends net.minecraft.client.gui.screens.Screen{
 	@Override
-	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
 	}
-	private TextFieldWidget hddSize;
+	private EditBox hddSize;
 	private String status;
 	private State currentState = State.MENU;
 	private final Language lang = Language.getInstance();
 	private Ext extension = Ext.vdi;
 	private static final char COLOR_CHAR = (char) (0xfeff00a7);
-	private ButtonWidget AA;
-	private ButtonWidget BB;
-	private MinecraftClient minecraft = MinecraftClient.getInstance();
+	private Button AA;
+	private Button BB;
+	private Minecraft minecraft = Minecraft.getInstance();
 
 	public enum State{
 		MENU,
@@ -48,11 +52,11 @@ public class GuiCreateHarddrive extends Screen{
 	}
 
 	public GuiCreateHarddrive() {
-		super(Text.translatable("Create Harddrive"));
+		super(Component.translatable("Create Harddrive"));
 	}
 
 	public String translation(String in) {
-		return lang.get(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
+		return lang.getOrDefault(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
 	}
 
 	@Override
@@ -60,25 +64,25 @@ public class GuiCreateHarddrive extends Screen{
 		if(currentState == State.CREATE_NEW) {
 			String s = "";
 			if(hddSize != null) {
-				s = hddSize.getText();
+				s = hddSize.getValue();
 			}
-			hddSize = new TextFieldWidget(this.textRenderer, this.width/2-150, this.height/2-10, 300, 20, Text.literal(""));
-			hddSize.setText(s);
-			hddSize.setChangedListener((st) -> hddSizeUpdate(st));
-			this.addSelectableChild(hddSize);
-			this.hddSizeUpdate(hddSize.getText());
-			AA = this.addDrawableChild(ButtonWidget.builder(Text.literal("vdi"), (wdgt) -> extset(Ext.vdi)).dimensions(this.width/2-150, this.height/2+25, 50, 20).build());
+			hddSize = new EditBox(this.font, this.width/2-150, this.height/2-10, 300, 20, Component.literal(""));
+			hddSize.setValue(s);
+			hddSize.setResponder((st) -> hddSizeUpdate(st));
+			this.addWidget(hddSize);
+			this.hddSizeUpdate(hddSize.getValue());
+			AA = this.addRenderableWidget(Button.builder(Component.literal("vdi"), (wdgt) -> extset(Ext.vdi)).bounds(this.width/2-150, this.height/2+25, 50, 20).build());
 			AA.active = false;
-			BB = this.addDrawableChild(ButtonWidget.builder(Text.literal("vmdk"), (wdgt) -> extset(Ext.vmdk)).dimensions(this.width/2-96, this.height/2+25, 50, 20).build());
-			int newvhdWidth = textRenderer.getWidth(translation("mcvmcomputers.vhd_setup.newvhd"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("mcvmcomputers.vhd_setup.newvhd")), (wdgt) -> createNew(wdgt)).dimensions(this.width/2-(newvhdWidth/2), this.height/2+50, newvhdWidth, 20).build());
-			int menuWidth = textRenderer.getWidth(translation("mcvmcomputers.vhd_setup.menu"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("mcvmcomputers.vhd_setup.menu")), (wdgt) -> switchState(State.MENU)).dimensions(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
+			BB = this.addRenderableWidget(Button.builder(Component.literal("vmdk"), (wdgt) -> extset(Ext.vmdk)).bounds(this.width/2-96, this.height/2+25, 50, 20).build());
+			int newvhdWidth = font.width(translation("mcvmcomputers.vhd_setup.newvhd"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("mcvmcomputers.vhd_setup.newvhd")), (wdgt) -> createNew(wdgt)).bounds(this.width/2-(newvhdWidth/2), this.height/2+50, newvhdWidth, 20).build());
+			int menuWidth = font.width(translation("mcvmcomputers.vhd_setup.menu"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("mcvmcomputers.vhd_setup.menu")), (wdgt) -> switchState(State.MENU)).bounds(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
 		}else if(currentState == State.MENU) {
-			int newvhdWidth = textRenderer.getWidth(translation("mcvmcomputers.vhd_setup.newvhd"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("mcvmcomputers.vhd_setup.newvhd")), (wdgt) -> switchState(State.CREATE_NEW)).dimensions(this.width/2 - (newvhdWidth/2), this.height/2 - 12, newvhdWidth, 20).build());
-			int oldvhdWidth = textRenderer.getWidth(translation("mcvmcomputers.vhd_setup.oldvhd"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("mcvmcomputers.vhd_setup.oldvhd")), (wdgt) -> switchState(State.SELECT_OLD)).dimensions(this.width/2 - (oldvhdWidth/2), this.height/2 + 12, oldvhdWidth, 20).build());
+			int newvhdWidth = font.width(translation("mcvmcomputers.vhd_setup.newvhd"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("mcvmcomputers.vhd_setup.newvhd")), (wdgt) -> switchState(State.CREATE_NEW)).bounds(this.width/2 - (newvhdWidth/2), this.height/2 - 12, newvhdWidth, 20).build());
+			int oldvhdWidth = font.width(translation("mcvmcomputers.vhd_setup.oldvhd"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("mcvmcomputers.vhd_setup.oldvhd")), (wdgt) -> switchState(State.SELECT_OLD)).bounds(this.width/2 - (oldvhdWidth/2), this.height/2 + 12, oldvhdWidth, 20).build());
 		}else {
 			int lastY = 60;
 			ArrayList<File> files = new ArrayList<>();
@@ -94,13 +98,13 @@ public class GuiCreateHarddrive extends Screen{
 				}
 			});
 			for(File f : files) {
-				this.addDrawableChild(ButtonWidget.builder(Text.literal((f.getName() + " | " + ((float)f.length()/1024f/1024f) + " " + translation("mcvmcomputers.vhd_setup.mb_used"))), (wdgt) -> selectOld(wdgt)).dimensions(this.width/2 - 90, lastY, 180, 14).build());
-				this.addDrawableChild(ButtonWidget.builder(Text.literal("x"), (wdgt) -> removevhd(f.getName())).dimensions(this.width/2 + 92, lastY, 14, 14).build());
+				this.addRenderableWidget(Button.builder(Component.literal((f.getName() + " | " + ((float)f.length()/1024f/1024f) + " " + translation("mcvmcomputers.vhd_setup.mb_used"))), (wdgt) -> selectOld(wdgt)).bounds(this.width/2 - 90, lastY, 180, 14).build());
+				this.addRenderableWidget(Button.builder(Component.literal("x"), (wdgt) -> removevhd(f.getName())).bounds(this.width/2 + 92, lastY, 14, 14).build());
 				lastY += 16;
 			}
 
-			int menuWidth = textRenderer.getWidth(translation("mcvmcomputers.vhd_setup.menu"))+40;
-			this.addDrawableChild(ButtonWidget.builder(Text.literal(translation("mcvmcomputers.vhd_setup.menu")), (wdgt) -> switchState(State.MENU)).dimensions(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
+			int menuWidth = font.width(translation("mcvmcomputers.vhd_setup.menu"))+40;
+			this.addRenderableWidget(Button.builder(Component.literal(translation("mcvmcomputers.vhd_setup.menu")), (wdgt) -> switchState(State.MENU)).bounds(this.width - (menuWidth+10), this.height - 30, menuWidth, 20).build());
 		}
 	}
 
@@ -117,24 +121,24 @@ public class GuiCreateHarddrive extends Screen{
 	}
 
 	private void switchState(State newState) {
-		this.clearChildren();
+		this.clearWidgets();
 		currentState = newState;
 		this.init();
 	}
 
-	private void selectOld(ButtonWidget wdgt) {
+	private void selectOld(Button wdgt) {
 		String buttonText = wdgt.getMessage().getString();
 		int sepIdx = buttonText.indexOf(" | ");
 		String fileName = sepIdx >= 0 ? buttonText.substring(0, sepIdx) : buttonText;
-		PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
-		pb.writeString(fileName);
-		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_CHANGE_HDD, pb));
+		FriendlyByteBuf pb = new FriendlyByteBuf(Unpooled.buffer());
+		pb.writeUtf(fileName);
+		PacketList.sendToServer("c2s_change_hdd", pb);
 		minecraft.setScreen(null);
 	}
 
-	private void createNew(ButtonWidget wdgt) {
+	private void createNew(Button wdgt) {
 		if(!status.startsWith(COLOR_CHAR + "c")) {
-			long sizeMB = Long.parseLong(hddSize.getText());
+			long sizeMB = Long.parseLong(hddSize.getValue());
 			// Skip any numbers whose file already exists (e.g. leftover from a failed
 			// previous attempt that VirtualBox already registered in its media library).
 			int i = ClientMod.latestVHDNum;
@@ -159,9 +163,9 @@ public class GuiCreateHarddrive extends Screen{
 				e.printStackTrace();
 			}
 
-			PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
-			pb.writeString(vhd.getName());
-			ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_CHANGE_HDD, pb));
+			FriendlyByteBuf pb = new FriendlyByteBuf(Unpooled.buffer());
+			pb.writeUtf(vhd.getName());
+PacketList.sendToServer("c2s_change_hdd", pb);
 			minecraft.setScreen(null);
 		}
 	}
@@ -204,15 +208,15 @@ public class GuiCreateHarddrive extends Screen{
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 		this.renderBackground(context, mouseX, mouseY, delta);
 		if(currentState == State.CREATE_NEW) {
-			context.drawTextWithShadow(this.textRenderer, status, this.width/2-150, this.height/2+13, -1);
-			context.drawTextWithShadow(this.textRenderer, translation("mcvmcomputers.vhd_setup.vhdsize"), this.width/2-150, this.height/2-20, -1);
+			context.drawString(this.font, status, this.width/2-150, this.height/2+13, -1);
+			context.drawString(this.font, translation("mcvmcomputers.vhd_setup.vhdsize"), this.width/2-150, this.height/2-20, -1);
 			this.hddSize.render(context, mouseX, mouseY, delta);
 		}else if(currentState == State.MENU) {
 			String s = translation("mcvmcomputers.vhd_setup.setupnewvhd");
-			context.drawTextWithShadow(this.textRenderer, s, this.width/2 - this.textRenderer.getWidth(s)/2, this.height/2 - 30, -1);
+			context.drawString(this.font, s, this.width/2 - this.font.width(s)/2, this.height/2 - 30, -1);
 		}
 		super.render(context, mouseX, mouseY, delta);
 	}

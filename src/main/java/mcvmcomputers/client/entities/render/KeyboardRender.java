@@ -3,36 +3,40 @@ package mcvmcomputers.client.entities.render;
 import mcvmcomputers.entities.EntityKeyboard;
 import mcvmcomputers.item.ItemList;
 import mcvmcomputers.utils.MVCUtils;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+
+
+
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceLocation;
 import org.joml.Quaternionf;
 
 public class KeyboardRender extends EntityRenderer<EntityKeyboard>{
-	public KeyboardRender(EntityRendererFactory.Context context) {
+	public KeyboardRender(EntityRendererProvider.Context context) {
 		super(context);
 	}
 
 	@Override
-	public Identifier getTexture(EntityKeyboard entity) {
+	public ResourceLocation getTextureLocation(EntityKeyboard entity) {
 		return null;
 	}
 
 	@Override
-	public void render(EntityKeyboard entity, float yaw, float tickDelta, MatrixStack matrices,
-			VertexConsumerProvider vertexConsumers, int light) {
-		matrices.push();
+	public void render(EntityKeyboard entity, float yaw, float tickDelta, PoseStack matrices,
+			MultiBufferSource VertexConsumers, int light) {
+		matrices.pushPose();
 		matrices.translate(0, 0.5, 0);
-		Quaternionf look = MVCUtils.lookAt(entity.getPos(), entity.getLookAtPos());
-		matrices.multiply(look);
-		MinecraftClient.getInstance().getItemRenderer().renderItem(new ItemStack(ItemList.ITEM_KEYBOARD), ModelTransformationMode.NONE, light, OverlayTexture.DEFAULT_UV, matrices, vertexConsumers, entity.getWorld(), 0);
-		matrices.pop();
+		Quaternionf look = MVCUtils.lookAt(entity.position(), entity.getLookAtPos());
+		matrices.mulPose(look);
+		Minecraft.getInstance().getItemRenderer().renderStatic(new ItemStack(ItemList.ITEM_KEYBOARD), ItemDisplayContext.NONE, light, OverlayTexture.NO_OVERLAY, matrices, VertexConsumers, entity.level(), 0);
+		matrices.popPose();
 	}
 
 }

@@ -1,4 +1,6 @@
 package mcvmcomputers.client.gui.setup;
+import net.minecraft.client.gui.screens.Screen;
+
 
 import java.io.File;
 import java.io.FileReader;
@@ -18,18 +20,18 @@ import mcvmcomputers.client.gui.setup.pages.SetupPageVMComputersDirectory;
 import mcvmcomputers.client.gui.setup.pages.SetupPageVboxDirectory;
 import mcvmcomputers.client.utils.VMSettings;
 import mcvmcomputers.utils.MVCUtils;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.Selectable;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Language;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 
-public class GuiSetup extends Screen{
+import net.minecraft.network.chat.Component;
+import net.minecraft.locale.Language;
+
+public class GuiSetup extends net.minecraft.client.gui.screens.Screen{
 	@Override
-	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
 		context.fillGradient(0, 0, this.width, this.height, 0xff404040, 0xff404040);
 	}
 
@@ -41,30 +43,30 @@ public class GuiSetup extends Screen{
 	public boolean startVb = false;
 	public String virtualBoxDirectory = "";
 	private Language language = Language.getInstance();
-	private MinecraftClient minecraft = MinecraftClient.getInstance();
+	private Minecraft minecraft = Minecraft.getInstance();
 
 	public GuiSetup() {
-		super(Text.literal("Setup"));
+		super(Component.literal("Setup"));
 	}
 
-	public <T extends Element & Selectable> void addElement(T e) {
-		this.addDrawableChild((net.minecraft.client.gui.widget.ClickableWidget) e);
+	public <T extends AbstractWidget> void addElement(T e) {
+		this.addRenderableWidget(e);
 	}
 
 	public void clearElements() {
-		for(Element e : new java.util.ArrayList<>(this.children())) {
-			this.remove(e);
+		for(GuiEventListener e : new java.util.ArrayList<>(this.children())) {
+			this.removeWidget(e);
 		}
 	}
 
 	public void clearButtons() {
-		for(Element e : new java.util.ArrayList<>(this.children())) {
-			this.remove(e);
+		for(GuiEventListener e : new java.util.ArrayList<>(this.children())) {
+			this.removeWidget(e);
 		}
 	}
 
-	public void addButton(ButtonWidget bw) {
-		this.addDrawableChild(bw);
+	public void addButton(Button bw) {
+		this.addRenderableWidget(bw);
 	}
 
 	public void nextPage() {
@@ -81,7 +83,7 @@ public class GuiSetup extends Screen{
 	}
 
 	public String translation(String in) {
-		return language.get(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
+		return language.getOrDefault(in).replace("%c", ""+MVCUtils.COLOR_CHAR);
 	}
 
 	public void lastPage() {
@@ -92,8 +94,8 @@ public class GuiSetup extends Screen{
 	}
 
 	public void firstPage() {
-		for(Element e : new java.util.ArrayList<>(this.children())) {
-			this.remove(e);
+		for(GuiEventListener e : new java.util.ArrayList<>(this.children())) {
+			this.removeWidget(e);
 		}
 		setupIndex = 0;
 		currentSetupPage = setupPages.get(0);
@@ -103,11 +105,11 @@ public class GuiSetup extends Screen{
 	@Override
 	public void init() {
 		language = Language.getInstance();
-		if(new File(minecraft.runDirectory, "vm_computers/setup.json").exists()) {
+		if(new File(minecraft.gameDirectory, "vm_computers/setup.json").exists()) {
 			FileReader fr;
 			VMSettings set = null;
 			try {
-				fr = new FileReader(new File(minecraft.runDirectory, "vm_computers/setup.json"));
+				fr = new FileReader(new File(minecraft.gameDirectory, "vm_computers/setup.json"));
 				set = new Gson().fromJson(fr, VMSettings.class);
 				fr.close();
 			} catch (Exception e) {
@@ -134,29 +136,29 @@ public class GuiSetup extends Screen{
 		}
 		if(!initialized) {
 			setupPages = new ArrayList<>();
-			setupPages.add(new SetupPageIntroMessage(this, this.textRenderer));
+			setupPages.add(new SetupPageIntroMessage(this, this.font));
 			if(SystemUtils.IS_OS_WINDOWS || SystemUtils.IS_OS_MAC) {
-				setupPages.add(new SetupPageVboxDirectory(this, this.textRenderer));
+				setupPages.add(new SetupPageVboxDirectory(this, this.font));
 			}
-			setupPages.add(new SetupPageVMComputersDirectory(this, this.textRenderer));
-			setupPages.add(new SetupPageUnfocusBinding(this, this.textRenderer));
-			setupPages.add(new SetupPageMaxValues(this, this.textRenderer));
+			setupPages.add(new SetupPageVMComputersDirectory(this, this.font));
+			setupPages.add(new SetupPageUnfocusBinding(this, this.font));
+			setupPages.add(new SetupPageMaxValues(this, this.font));
 			currentSetupPage = setupPages.get(0);
 			initialized = true;
 		}
-		for(Element e : new java.util.ArrayList<>(this.children())) {
-			this.remove(e);
+		for(GuiEventListener e : new java.util.ArrayList<>(this.children())) {
+			this.removeWidget(e);
 		}
 		currentSetupPage.init();
 	}
 
 	@Override
-	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
 		this.renderBackground(context, mouseX, mouseY, delta);
 		String title = translation("mcvmcomputers.setup.title");
-		context.drawTextWithShadow(this.textRenderer, title, this.width/2 - this.textRenderer.getWidth(title)/2, 20, -1);
+		context.drawString(this.font, title, this.width/2 - this.font.width(title)/2, 20, -1);
 		String s = translation("mcvmcomputers.setup.page").replaceFirst("%s", ""+(setupIndex+1)).replaceFirst("%s", ""+setupPages.size());
-		context.drawTextWithShadow(this.textRenderer, s, this.width/2 - this.textRenderer.getWidth(s)/2, 30, -1);
+		context.drawString(this.font, s, this.width/2 - this.font.width(s)/2, 30, -1);
 		currentSetupPage.render(context, mouseX, mouseY, delta);
 		super.render(context, mouseX, mouseY, delta);
 	}

@@ -6,7 +6,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.lwjgl.glfw.GLFW;
 
 import mcvmcomputers.client.ClientMod;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public class VMSettings {
 	public String vboxDirectory;
@@ -30,8 +30,8 @@ public class VMSettings {
 		if(ClientMod.vhdDirectory != null) {
 			vmComputersDirectory = ClientMod.vhdDirectory.getParentFile().getAbsolutePath();
 		}else {
-			MinecraftClient mc = MinecraftClient.getInstance();
-			vmComputersDirectory = new File(mc.runDirectory, "vm_computers").getAbsolutePath();
+			Minecraft mc = Minecraft.getInstance();
+			vmComputersDirectory = new File(mc.gameDirectory, "vm_computers").getAbsolutePath();
 		}
 	}
 }

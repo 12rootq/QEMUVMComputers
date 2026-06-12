@@ -2,13 +2,13 @@
   "required": true,
   "minVersion": "0.8",
   "package": "mcvmcomputers.mixins",
+  "refmap": "mcvmcomputers.refmap.json",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "ServerMixin",
     "PlayerManagerMixin"
   ],
   "client": [
-    "HeldItemMixin",
     "KeyboardMixin",
     "MouseMixin",
     "GameloopMixin"

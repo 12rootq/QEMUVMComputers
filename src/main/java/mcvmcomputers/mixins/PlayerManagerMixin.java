@@ -1,35 +1,41 @@
 package mcvmcomputers.mixins;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.world.entity.player.Player;
 
-import java.util.Collection;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import io.netty.buffer.Unpooled;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.entities.EntityPC;
 import mcvmcomputers.networking.PacketList;
-import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.network.FriendlyByteBuf;
 
-@Mixin(PlayerManager.class)
+
+
+/**
+ * Server-side cleanup when a player disconnects (mixin into {@link PlayerList}).
+ *
+ * <p>When a player leaves the server, removes their order and PC entity from
+ * {@link MainMod#orders}/{@link MainMod#computers} and sends the
+ * {@code s2c_stop_screen} packet to tracking clients so they stop rendering that
+ * PC's screen. Prevents leaks and "stuck" screens after a player leaves.</p>
+ */
+@Mixin(PlayerList.class)
 public class PlayerManagerMixin {
-	@Inject(at = @At("HEAD"), method = "remove")
-	public void remove(ServerPlayerEntity player, CallbackInfo ci) {
-		MainMod.orders.remove(player.getUuid());
-		EntityPC pc = MainMod.computers.remove(player.getUuid());;
-		if(pc != null){
-			Collection<ServerPlayerEntity> watchingPlayers = PlayerLookup.tracking(pc);
-			PacketByteBuf b = PacketByteBufs.create();
-			b.writeUuid(player.getUuid());
-			watchingPlayers.forEach((p) -> {
-				ServerPlayNetworking.send(p, new PacketList.RawBytesPayload(PacketList.S2C_STOP_SCREEN, b));
-			});
-		}
-	}
+    @Inject(at = @At("HEAD"), method = "remove")
+    public void remove(ServerPlayer player, CallbackInfo ci) {
+        MainMod.orders.remove(player.getUUID());
+        EntityPC pc = MainMod.computers.remove(player.getUUID());
+        if (pc != null) {
+            // Tell tracking clients to stop rendering this PC's screen.
+            FriendlyByteBuf b = new FriendlyByteBuf(Unpooled.buffer());
+            b.writeUUID(player.getUUID());
+            PacketList.sendToTracking(pc, "s2c_stop_screen", b);
+        }
+    }
 }

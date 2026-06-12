@@ -1,12 +1,13 @@
 package mcvmcomputers.utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 import mcvmcomputers.item.OrderableItem;
 
 public class TabletOrder {
-	public List<OrderableItem> items;
+	public List<OrderableItem> items = new ArrayList<>();
 	public OrderStatus currentStatus = OrderStatus.PAYMENT_CHEST_ARRIVAL_SOON;
 	public int price;
 	public boolean entitySpawned;

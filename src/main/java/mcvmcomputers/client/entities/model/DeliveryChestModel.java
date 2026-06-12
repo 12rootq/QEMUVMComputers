@@ -4,17 +4,25 @@ import java.awt.Color;
 import java.io.IOException;
 import java.util.Random;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.model.*;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+
+import net.minecraft.client.model.geom.builders.LayerDefinition;
+import net.minecraft.client.model.geom.builders.MeshDefinition;
+import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.model.geom.builders.CubeListBuilder;
+
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.model.geom.PartPose;
+import net.minecraft.client.model.EntityModel;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.resources.ResourceLocation;
 
 public class DeliveryChestModel extends EntityModel<Entity> {
 	public final ModelPart model;
@@ -31,23 +39,23 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 	public final ModelPart fire;
 
 	private final NativeImage baseTexture;
-	private final MinecraftClient mcc;
+	private final Minecraft mcc;
 
 	public static final Random TEX_RANDOM = new Random();
 
 	private NativeImage ni;
-	private NativeImageBackedTexture nibt;
-	private Identifier texId;
+	private DynamicTexture nibt;
+	private ResourceLocation texId;
 
 	public boolean fireYes = true;
 
 	public DeliveryChestModel() throws IOException {
-		this(getTexturedModelData().createModel());
+		this(getLayerDefinition().bakeRoot());
 	}
 
 	public DeliveryChestModel(ModelPart root) throws IOException {
-		this.mcc = MinecraftClient.getInstance();
-		this.baseTexture = NativeImage.read(mcc.getResourceManager().getResourceOrThrow(Identifier.of("mcvmcomputers", "textures/entity/delivery_chest.png")).getInputStream());
+		this.mcc = Minecraft.getInstance();
+		this.baseTexture = NativeImage.read(mcc.getResourceManager().getResourceOrThrow(ResourceLocation.fromNamespaceAndPath("mcvmcomputers", "textures/entity/delivery_chest.png")).open());
 
 		this.model = root.getChild("model");
 		this.opening = this.model.getChild("opening");
@@ -63,102 +71,102 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 		this.fire = this.engine.getChild("fire");
 	}
 
-	public static TexturedModelData getTexturedModelData() {
-		ModelData modelData = new ModelData();
-		ModelPartData root = modelData.getRoot();
+	public static LayerDefinition getLayerDefinition() {
+		MeshDefinition meshDef = new MeshDefinition();
+		PartDefinition root = meshDef.getRoot();
 
 
-		ModelPartData modelData_part = root.addChild("model", ModelPartBuilder.create()
-			.uv(0, 0).cuboid(-6.0F, -5.0F, -6.0F, 12.0F, 8.0F, 12.0F),
-			ModelTransform.pivot(0.0F, 7.0F, 0.0F));
+		PartDefinition MeshDefinition_part = root.addOrReplaceChild("model", CubeListBuilder.create()
+			.texOffs(0, 0).addBox(-6.0F, -5.0F, -6.0F, 12.0F, 8.0F, 12.0F),
+			PartPose.offset(0.0F, 7.0F, 0.0F));
 
 
-		modelData_part.addChild("opening", ModelPartBuilder.create()
-			.uv(0, 20).cuboid(-6.0F, -2.0F, -12.0F, 12.0F, 2.0F, 12.0F),
-			ModelTransform.of(0.0F, -5.0F, 6.0F, -1.1345F, 0.0F, 0.0F));
+		MeshDefinition_part.addOrReplaceChild("opening", CubeListBuilder.create()
+			.texOffs(0, 20).addBox(-6.0F, -2.0F, -12.0F, 12.0F, 2.0F, 12.0F),
+			PartPose.offsetAndRotation(0.0F, -5.0F, 6.0F, -1.1345F, 0.0F, 0.0F));
 
 
-		ModelPartData upleg0Data = modelData_part.addChild("upleg0", ModelPartBuilder.create()
-			.uv(24, 34).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-			ModelTransform.of(-6.0F, 3.0F, 6.0F, 0.0F, 0.7854F, 0.0F));
+		PartDefinition upleg0Data = MeshDefinition_part.addOrReplaceChild("upleg0", CubeListBuilder.create()
+			.texOffs(24, 34).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
+			PartPose.offsetAndRotation(-6.0F, 3.0F, 6.0F, 0.0F, 0.7854F, 0.0F));
 
 
-		upleg0Data.addChild("uleg0", ModelPartBuilder.create()
-			.uv(0, 46).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-			.uv(0, 20).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
+		upleg0Data.addOrReplaceChild("uleg0", CubeListBuilder.create()
+			.texOffs(0, 46).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
+			.texOffs(0, 20).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
+			PartPose.offset(-0.9828F, 7.0F, -0.0071F));
 
 
-		ModelPartData upleg1Data = modelData_part.addChild("upleg1", ModelPartBuilder.create()
-			.uv(0, 34).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-			ModelTransform.of(-6.0F, 3.0F, -6.0F, 0.0F, -0.7854F, 0.0F));
+		PartDefinition upleg1Data = MeshDefinition_part.addOrReplaceChild("upleg1", CubeListBuilder.create()
+			.texOffs(0, 34).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
+			PartPose.offsetAndRotation(-6.0F, 3.0F, -6.0F, 0.0F, -0.7854F, 0.0F));
 
 
-		upleg1Data.addChild("uleg1", ModelPartBuilder.create()
-			.uv(44, 44).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-			.uv(0, 8).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
+		upleg1Data.addOrReplaceChild("uleg1", CubeListBuilder.create()
+			.texOffs(44, 44).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
+			.texOffs(0, 8).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
+			PartPose.offset(-0.9828F, 7.0F, -0.0071F));
 
 
-		ModelPartData upleg2Data = modelData_part.addChild("upleg2", ModelPartBuilder.create()
-			.uv(6, 24).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-			ModelTransform.of(6.0F, 3.0F, -6.0F, 0.0F, -2.3562F, 0.0F));
+		PartDefinition upleg2Data = MeshDefinition_part.addOrReplaceChild("upleg2", CubeListBuilder.create()
+			.texOffs(6, 24).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
+			PartPose.offsetAndRotation(6.0F, 3.0F, -6.0F, 0.0F, -2.3562F, 0.0F));
 
 
-		upleg2Data.addChild("uleg2", ModelPartBuilder.create()
-			.uv(38, 43).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-			.uv(0, 4).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
+		upleg2Data.addOrReplaceChild("uleg2", CubeListBuilder.create()
+			.texOffs(38, 43).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
+			.texOffs(0, 4).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
+			PartPose.offset(-0.9828F, 7.0F, -0.0071F));
 
 
-		ModelPartData upleg3Data = modelData_part.addChild("upleg3", ModelPartBuilder.create()
-			.uv(0, 24).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
-			ModelTransform.of(6.0F, 3.0F, 6.0F, 0.0F, 2.3562F, 0.0F));
+		PartDefinition upleg3Data = MeshDefinition_part.addOrReplaceChild("upleg3", CubeListBuilder.create()
+			.texOffs(0, 24).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 7.0F, 1.0F),
+			PartPose.offsetAndRotation(6.0F, 3.0F, 6.0F, 0.0F, 2.3562F, 0.0F));
 
 
-		upleg3Data.addChild("uleg3", ModelPartBuilder.create()
-			.uv(32, 43).cuboid(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
-			.uv(0, 0).cuboid(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
-			ModelTransform.pivot(-0.9828F, 7.0F, -0.0071F));
+		upleg3Data.addOrReplaceChild("uleg3", CubeListBuilder.create()
+			.texOffs(32, 43).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F)
+			.texOffs(0, 0).addBox(-1.4868F, 6.0F, -1.5232F, 3.0F, 1.0F, 3.0F),
+			PartPose.offset(-0.9828F, 7.0F, -0.0071F));
 
 
-		ModelPartData engineData = modelData_part.addChild("engine", ModelPartBuilder.create()
-			.uv(0, 34).cuboid(-4.0F, 8.0F, -4.0F, 8.0F, 4.0F, 8.0F)
-			.uv(36, 0).cuboid(-3.0F, 5.0F, -3.0F, 6.0F, 3.0F, 6.0F)
-			.uv(36, 20).cuboid(-2.0F, 3.0F, -2.0F, 4.0F, 2.0F, 4.0F)
-			.uv(36, 26).cuboid(-4.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
-			.uv(30, 34).cuboid(3.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
-			.uv(36, 0).cuboid(-4.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F)
-			.uv(34, 34).cuboid(3.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F),
-			ModelTransform.pivot(0.0F, 0.0F, 0.0F));
+		PartDefinition engineData = MeshDefinition_part.addOrReplaceChild("engine", CubeListBuilder.create()
+			.texOffs(0, 34).addBox(-4.0F, 8.0F, -4.0F, 8.0F, 4.0F, 8.0F)
+			.texOffs(36, 0).addBox(-3.0F, 5.0F, -3.0F, 6.0F, 3.0F, 6.0F)
+			.texOffs(36, 20).addBox(-2.0F, 3.0F, -2.0F, 4.0F, 2.0F, 4.0F)
+			.texOffs(36, 26).addBox(-4.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
+			.texOffs(30, 34).addBox(3.0F, 3.0F, 3.0F, 1.0F, 5.0F, 1.0F)
+			.texOffs(36, 0).addBox(-4.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F)
+			.texOffs(34, 34).addBox(3.0F, 3.0F, -4.0F, 1.0F, 5.0F, 1.0F),
+			PartPose.offset(0.0F, 0.0F, 0.0F));
 
 
-		engineData.addChild("fire", ModelPartBuilder.create()
-			.uv(32, 34).cuboid(-3.0F, -1.0F, -3.0F, 6.0F, 3.0F, 6.0F),
-			ModelTransform.pivot(0.0F, 13.0F, 0.0F));
+		engineData.addOrReplaceChild("fire", CubeListBuilder.create()
+			.texOffs(32, 34).addBox(-3.0F, -1.0F, -3.0F, 6.0F, 3.0F, 6.0F),
+			PartPose.offset(0.0F, 13.0F, 0.0F));
 
-		return TexturedModelData.of(modelData, 64, 64);
+		return LayerDefinition.create(meshDef, 64, 64);
 	}
 
 	private void generateTexture() {
 		if(ni != null) {ni.close(); ni = null;}
 		if(nibt != null) {nibt.close(); nibt = null;}
-		if(texId != null) {mcc.getTextureManager().destroyTexture(texId); texId = null;};
+		if(texId != null) {mcc.getTextureManager().release(texId); texId = null;};
 
 		ni = new NativeImage(64, 64, true);
 		ni.copyFrom(baseTexture);
 		for(int x = 38;x<50;x++) {
 			for(int y = 34;y<40;y++) {
-				ni.setColor(x, y, randomColor());
+				ni.setPixelRGBA(x, y, randomColor());
 			}
 		}
 		for(int x = 32;x<56;x++) {
 			for(int y = 40;y<43;y++) {
-				ni.setColor(x, y, randomColor());
+				ni.setPixelRGBA(x, y, randomColor());
 			}
 		}
-		nibt = new NativeImageBackedTexture(ni);
-		texId = mcc.getTextureManager().registerDynamicTexture("delivery_chest_fire", nibt);
+		nibt = new DynamicTexture(ni);
+		texId = mcc.getTextureManager().register("delivery_chest_fire", nibt);
 	}
 
 	private int randomColor() {
@@ -177,22 +185,22 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 	}
 
 	@Override
-	public void setAngles(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch){
+	public void setupAnim(Entity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch){
 	}
 
 	@Override
-	public void render(MatrixStack matrixStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color){
-		model.render(matrixStack, buffer, packedLight, packedOverlay, -1);
+	public void renderToBuffer(PoseStack PoseStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color){
+		model.render(PoseStack, buffer, packedLight, packedOverlay, -1);
 	}
 
-	public void render(MatrixStack matrixStack, VertexConsumerProvider provider, int packedLight, int packedOverlay){
+	public void renderToBuffer(PoseStack PoseStack, MultiBufferSource provider, int packedLight, int packedOverlay){
 		this.generateTexture();
-		model.render(matrixStack, provider.getBuffer(RenderLayer.getEntityCutout(texId)), packedLight, packedOverlay, -1);
+		model.render(PoseStack, provider.getBuffer(RenderType.entityCutout(texId)), packedLight, packedOverlay, -1);
 	}
 
 	public void setRotationAngle(ModelPart modelRenderer, float x, float y, float z) {
-		modelRenderer.pitch = x;
-		modelRenderer.yaw = y;
-		modelRenderer.roll = z;
+		modelRenderer.xRot = x;
+		modelRenderer.yRot = y;
+		modelRenderer.zRot = z;
 	}
 }

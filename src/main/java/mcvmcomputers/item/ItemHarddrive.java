@@ -1,48 +1,53 @@
 package mcvmcomputers.item;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.entity.player.Player;
+
+
+import net.minecraft.world.item.Item;
 
 import mcvmcomputers.MainMod;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.world.World;
+import net.minecraft.core.component.DataComponents;
+
+
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.level.Level;
 
 public class ItemHarddrive extends OrderableItem{
-	public ItemHarddrive(Settings settings) {
+	public ItemHarddrive(Item.Properties settings) {
 		super(settings, 6);
 	}
 
 
 	@Override
-	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-		if(world.isClient) {
+	public InteractionResultHolder<ItemStack> use(Level level, Player user, InteractionHand hand) {
+		if(level.isClientSide()) {
 			MainMod.hardDriveClick.run();
 		}
-		return super.use(world, user, hand);
+		return super.use(level, user, hand);
 	}
 
 	@Override
-	public Text getName(ItemStack stack) {
-		NbtComponent nbtComp = stack.get(DataComponentTypes.CUSTOM_DATA);
+	public Component getName(ItemStack stack) {
+		CustomData nbtComp = stack.get(DataComponents.CUSTOM_DATA);
 		if (nbtComp != null) {
-			NbtCompound nbt = nbtComp.copyNbt();
+			CompoundTag nbt = nbtComp.copyTag();
 			if (nbt.contains("vhdfile")) {
-				return Text.translatable("mcvmcomputers.hdd_item_name", nbt.getString("vhdfile")).formatted(Formatting.WHITE);
+				return Component.translatable("mcvmcomputers.hdd_item_name", nbt.getString("vhdfile")).withStyle(ChatFormatting.WHITE);
 			}
 		}
-		return Text.translatable("mcvmcomputers.hdd_item_name", Text.translatable("mcvmcomputers.hdd_right_click").getString()).formatted(Formatting.WHITE);
+		return Component.translatable("mcvmcomputers.hdd_item_name", Component.translatable("mcvmcomputers.hdd_right_click").getString()).withStyle(ChatFormatting.WHITE);
 	}
 
 	public static ItemStack createHardDrive(String fileName) {
 		ItemStack is = new ItemStack(ItemList.ITEM_HARDDRIVE);
-		NbtCompound ct = new NbtCompound();
+		CompoundTag ct = new CompoundTag();
 		ct.putString("vhdfile", fileName);
-		is.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(ct));
+		is.set(DataComponents.CUSTOM_DATA, CustomData.of(ct));
 		return is;
 	}
 

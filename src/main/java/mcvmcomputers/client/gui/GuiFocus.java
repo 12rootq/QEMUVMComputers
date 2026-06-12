@@ -1,29 +1,39 @@
 package mcvmcomputers.client.gui;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+
 
 import java.nio.DoubleBuffer;
 import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.glfw.GLFW;
 
 import mcvmcomputers.client.ClientMod;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Text;
-import net.minecraft.util.Language;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
 
-public class GuiFocus extends Screen{
+import net.minecraft.network.chat.Component;
+import net.minecraft.locale.Language;
+
+/**
+ * The virtual machine "focus" screen.
+ *
+ * <p>While this screen is open and the VM is on, keyboard and mouse input is
+ * redirected to the guest OS (see {@link mcvmcomputers.mixins.KeyboardMixin} and
+ * {@link mcvmcomputers.mixins.MouseMixin}) instead of controlling the Minecraft
+ * player. The screen captures the cursor and shows the VM screen frame; leaving is
+ * done with the configured unfocus key combination ({@code ClientMod.glfwUnfocusKey*}).</p>
+ */
+public class GuiFocus extends net.minecraft.client.gui.screens.Screen{
 	private String keyString;
 	private ArrayList<Integer> keys;
 	private final Language lang = Language.getInstance();
-	private MinecraftClient minecraft = MinecraftClient.getInstance();
-	private Timer serverAddressTimer;
+	private Minecraft minecraft = Minecraft.getInstance();
+
 
 	public GuiFocus() {
-		super(Text.translatable("Focus"));
+		super(Component.translatable("Focus"));
 	}
 
 	@Override
@@ -53,29 +63,16 @@ public class GuiFocus extends Screen{
 			plus = true;
 		}
 
-		serverAddressTimer = new Timer();
-		class CheckAddress extends TimerTask {
-			public void run() {
-				long window = minecraft.getWindow().getHandle();
-				if (minecraft.getCurrentServerEntry() == null) {
 
-					GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
-					serverAddressTimer.cancel();
-				} else {
-					String mcc = minecraft.getCurrentServerEntry().address;
-				}
-			}
-		}
-		serverAddressTimer.schedule(new CheckAddress(), 0, 1000);
 	}
 
 	@Override
-	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+	public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
 	}
 
 	@Override
-	public void render(DrawContext context, int wmouseX, int wmouseY, float delta) {
-		long window = minecraft.getWindow().getHandle();
+	public void render(GuiGraphics context, int wmouseX, int wmouseY, float delta) {
+		long window = minecraft.getWindow().getWindow();
 		DoubleBuffer mX = BufferUtils.createDoubleBuffer(1);
 		DoubleBuffer mY = BufferUtils.createDoubleBuffer(1);
 		GLFW.glfwGetCursorPos(window, mX, mY);
@@ -93,8 +90,10 @@ public class GuiFocus extends Screen{
 		if (GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_MIDDLE) == GLFW.GLFW_PRESS) mask |= 0x04;
 		ClientMod.mouseButtonMask = mask;
 
-		context.drawTextWithShadow(this.textRenderer, lang.get("mcvmcomputers.focus.lose").replace("%s", keyString), 4, 4, -1);
-		GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
+		context.drawString(this.font, lang.getOrDefault("mcvmcomputers.focus.lose").replace("%s", keyString), 4, 4, -1);
+		if (GLFW.glfwGetInputMode(window, GLFW.GLFW_CURSOR) != GLFW.GLFW_CURSOR_DISABLED) {
+			GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
+		}
 
 		boolean pressed = true;
 		for(int key : keys) {
@@ -111,12 +110,13 @@ public class GuiFocus extends Screen{
 		super.render(context, wmouseX, wmouseY, delta);
 	}
 
+
+
 	@Override
 	public void removed() {
 		ClientMod.releaseKeys = true;
-		if (serverAddressTimer != null) {
-			serverAddressTimer.cancel();
-		}
+		long window = minecraft.getWindow().getWindow();
+		GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
 	}
 
 	@Override
@@ -125,7 +125,7 @@ public class GuiFocus extends Screen{
 	}
 
 	@Override
-	public boolean shouldPause() {
+	public boolean isPauseScreen() {
 		return false;
 	}
 }

@@ -7,25 +7,28 @@ import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.item.ItemPackage;
 import mcvmcomputers.utils.TabletOrder;
 import mcvmcomputers.utils.TabletOrder.OrderStatus;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.entity.player.Player;
 
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.registry.Registries;
-import net.minecraft.world.World;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.nbt.CompoundTag;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.InteractionHand;
+
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.level.Level;
 
 /**
  * The rocket-powered delivery chest entity. It flies in to drop off the
@@ -33,16 +36,16 @@ import net.minecraft.world.World;
  * again. Drives its own animation (legs, opening, fire) and rocket sound.
  */
 public class EntityDeliveryChest extends Entity{
-	private static final TrackedData<Float> TARGET_X =
-			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.FLOAT);
-	private static final TrackedData<Float> TARGET_Y =
-			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.FLOAT);
-	private static final TrackedData<Float> TARGET_Z =
-			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.FLOAT);
-	private static final TrackedData<Boolean> TAKING_OFF =
-			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.BOOLEAN);
-	private static final TrackedData<String> DELIVERY_UUID =
-			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.STRING);
+	private static final EntityDataAccessor<Float> TARGET_X =
+			SynchedEntityData.defineId(EntityDeliveryChest.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Float> TARGET_Y =
+			SynchedEntityData.defineId(EntityDeliveryChest.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Float> TARGET_Z =
+			SynchedEntityData.defineId(EntityDeliveryChest.class, EntityDataSerializers.FLOAT);
+	private static final EntityDataAccessor<Boolean> TAKING_OFF =
+			SynchedEntityData.defineId(EntityDeliveryChest.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<String> DELIVERY_UUID =
+			SynchedEntityData.defineId(EntityDeliveryChest.class, EntityDataSerializers.STRING);
 
 
 	public float renderRot = 90f;
@@ -61,55 +64,55 @@ public class EntityDeliveryChest extends Entity{
 	public float takeOffTime = 0f;
 
 
-	public EntityDeliveryChest(EntityType<?> type, World world) {
-		super(type, world);
+	public EntityDeliveryChest(EntityType<?> type, Level level) {
+		super(type, level);
 	}
 
-	public EntityDeliveryChest(World world, Vec3d target, UUID owner) {
-		super(EntityList.DELIVERY_CHEST, world);
-		this.getDataTracker().set(TARGET_X, (float)target.x);
-		this.getDataTracker().set(TARGET_Y, (float)target.y);
-		this.getDataTracker().set(TARGET_Z, (float)target.z);
-		this.getDataTracker().set(DELIVERY_UUID, owner.toString());
-		this.updatePosition(target.x, target.y, target.z);
+	public EntityDeliveryChest(Level level, Vec3 target, UUID owner) {
+		this(EntityList.DELIVERY_CHEST, level);
+		this.getEntityData().set(TARGET_X, (float)target.x);
+		this.getEntityData().set(TARGET_Y, (float)target.y);
+		this.getEntityData().set(TARGET_Z, (float)target.z);
+		this.getEntityData().set(DELIVERY_UUID, owner.toString());
+		this.setPos(target.x, target.y, target.z);
 	}
 
-	public EntityDeliveryChest(World world, double targetX, double targetY, double targetZ) {
-		super(EntityList.DELIVERY_CHEST, world);
-		this.getDataTracker().set(TARGET_X, (float)targetX);
-		this.getDataTracker().set(TARGET_Y, (float)targetY);
-		this.getDataTracker().set(TARGET_Z, (float)targetZ);
-		this.updatePosition(targetX, targetY, targetZ);
-	}
-
-	@Override
-	protected void initDataTracker(DataTracker.Builder builder) {
-		builder.add(TARGET_X, 0f);
-		builder.add(TARGET_Y, 0f);
-		builder.add(TARGET_Z, 0f);
-		builder.add(DELIVERY_UUID, "");
-		builder.add(TAKING_OFF, false);
+	public EntityDeliveryChest(Level level, double targetX, double targetY, double targetZ) {
+		this(EntityList.DELIVERY_CHEST, level);
+		this.getEntityData().set(TARGET_X, (float)targetX);
+		this.getEntityData().set(TARGET_Y, (float)targetY);
+		this.getEntityData().set(TARGET_Z, (float)targetZ);
+		this.setPos(targetX, targetY, targetZ);
 	}
 
 	@Override
-	protected void readCustomDataFromNbt(NbtCompound tag) {
-		this.getDataTracker().set(TARGET_X, tag.getFloat("TargetX"));
-		this.getDataTracker().set(TARGET_Y, tag.getFloat("TargetY"));
-		this.getDataTracker().set(TARGET_Z, tag.getFloat("TargetZ"));
-		this.getDataTracker().set(DELIVERY_UUID, tag.getString("DeliveryUUID"));
+	protected void defineSynchedData(SynchedEntityData.Builder builder) {
+		builder.define(TARGET_X, 0f);
+		builder.define(TARGET_Y, 0f);
+		builder.define(TARGET_Z, 0f);
+		builder.define(DELIVERY_UUID, "");
+		builder.define(TAKING_OFF, false);
+	}
+
+	@Override
+	protected void readAdditionalSaveData(CompoundTag tag) {
+		this.getEntityData().set(TARGET_X, tag.getFloat("TargetX"));
+		this.getEntityData().set(TARGET_Y, tag.getFloat("TargetY"));
+		this.getEntityData().set(TARGET_Z, tag.getFloat("TargetZ"));
+		this.getEntityData().set(DELIVERY_UUID, tag.getString("DeliveryUUID"));
 	}
 	@Override
-	protected void writeCustomDataToNbt(NbtCompound tag) {
-		tag.putFloat("TargetX", this.getDataTracker().get(TARGET_X));
-		tag.putFloat("TargetY", this.getDataTracker().get(TARGET_Y));
-		tag.putFloat("TargetZ", this.getDataTracker().get(TARGET_Z));
-		tag.putString("DeliveryUUID", this.getDataTracker().get(DELIVERY_UUID));
+	protected void addAdditionalSaveData(CompoundTag tag) {
+		tag.putFloat("TargetX", this.getEntityData().get(TARGET_X));
+		tag.putFloat("TargetY", this.getEntityData().get(TARGET_Y));
+		tag.putFloat("TargetZ", this.getEntityData().get(TARGET_Z));
+		tag.putString("DeliveryUUID", this.getEntityData().get(DELIVERY_UUID));
 	}
 
 	@Override
 	public void tick() {
 		super.tick();
-		if(!this.getWorld().isClient) {
+		if(!this.level().isClientSide()) {
 			if(this.getDeliveryUUID().isEmpty()) {
 				this.kill();
 			}
@@ -118,7 +121,7 @@ public class EntityDeliveryChest extends Entity{
 			}else {
 				TabletOrder to = MainMod.orders.get(UUID.fromString(getDeliveryUUID()));
 				if(to.currentStatus == OrderStatus.PAYMENT_CHEST_RECEIVING || to.currentStatus == OrderStatus.ORDER_CHEST_RECEIVED) {
-					this.getDataTracker().set(TAKING_OFF, true);
+					this.getEntityData().set(TAKING_OFF, true);
 					takeOffTime += 0.05f;
 					if(takeOffTime > 0.5f) {
 						this.kill();
@@ -133,70 +136,83 @@ public class EntityDeliveryChest extends Entity{
 	}
 
 	@Override
-	public ActionResult interact(PlayerEntity player, Hand hand) {
-		if(player.getWorld().isClient) {
-			return ActionResult.FAIL;
+	public InteractionResult interact(Player player, InteractionHand hand) {
+		if(player.level().isClientSide()) {
+			return InteractionResult.FAIL;
 		}
-		if(hand == Hand.OFF_HAND) {
-			return ActionResult.FAIL;
+		if(hand == InteractionHand.OFF_HAND) {
+			return InteractionResult.FAIL;
 		}
-		if(player.getUuid().toString().equals(getDeliveryUUID())) {
-			TabletOrder to = MainMod.orders.get(UUID.fromString(getDeliveryUUID()));
-			if(to.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
-				ItemStack is = player.getMainHandStack();
+		String deliveryUUID = getDeliveryUUID();
+		if(deliveryUUID.isEmpty() || !MainMod.orders.containsKey(UUID.fromString(deliveryUUID))) {
+			return InteractionResult.FAIL;
+		}
+		if(!player.getStringUUID().equals(deliveryUUID)) {
+			player.sendSystemMessage(Component.translatable("mcvmcomputers.not_your_computer").withStyle(ChatFormatting.RED));
+			return InteractionResult.FAIL;
+		}
+		TabletOrder to = MainMod.orders.get(UUID.fromString(deliveryUUID));
+		if(to.currentStatus == OrderStatus.PAYMENT_CHEST_ARRIVED) {
+			ItemStack is = player.getMainHandItem();
 
-				boolean flag = false;
+			boolean flag = false;
 
-				if(is != null) {
-					if(is.getItem().equals(Items.IRON_INGOT)) {
-						int count = is.getCount();
-						to.price -= count;
-						is.decrement(count);
-						flag = true;
-					}
+			if(!is.isEmpty()) {
+				if(is.getItem().equals(Items.IRON_INGOT)) {
+					int count = is.getCount();
+					to.price -= count;
+					is.shrink(count);
+					flag = true;
 				}
+			}
 
-				if(!flag) {
-					player.sendMessage(Text.translatable("mcvmcomputers.click_with_ingots").formatted(Formatting.RED));
-				}else {
-					if(to.price < 0) {
-
-						ItemStack refund = new ItemStack(Items.IRON_INGOT, to.price * -1);
-						player.getInventory().offerOrDrop(refund);
-						to.price = 0;
-						to.currentStatus = OrderStatus.PAYMENT_CHEST_RECEIVING;
-					}else if(to.price == 0) {
-						to.currentStatus = OrderStatus.PAYMENT_CHEST_RECEIVING;
-					}
+			if(!flag) {
+				player.sendSystemMessage(Component.translatable("mcvmcomputers.click_with_ingots").append(Component.literal(" (" + to.price + ")")).withStyle(ChatFormatting.RED));
+			}else {
+				if(to.price < 0) {
+					ItemStack refund = new ItemStack(Items.IRON_INGOT, to.price * -1);
+					player.getInventory().add(refund);
+					to.price = 0;
+					to.currentStatus = OrderStatus.PAYMENT_CHEST_RECEIVING;
+				}else if(to.price == 0) {
+					to.currentStatus = OrderStatus.PAYMENT_CHEST_RECEIVING;
 				}
+				if (to.price > 0) {
+					this.setCustomName(Component.literal(to.price + " ").append(Component.translatable("item.minecraft.iron_ingot")));
+				} else {
+					this.setCustomNameVisible(false);
+				}
+			}
 
-				return flag ? ActionResult.SUCCESS : ActionResult.FAIL;
-			}else if(to.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
-			player.getWorld().spawnEntity(new ItemEntity(player.getWorld(), this.getX(), this.getY()+1.5, this.getZ(), ItemPackage.createPackage(Registries.ITEM.getId(to.items.get(0)))));
+			return flag ? InteractionResult.SUCCESS : InteractionResult.FAIL;
+		}else if(to.currentStatus == OrderStatus.ORDER_CHEST_ARRIVED) {
+			if(!to.items.isEmpty()) {
+				player.level().addFreshEntity(new ItemEntity(player.level(), this.getX(), this.getY()+1.5, this.getZ(), ItemPackage.createPackage(BuiltInRegistries.ITEM.getKey(to.items.get(0)))));
 				to.items.remove(0);
-				if(to.items.size() == 0) {
+				if(to.items.isEmpty()) {
 					to.currentStatus = OrderStatus.ORDER_CHEST_RECEIVED;
 				}
 			}
+			return InteractionResult.SUCCESS;
 		}
 
 		return super.interact(player, hand);
 	}
 
 	public float getTargetX() {
-		return this.getDataTracker().get(TARGET_X);
+		return this.getEntityData().get(TARGET_X);
 	}
 	public float getTargetY() {
-		return this.getDataTracker().get(TARGET_Y);
+		return this.getEntityData().get(TARGET_Y);
 	}
 	public float getTargetZ() {
-		return this.getDataTracker().get(TARGET_Z);
+		return this.getEntityData().get(TARGET_Z);
 	}
 	public String getDeliveryUUID() {
-		return this.getDataTracker().get(DELIVERY_UUID);
+		return this.getEntityData().get(DELIVERY_UUID);
 	}
 	public Boolean getTakingOff() {
-		return this.getDataTracker().get(TAKING_OFF);
+		return this.getEntityData().get(TAKING_OFF);
 	}
 
 	public void updateRenderPos(double x, double y, double z) {
@@ -206,19 +222,14 @@ public class EntityDeliveryChest extends Entity{
 
 
 	@Override
-	public boolean isCollidable() {
-		return true;
-	}
-
-	@Override
-	public boolean canHit() {
+	public boolean isPickable() {
 		return true;
 	}
 
 	@Override
 	public void remove(Entity.RemovalReason reason) {
 		super.remove(reason);
-		if(getWorld().isClient) {
+		if(level().isClientSide()) {
 			ClientMod.currentDeliveryChest = this;
 			MainMod.deliveryChestSound.run();
 		}

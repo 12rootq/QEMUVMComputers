@@ -1,29 +1,29 @@
 package mcvmcomputers.sound;
 
-import net.minecraft.client.sound.AbstractSoundInstance;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.client.resources.sounds.AbstractSoundInstance;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.util.RandomSource;
 
-public class TabletSoundInstance extends AbstractSoundInstance{
+public class TabletSoundInstance extends AbstractSoundInstance {
 
 	public TabletSoundInstance(SoundEvent soundId) {
-		super(soundId, SoundCategory.MASTER, Random.create());
+		super(soundId, SoundSource.MASTER, RandomSource.create());
 	}
 
 	@Override
-	public boolean isRepeatable() {
+	public boolean isLooping() {
 		return true;
 	}
 
 	@Override
-	public boolean shouldAlwaysPlay() {
+	public boolean canStartSilent() {
 		return true;
 	}
 
 	@Override
 	public float getVolume() {
-		return .15F * this.sound.getVolume().get(this.random);
+		return .15F * this.sound.getVolume().sample(this.random);
 	}
 
 }

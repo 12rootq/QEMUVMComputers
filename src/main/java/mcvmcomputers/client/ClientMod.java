@@ -1,4 +1,36 @@
 package mcvmcomputers.client;
+import net.minecraft.world.entity.player.Player;
+
+
+import mcvmcomputers.MainMod;
+import mcvmcomputers.client.entities.render.*;
+import mcvmcomputers.client.gui.*;
+import mcvmcomputers.client.tablet.TabletOS;
+import mcvmcomputers.client.utils.VBoxManage;
+import mcvmcomputers.entities.*;
+import mcvmcomputers.item.ItemOrderingTablet;
+import mcvmcomputers.networking.PacketList;
+import mcvmcomputers.utils.TabletOrder;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+
+import org.apache.commons.lang3.SystemUtils;
+import org.lwjgl.glfw.GLFW;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -6,386 +38,231 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.zip.DataFormatException;
+import java.util.*;
 import java.util.zip.Deflater;
-import java.util.zip.Inflater;
-
-import org.apache.commons.lang3.SystemUtils;
-import org.lwjgl.glfw.GLFW;
-
-import mcvmcomputers.client.utils.VBoxManage;
-
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
-import mcvmcomputers.MainMod;
-import mcvmcomputers.client.entities.render.CRTScreenRender;
-import mcvmcomputers.client.entities.render.DeliveryChestRender;
-import mcvmcomputers.client.entities.render.FlatScreenRender;
-import mcvmcomputers.client.entities.render.WallTVRender;
-import mcvmcomputers.client.entities.render.ItemPreviewRender;
-import mcvmcomputers.client.entities.render.KeyboardRender;
-import mcvmcomputers.client.entities.render.MouseRender;
-import mcvmcomputers.client.entities.render.PCRender;
-import mcvmcomputers.client.gui.GuiCreateHarddrive;
-import mcvmcomputers.client.gui.GuiFocus;
-import mcvmcomputers.client.gui.GuiPCEditing;
-import mcvmcomputers.client.tablet.TabletOS;
-import mcvmcomputers.entities.EntityCRTScreen;
-import mcvmcomputers.entities.EntityDeliveryChest;
-import mcvmcomputers.entities.EntityFlatScreen;
-import mcvmcomputers.entities.EntityItemPreview;
-import mcvmcomputers.entities.EntityKeyboard;
-import mcvmcomputers.entities.EntityList;
-import mcvmcomputers.entities.EntityMouse;
-import mcvmcomputers.entities.EntityPC;
-import mcvmcomputers.entities.EntityWallTV;
-import mcvmcomputers.item.OrderableItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import mcvmcomputers.networking.PacketList;
-import mcvmcomputers.utils.TabletOrder;
-import mcvmcomputers.utils.TabletOrder.OrderStatus;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 
 /**
- * Client mod entry point. Registers entity renderers and client-side packet
- * handlers, and stores all client-only VM state: the running VirtualBox handle,
- * the live screen textures streamed from the guest, mouse/keyboard input buffers
- * and the unfocus key bindings.
+ * Central holder of client-side mod state and renderer registration.
+ *
+ * <p>Subscribed to the mod bus ({@link EventBusSubscriber}); in
+ * {@link #registerRenderers} it registers the renderers for all entities and wires
+ * up the client implementations of the {@link MainMod} callbacks (opening GUIs,
+ * sounds). It also holds all shared client-side VM state: the on/off flags
+ * ({@code vmTurnedOn}/{@code vmTurningOn}/{@code vmTurningOff}), the
+ * {@link VBoxManage} instance, the keyboard scancode queue
+ * ({@link #vmKeyboardScancodes}), the mouse state, the VM screen textures and the
+ * unfocus key bindings.</p>
+ *
+ * <p>Many fields are {@code volatile}/synchronized because they are accessed by both
+ * the render thread and the background {@link VMRunnable}.</p>
  */
-public class ClientMod implements ClientModInitializer{
-	public static final OutputStream discardAllBytes = new OutputStream() { @Override public void write(int b) throws IOException {} };
-	public static Map<UUID, Identifier> vmScreenTextures;
-	public static Map<UUID, NativeImage> vmScreenTextureNI;
-	public static Map<UUID, NativeImageBackedTexture> vmScreenTextureNIBT;
-	public static EntityItemPreview thePreviewEntity;
-	public static final Object VM_TURNING_ON_LOCK = new Object();
-	public static volatile boolean vmTurnedOn;
-	public static volatile boolean vmTurningOff;
-	public static volatile boolean vmTurningOn;
-	public static int maxRam = 8192;
-	public static int videoMem = 256;
-	public static VBoxManage vbox;
+@EventBusSubscriber(modid = "mcvmcomputers", bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+/**
+ * Client-side helper. Registers entity renderers and client packet handlers via
+ * NeoForge events, and stores all client-only VM state: the running VirtualBox
+ * handle, the live screen textures streamed from the guest, mouse/keyboard input
+ * buffers and the unfocus key bindings.
+ */
+public class ClientMod {
+    public static final OutputStream discardAllBytes = new OutputStream() {
+        @Override public void write(int b) throws IOException {}
+    };
+    public static Map<UUID, ResourceLocation> vmScreenTextures;
+    public static Map<UUID, com.mojang.blaze3d.platform.NativeImage> vmScreenTextureNI;
+    public static Map<UUID, DynamicTexture> vmScreenTextureNIBT;
+    public static EntityItemPreview thePreviewEntity;
+    public static final Object VM_TURNING_ON_LOCK = new Object();
+    public static volatile boolean vmTurnedOn;
+    public static volatile boolean vmTurningOff;
+    public static volatile boolean vmTurningOn;
+    public static int maxRam = 8192;
+    public static int videoMem = 256;
+    public static VBoxManage vbox;
 
-	public static String vboxDirectory = "";
-	public static volatile Thread vmUpdateThread;
-	public static final Object VM_TEXTURE_LOCK = new Object();
-	public static volatile byte[] vmTextureBytes;
-	public static volatile int vmTextureBytesSize;
-	public static boolean failedSend;
+    public static String vboxDirectory = "";
+    public static volatile Thread vmUpdateThread;
+    public static final Object VM_TEXTURE_LOCK = new Object();
+    public static volatile byte[] vmTextureBytes;
+    public static volatile int vmTextureBytesSize;
+    public static boolean failedSend;
 
-	public static double mouseLastX = 0;
-	public static double mouseLastY = 0;
-	public static double mouseCurX = 0;
-	public static double mouseCurY = 0;
-	public static int mouseDeltaScroll;
-	// Mouse button bits: left=0x01, right=0x02, middle=0x04 (VBox buttonState convention).
-	// mouseButtonMask  = real-time held state.
-	// mouseButtonPressedLatch = bits pressed since the VM loop last consumed them, so a
-	// fast click (press+release within one ~66ms VM tick) is never lost.
-	public static volatile int mouseButtonMask;
-	public static volatile int mouseButtonPressedLatch;
-	public static List<Integer> vmKeyboardScancodes = new ArrayList<>();
-	public static boolean releaseKeys = false;
-	public static File vhdDirectory;
-	public static File isoDirectory;
-	public static int latestVHDNum = 0;
-	public static TabletOS tabletOS;
-	public static TabletOrder myOrder;
-	public static int vmEntityID = -1;
+    public static volatile double mouseLastX = 0;
+    public static volatile double mouseLastY = 0;
+    public static volatile double mouseCurX = 0;
+    public static volatile double mouseCurY = 0;
+    public static int mouseDeltaScroll;
+    public static volatile int mouseButtonMask;
+    public static volatile int mouseButtonPressedLatch;
+    public static List<Integer> vmKeyboardScancodes = new ArrayList<>();
+    public static boolean releaseKeys = false;
+    public static File vhdDirectory;
+    public static File isoDirectory;
+    public static int latestVHDNum = 0;
+    public static TabletOS tabletOS;
+    public static TabletOrder myOrder;
+    public static int vmEntityID = -1;
 
-	public static Thread tabletThread;
+    public static Thread tabletThread;
 
-	public static float deltaTime;
-	public static long lastDeltaTimeTime;
+    public static float deltaTime;
+    public static long lastDeltaTimeTime;
 
-	public static int glfwUnfocusKey1;
-	public static int glfwUnfocusKey2;
-	public static int glfwUnfocusKey3;
-	public static int glfwUnfocusKey4;
+    public static int glfwUnfocusKey1;
+    public static int glfwUnfocusKey2;
+    public static int glfwUnfocusKey3;
+    public static int glfwUnfocusKey4;
 
-	static {
-		if(SystemUtils.IS_OS_MAC) {
-			glfwUnfocusKey1 = GLFW.GLFW_KEY_LEFT_ALT;
-			glfwUnfocusKey2 = GLFW.GLFW_KEY_RIGHT_ALT;
-			glfwUnfocusKey3 = GLFW.GLFW_KEY_BACKSPACE;
-			glfwUnfocusKey4 = -1;
-		}else {
-			glfwUnfocusKey1 = GLFW.GLFW_KEY_LEFT_CONTROL;
-			glfwUnfocusKey2 = GLFW.GLFW_KEY_RIGHT_CONTROL;
-			glfwUnfocusKey3 = GLFW.GLFW_KEY_BACKSPACE;
-			glfwUnfocusKey4 = -1;
-		}
-	}
+    static {
+        if (SystemUtils.IS_OS_MAC) {
+            glfwUnfocusKey1 = GLFW.GLFW_KEY_LEFT_ALT;
+            glfwUnfocusKey2 = GLFW.GLFW_KEY_RIGHT_ALT;
+            glfwUnfocusKey3 = GLFW.GLFW_KEY_BACKSPACE;
+            glfwUnfocusKey4 = -1;
+        } else {
+            glfwUnfocusKey1 = GLFW.GLFW_KEY_LEFT_CONTROL;
+            glfwUnfocusKey2 = GLFW.GLFW_KEY_RIGHT_CONTROL;
+            glfwUnfocusKey3 = GLFW.GLFW_KEY_BACKSPACE;
+            glfwUnfocusKey4 = -1;
+        }
+    }
 
-	public static EntityDeliveryChest currentDeliveryChest;
-	public static EntityPC currentPC;
+    public static EntityDeliveryChest currentDeliveryChest;
+    public static EntityPC currentPC;
 
-	public static String getKeyName(int key) {
-		if (key < 0) {
-			return "None";
-		}else {
-			return glfwKey(key);
-		}
-	}
+    public static void playPlaceSound(Level level, Player user, SoundEvent sound, double reach) {
+        Vec3 soundPos = thePreviewEntity != null
+            ? thePreviewEntity.position()
+            : user.pick(reach, 0f, false).getLocation();
+        level.playSound(null, soundPos.x, soundPos.y, soundPos.z, sound, SoundSource.BLOCKS, 1f, 1f);
+    }
 
-	private static String glfwKey(int key) {
-		switch(key) {
-		case GLFW.GLFW_KEY_LEFT_CONTROL:
-			return "L Control";
-		case GLFW.GLFW_KEY_RIGHT_CONTROL:
-			return "R Control";
-		case GLFW.GLFW_KEY_RIGHT_ALT:
-			return "R Alt";
-		case GLFW.GLFW_KEY_LEFT_ALT:
-			return "L Alt";
-		case GLFW.GLFW_KEY_LEFT_SHIFT:
-			return "L Shift";
-		case GLFW.GLFW_KEY_RIGHT_SHIFT:
-			return "R Shift";
-		case GLFW.GLFW_KEY_ENTER:
-			return "Enter";
-		case GLFW.GLFW_KEY_BACKSPACE:
-			return "Backspace";
-		case GLFW.GLFW_KEY_CAPS_LOCK:
-			return "Caps Lock";
-		case GLFW.GLFW_KEY_TAB:
-			return "Tab";
-		default:
-			return GLFW.glfwGetKeyName(key, 0);
-		}
-	}
+    public static String getKeyName(int key) {
+        if (key < 0) return "None";
+        return glfwKey(key);
+    }
 
-	public static void getVHDNum() throws NumberFormatException, IOException {
-		File f = new File(vhdDirectory.getParentFile(), "vhdnum");
-		if(f.exists()) {
-			latestVHDNum = Integer.parseInt(Files.readAllLines(f.toPath()).get(0));
-		}
-	}
+    private static String glfwKey(int key) {
+        return switch (key) {
+            case GLFW.GLFW_KEY_LEFT_CONTROL -> "L Control";
+            case GLFW.GLFW_KEY_RIGHT_CONTROL -> "R Control";
+            case GLFW.GLFW_KEY_RIGHT_ALT -> "R Alt";
+            case GLFW.GLFW_KEY_LEFT_ALT -> "L Alt";
+            case GLFW.GLFW_KEY_LEFT_SHIFT -> "L Shift";
+            case GLFW.GLFW_KEY_RIGHT_SHIFT -> "R Shift";
+            case GLFW.GLFW_KEY_ENTER -> "Enter";
+            case GLFW.GLFW_KEY_BACKSPACE -> "Backspace";
+            case GLFW.GLFW_KEY_CAPS_LOCK -> "Caps Lock";
+            case GLFW.GLFW_KEY_TAB -> "Tab";
+            default -> GLFW.glfwGetKeyName(key, 0);
+        };
+    }
 
-	public static void increaseVHDNum() throws IOException {
-		latestVHDNum++;
-		File f = new File(vhdDirectory.getParentFile(), "vhdnum");
-		if(f.exists()) {
-			f.delete();
-		}
-		f.createNewFile();
-		try (FileWriter fw = new FileWriter(f)) {
-			fw.append(""+latestVHDNum);
-			fw.flush();
-		}
-	}
+    public static void getVHDNum() throws NumberFormatException, IOException {
+        File f = new File(vhdDirectory.getParentFile(), "vhdnum");
+        if (f.exists()) {
+            latestVHDNum = Integer.parseInt(Files.readAllLines(f.toPath()).get(0));
+        }
+    }
 
-	public static void generatePCScreen() {
-		MinecraftClient mcc = MinecraftClient.getInstance();
-		if(mcc.player == null) {
-			return;
-		}
-		byte[] localTextureBytes;
-		int localTextureBytesSize;
-		synchronized (VM_TEXTURE_LOCK) {
-			localTextureBytes = vmTextureBytes;
-			localTextureBytesSize = vmTextureBytesSize;
-			vmTextureBytes = null;
-		}
-		if(localTextureBytes != null) {
-			if(vmScreenTextures.containsKey(mcc.player.getUuid())) {
-				MinecraftClient.getInstance().getTextureManager().destroyTexture(vmScreenTextures.get(mcc.player.getUuid()));
-				vmScreenTextures.remove(mcc.player.getUuid());
-			}
+    public static void increaseVHDNum() throws IOException {
+        latestVHDNum++;
+        File f = new File(vhdDirectory.getParentFile(), "vhdnum");
+        if (f.exists()) f.delete();
+        f.createNewFile();
+        try (FileWriter fw = new FileWriter(f)) {
+            fw.append("" + latestVHDNum);
+            fw.flush();
+        }
+    }
 
-			Deflater def = new Deflater();
-			def.setInput(localTextureBytes);
-			def.finish();
-			byte[] deflated = new byte[localTextureBytesSize];
-			int sz = def.deflate(deflated);
-			def.end();
+    public static void generatePCScreen() {
+        Minecraft mcc = Minecraft.getInstance();
+        if (mcc.player == null) return;
+        byte[] localTextureBytes;
+        int localTextureBytesSize;
+        synchronized (VM_TEXTURE_LOCK) {
+            localTextureBytes = vmTextureBytes;
+            localTextureBytesSize = vmTextureBytesSize;
+            vmTextureBytes = null;
+        }
+        if (localTextureBytes != null) {
+            if (vmScreenTextures.containsKey(mcc.player.getUUID())) {
+                mcc.getTextureManager().release(vmScreenTextures.get(mcc.player.getUUID()));
+                vmScreenTextures.remove(mcc.player.getUUID());
+            }
 
-			if(sz > 32766) {
-				if(!failedSend){
-					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_too_big_mp").formatted(Formatting.RED));
-					failedSend = true;
-				}
-			}else {
-				if(failedSend) {
-					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_ok_mp").formatted(Formatting.GREEN));
-					failedSend = false;
-				}
+            Deflater def = new Deflater();
+            def.setInput(localTextureBytes);
+            def.finish();
+            byte[] deflated = new byte[localTextureBytesSize];
+            int sz = def.deflate(deflated);
+            def.end();
 
-				PacketByteBuf p = PacketByteBufs.create();
-				p.writeByteArray(Arrays.copyOfRange(deflated, 0, sz));
-				p.writeInt(sz);
-				p.writeInt(localTextureBytesSize);
-				ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_SCREEN, p));
-			}
+            if (sz > 32766) {
+                if (!failedSend) {
+                    mcc.player.displayClientMessage(
+                        Component.translatable("mcvmcomputers.screen_too_big_mp").withStyle(ChatFormatting.RED), false);
+                    failedSend = true;
+                }
+            } else {
+                if (failedSend) {
+                    mcc.player.displayClientMessage(
+                        Component.translatable("mcvmcomputers.screen_ok_mp").withStyle(ChatFormatting.GREEN), false);
+                    failedSend = false;
+                }
 
-			NativeImage ni = null;
-			try {
-				ni = NativeImage.read(new ByteArrayInputStream(localTextureBytes));
-			} catch (IOException e) {
-			}
-			if(ni != null) {
-				if(vmScreenTextureNI.containsKey(mcc.player.getUuid())) {
-					vmScreenTextureNI.get(mcc.player.getUuid()).close();
-					vmScreenTextureNI.remove(mcc.player.getUuid());
-				}
-				if(vmScreenTextureNIBT.containsKey(mcc.player.getUuid())) {
-					vmScreenTextureNIBT.get(mcc.player.getUuid()).close();
-					vmScreenTextureNIBT.remove(mcc.player.getUuid());
-				}
-				vmScreenTextureNI.put(mcc.player.getUuid(), ni);
-				NativeImageBackedTexture nibt = new NativeImageBackedTexture(ni);
-				vmScreenTextureNIBT.put(mcc.player.getUuid(), nibt);
-				vmScreenTextures.put(mcc.player.getUuid(), MinecraftClient.getInstance().getTextureManager().registerDynamicTexture("vm_texture", nibt));
-			}
-			vmTextureBytes = null;
-		}
-	}
+                FriendlyByteBuf p = new FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+                p.writeByteArray(Arrays.copyOfRange(deflated, 0, sz));
+                p.writeInt(sz);
+                p.writeInt(localTextureBytesSize);
+                PacketList.sendToServer("c2s_screen", p);
+            }
 
-	public static void registerClientPackets() {
-		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_SCREEN), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
-			PacketByteBuf attachedData = payload.data();
-			byte[] screen = attachedData.readByteArray();
-			int compressedDataSize = attachedData.readInt();
-			int dataSize = attachedData.readInt();
-			UUID pcOwner = attachedData.readUuid();
+            com.mojang.blaze3d.platform.NativeImage ni = null;
+            try {
+                ni = com.mojang.blaze3d.platform.NativeImage.read(new ByteArrayInputStream(localTextureBytes));
+            } catch (IOException e) {}
+            if (ni != null) {
+                if (vmScreenTextureNI.containsKey(mcc.player.getUUID())) {
+                    vmScreenTextureNI.get(mcc.player.getUUID()).close();
+                    vmScreenTextureNI.remove(mcc.player.getUUID());
+                }
+                if (vmScreenTextureNIBT.containsKey(mcc.player.getUUID())) {
+                    vmScreenTextureNIBT.get(mcc.player.getUUID()).close();
+                    vmScreenTextureNIBT.remove(mcc.player.getUUID());
+                }
+                vmScreenTextureNI.put(mcc.player.getUUID(), ni);
+                DynamicTexture nibt = new DynamicTexture(ni);
+                vmScreenTextureNIBT.put(mcc.player.getUUID(), nibt);
+                vmScreenTextures.put(mcc.player.getUUID(),
+                    mcc.getTextureManager().register("vm_texture", nibt));
+            }
+            vmTextureBytes = null;
+        }
+    }
 
-			context.client().execute(() -> {
-				MinecraftClient mcc = MinecraftClient.getInstance();
-				if(!pcOwner.equals(mcc.player.getUuid())) {
-					if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
-						mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
-						vmScreenTextures.remove(pcOwner);
-					}
-					if(ClientMod.vmScreenTextureNI.containsKey(pcOwner)) {
-						ClientMod.vmScreenTextureNI.get(pcOwner).close();
-						vmScreenTextureNI.remove(pcOwner);
-					}
-					if(ClientMod.vmScreenTextureNIBT.containsKey(pcOwner)) {
-						ClientMod.vmScreenTextureNIBT.get(pcOwner).close();
-						vmScreenTextureNIBT.remove(pcOwner);
-					}
-					try {
-						Inflater inf = new Inflater();
-						inf.setInput(screen, 0, compressedDataSize);
-						byte[] actualScreen = new byte[dataSize+1];
-						int size = inf.inflate(actualScreen);
-						inf.end();
-						NativeImage ni = NativeImage.read(new ByteArrayInputStream(actualScreen, 0, size));
-						NativeImageBackedTexture nibt = new NativeImageBackedTexture(ni);
-						ClientMod.vmScreenTextures.put(pcOwner, mcc.getTextureManager().registerDynamicTexture("pc_screen_mp", nibt));
-						ClientMod.vmScreenTextureNI.put(pcOwner, ni);
-						ClientMod.vmScreenTextureNIBT.put(pcOwner, nibt);
-					} catch (IOException | DataFormatException e) {
-						e.printStackTrace();
-					}
-				}
-			});
-		});
+    @SubscribeEvent
+    public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        MainMod.pcOpenGui = () -> Minecraft.getInstance().setScreen(new GuiPCEditing(currentPC));
+        MainMod.hardDriveClick = () -> Minecraft.getInstance().setScreen(new GuiCreateHarddrive());
+        MainMod.focus = () -> Minecraft.getInstance().setScreen(new GuiFocus());
+        MainMod.deliveryChestSound = () -> {
+            if (currentDeliveryChest.rocketSound != null && Minecraft.getInstance().getSoundManager().isActive(currentDeliveryChest.rocketSound)) {
+                Minecraft.getInstance().getSoundManager().stop(currentDeliveryChest.rocketSound);
+            }
+        };
 
-		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_STOP_SCREEN), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
-			PacketByteBuf attachedData = payload.data();
-			UUID pcOwner = attachedData.readUuid();
+        vmScreenTextures = new HashMap<>();
+        vmScreenTextureNI = new HashMap<>();
+        vmScreenTextureNIBT = new HashMap<>();
 
-			context.client().execute(() -> {
-				MinecraftClient mcc = MinecraftClient.getInstance();
-				if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
-					mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
-					vmScreenTextures.remove(pcOwner);
-				}
-				if(ClientMod.vmScreenTextureNI.containsKey(pcOwner)) {
-					ClientMod.vmScreenTextureNI.get(pcOwner).close();
-					vmScreenTextureNI.remove(pcOwner);
-				}
-				if(ClientMod.vmScreenTextureNIBT.containsKey(pcOwner)) {
-					ClientMod.vmScreenTextureNIBT.get(pcOwner).close();
-					vmScreenTextureNIBT.remove(pcOwner);
-				}
-			});
-		});
-
-		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_SYNC_ORDER), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
-			PacketByteBuf attachedData = payload.data();
-			int arraySize = attachedData.readInt();
-			java.util.List<OrderableItem> arr = new java.util.ArrayList<>();
-for (int i = 0; i < arraySize; i++) {
-	Item readItem = net.minecraft.registry.Registries.ITEM.get(net.minecraft.util.Identifier.of(attachedData.readString()));
-	if (readItem instanceof OrderableItem oi) {
-		arr.add(oi);
-	}
-}
-			int price = attachedData.readInt();
-			OrderStatus status = OrderStatus.values()[attachedData.readInt()];
-
-			context.client().execute(() -> {
-				if(ClientMod.myOrder == null) {
-					ClientMod.myOrder = new TabletOrder();
-				}
-				ClientMod.myOrder.price = price;
-				ClientMod.myOrder.items = arr;
-				ClientMod.myOrder.orderUUID = context.client().player.getUuid().toString();
-				ClientMod.myOrder.currentStatus = status;
-			});
-		});
-	}
-
-	@Override
-	public void onInitializeClient() {
-		MainMod.pcOpenGui = new Runnable() {
-			@Override
-			public void run() {
-				MinecraftClient.getInstance().setScreen(new GuiPCEditing(currentPC));
-			}
-		};
-		MainMod.hardDriveClick = new Runnable() {
-			@Override
-			public void run() {
-				MinecraftClient.getInstance().setScreen(new GuiCreateHarddrive());
-			}
-		};
-		MainMod.focus = new Runnable() {
-			@Override
-			public void run() {
-				MinecraftClient.getInstance().setScreen(new GuiFocus());
-			}
-		};
-		MainMod.deliveryChestSound = new Runnable() {
-			@Override
-			public void run() {
-				if(MinecraftClient.getInstance().getSoundManager().isPlaying(currentDeliveryChest.rocketSound)) {
-					MinecraftClient.getInstance().getSoundManager().stop(currentDeliveryChest.rocketSound);
-				}
-			}
-		};
-
-		registerClientPackets();
-
-		vmScreenTextures = new HashMap<UUID, Identifier>();
-		vmScreenTextureNI = new HashMap<UUID, NativeImage>();
-		vmScreenTextureNIBT = new HashMap<UUID, NativeImageBackedTexture>();
-
-		EntityRendererRegistry.register(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
-		EntityRendererRegistry.register(EntityList.KEYBOARD, KeyboardRender::new);
-		EntityRendererRegistry.register(EntityList.MOUSE, MouseRender::new);
-		EntityRendererRegistry.register(EntityList.CRT_SCREEN, CRTScreenRender::new);
-		EntityRendererRegistry.register(EntityList.FLATSCREEN, FlatScreenRender::new);
-		EntityRendererRegistry.register(EntityList.WALLTV, WallTVRender::new);
-		EntityRendererRegistry.register(EntityList.PC, PCRender::new);
-		EntityRendererRegistry.register(EntityList.DELIVERY_CHEST, DeliveryChestRender::new);
-	}
-
+        event.registerEntityRenderer(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
+        event.registerEntityRenderer(EntityList.KEYBOARD, KeyboardRender::new);
+        event.registerEntityRenderer(EntityList.MOUSE, MouseRender::new);
+        event.registerEntityRenderer(EntityList.CRT_SCREEN, CRTScreenRender::new);
+        event.registerEntityRenderer(EntityList.FLATSCREEN, FlatScreenRender::new);
+        event.registerEntityRenderer(EntityList.WALLTV, WallTVRender::new);
+        event.registerEntityRenderer(EntityList.PC, PCRender::new);
+        event.registerEntityRenderer(EntityList.DELIVERY_CHEST, DeliveryChestRender::new);
+    }
 }
