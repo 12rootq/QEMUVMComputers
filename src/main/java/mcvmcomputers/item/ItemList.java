@@ -8,140 +8,125 @@ import mcvmcomputers.entities.EntityFlatScreen;
 import mcvmcomputers.entities.EntityKeyboard;
 import mcvmcomputers.entities.EntityMouse;
 import mcvmcomputers.entities.EntityWallTV;
-import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.Item.Settings;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Rarity;
+import net.minecraftforge.registries.RegisterEvent;
 
 /**
- * Declares and registers every item in the mod (PC parts, peripherals, screens,
- * the ordering tablet and packages) and builds the three creative-tab item groups.
+ * Declares every mod item (PC parts, peripherals, screens, ordering tablet and
+ * packages). Registration happens via Forge's RegisterEvent; creative tab groups
+ * are built in registerGroups().
  */
 public class ItemList {
-	public static final RegistryKey<ItemGroup> PARTS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("mcvmcomputers", "parts"));
-	public static final ItemGroup MOD_ITEM_GROUP_PARTS = FabricItemGroup.builder()
-		.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
-		.displayName(Text.translatable("itemGroup.mcvmcomputers.parts"))
-		.build();
-	public static final RegistryKey<ItemGroup> PERIPHERALS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("mcvmcomputers", "peripherals"));
-	public static final ItemGroup MOD_ITEM_GROUP_PERIPHERALS = FabricItemGroup.builder()
-		.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
-		.displayName(Text.translatable("itemGroup.mcvmcomputers.peripherals"))
-		.build();
-	public static final RegistryKey<ItemGroup> OTHERS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("mcvmcomputers", "others"));
-	public static final ItemGroup MOD_ITEM_GROUP_OTHERS = FabricItemGroup.builder()
-		.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
-		.displayName(Text.translatable("itemGroup.mcvmcomputers.others"))
-		.build();
-	public static final OrderableItem PC_CASE_SIDEPANEL = new ItemPCCaseSidepanel(new Settings());
-	public static final OrderableItem ITEM_MOTHERBOARD = new OrderableItem(new Settings(), 4);
-	public static final OrderableItem ITEM_MOTHERBOARD64 = new OrderableItem(new Settings(), 8);
-	public static final OrderableItem ITEM_FLATSCREEN = new PlacableOrderableItem(new Settings(), EntityFlatScreen.class, SoundEvents.BLOCK_METAL_PLACE, 10);
-	public static final OrderableItem ITEM_WALLTV = new PlacableOrderableItem(new Settings(), EntityWallTV.class, SoundEvents.BLOCK_METAL_PLACE, 14, true);
-	public static final OrderableItem ITEM_CRTSCREEN = new PlacableOrderableItem(new Settings(), EntityCRTScreen.class, SoundEvents.BLOCK_METAL_PLACE, 10);
-	public static final OrderableItem ITEM_HARDDRIVE = new ItemHarddrive(new Settings());
-	public static final OrderableItem ITEM_KEYBOARD = new PlacableOrderableItem(new Settings(), EntityKeyboard.class, SoundEvents.BLOCK_METAL_PLACE, 4);
-	public static final OrderableItem ITEM_MOUSE = new PlacableOrderableItem(new Settings(), EntityMouse.class, SoundEvents.BLOCK_METAL_PLACE, 4);
-	public static final OrderableItem ITEM_RAM64M = new OrderableItem(new Settings(),2);
-	public static final OrderableItem ITEM_RAM128M = new OrderableItem(new Settings(),2);
-	public static final OrderableItem ITEM_RAM256M = new OrderableItem(new Settings(),3);
-	public static final OrderableItem ITEM_RAM512M = new OrderableItem(new Settings(),4);
-	public static final OrderableItem ITEM_RAM1G = new OrderableItem(new Settings(),6);
-	public static final OrderableItem ITEM_RAM2G = new OrderableItem(new Settings(),8);
-	public static final OrderableItem ITEM_RAM4G = new OrderableItem(new Settings(),14);
-	public static final OrderableItem ITEM_CPU2 = new OrderableItem(new Settings(), 10);
-	public static final OrderableItem ITEM_CPU4 = new OrderableItem(new Settings(), 8);
-	public static final OrderableItem ITEM_CPU6 = new OrderableItem(new Settings(), 6);
-	public static final OrderableItem ITEM_GPU = new OrderableItem(new Settings(), 12);
-	public static final Item ITEM_TABLET = new ItemOrderingTablet(new Settings().maxCount(1));
-	public static final Item ITEM_PACKAGE = new ItemPackage(new Settings().rarity(Rarity.EPIC));
-	public static final OrderableItem PC_CASE = new ItemPCCase(new Settings());
-	public static final Item PC_CASE_NO_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
-	public static final Item PC_CASE_ONLY_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
-	public static final Item PC_CASE_GLASS_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
+    // ----- items -----
+    public static final OrderableItem PC_CASE_SIDEPANEL = new ItemPCCaseSidepanel(new Settings());
+    public static final OrderableItem ITEM_MOTHERBOARD = new OrderableItem(new Settings(), 4);
+    public static final OrderableItem ITEM_MOTHERBOARD64 = new OrderableItem(new Settings(), 8);
+    public static final OrderableItem ITEM_FLATSCREEN = new PlacableOrderableItem(new Settings(), EntityFlatScreen.class, SoundEvents.BLOCK_METAL_PLACE, 10);
+    public static final OrderableItem ITEM_WALLTV = new PlacableOrderableItem(new Settings(), EntityWallTV.class, SoundEvents.BLOCK_METAL_PLACE, 14, true);
+    public static final OrderableItem ITEM_CRTSCREEN = new PlacableOrderableItem(new Settings(), EntityCRTScreen.class, SoundEvents.BLOCK_METAL_PLACE, 10);
+    public static final OrderableItem ITEM_HARDDRIVE = new ItemHarddrive(new Settings());
+    public static final OrderableItem ITEM_KEYBOARD = new PlacableOrderableItem(new Settings(), EntityKeyboard.class, SoundEvents.BLOCK_METAL_PLACE, 4);
+    public static final OrderableItem ITEM_MOUSE = new PlacableOrderableItem(new Settings(), EntityMouse.class, SoundEvents.BLOCK_METAL_PLACE, 4);
+    public static final OrderableItem ITEM_RAM64M = new OrderableItem(new Settings(), 2);
+    public static final OrderableItem ITEM_RAM128M = new OrderableItem(new Settings(), 2);
+    public static final OrderableItem ITEM_RAM256M = new OrderableItem(new Settings(), 3);
+    public static final OrderableItem ITEM_RAM512M = new OrderableItem(new Settings(), 4);
+    public static final OrderableItem ITEM_RAM1G = new OrderableItem(new Settings(), 6);
+    public static final OrderableItem ITEM_RAM2G = new OrderableItem(new Settings(), 8);
+    public static final OrderableItem ITEM_RAM4G = new OrderableItem(new Settings(), 14);
+    public static final OrderableItem ITEM_CPU2 = new OrderableItem(new Settings(), 10);
+    public static final OrderableItem ITEM_CPU4 = new OrderableItem(new Settings(), 8);
+    public static final OrderableItem ITEM_CPU6 = new OrderableItem(new Settings(), 6);
+    public static final OrderableItem ITEM_GPU = new OrderableItem(new Settings(), 12);
+    public static final Item ITEM_TABLET = new ItemOrderingTablet(new Settings().maxCount(1));
+    public static final Item ITEM_PACKAGE = new ItemPackage(new Settings().rarity(Rarity.EPIC));
+    public static final OrderableItem PC_CASE = new ItemPCCase(new Settings());
+    public static final Item PC_CASE_NO_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
+    public static final Item PC_CASE_ONLY_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
+    public static final Item PC_CASE_GLASS_PANEL = new Item(new Settings().rarity(Rarity.EPIC));
+    public static final OrderableItem ITEM_MOUSE_PAD = new OrderableItem(new Settings(), 3);
 
-	public static final List<Item> PLACABLE_ITEMS = Arrays.asList(PC_CASE, PC_CASE_SIDEPANEL, ITEM_KEYBOARD, ITEM_MOUSE, ITEM_CRTSCREEN, ITEM_FLATSCREEN, ITEM_WALLTV);
+    public static final List<Item> PLACABLE_ITEMS = Arrays.asList(PC_CASE, PC_CASE_SIDEPANEL, ITEM_KEYBOARD, ITEM_MOUSE, ITEM_CRTSCREEN, ITEM_FLATSCREEN, ITEM_WALLTV);
 
-	public static void init() {
-		Registry.register(Registries.ITEM_GROUP, PARTS_KEY, MOD_ITEM_GROUP_PARTS);
-		Registry.register(Registries.ITEM_GROUP, PERIPHERALS_KEY, MOD_ITEM_GROUP_PERIPHERALS);
-		Registry.register(Registries.ITEM_GROUP, OTHERS_KEY, MOD_ITEM_GROUP_OTHERS);
+    // ----- item groups (vanilla builder, no Fabric API) -----
+    public static ItemGroup MOD_ITEM_GROUP_PARTS;
+    public static ItemGroup MOD_ITEM_GROUP_PERIPHERALS;
+    public static ItemGroup MOD_ITEM_GROUP_OTHERS;
 
-		registerItem("pc_case_sidepanel", PC_CASE_SIDEPANEL);
-		registerItem("pc_case", PC_CASE);
-		registerItem("motherboard", ITEM_MOTHERBOARD);
-		registerItem("motherboard64", ITEM_MOTHERBOARD64);
-		registerItem("walltv", ITEM_WALLTV);
-		registerItem("flatscreen", ITEM_FLATSCREEN);
-		registerItem("crtscreen", ITEM_CRTSCREEN);
-		registerItem("harddrive", ITEM_HARDDRIVE);
-		registerItem("keyboard", ITEM_KEYBOARD);
-		registerItem("mouse", ITEM_MOUSE);
-		registerItem("ram64m", ITEM_RAM64M);
-		registerItem("ram128m", ITEM_RAM128M);
-		registerItem("ram256m", ITEM_RAM256M);
-		registerItem("ram512m", ITEM_RAM512M);
-		registerItem("ram1g", ITEM_RAM1G);
-		registerItem("ram2g", ITEM_RAM2G);
-		registerItem("ram4g", ITEM_RAM4G);
-		registerItem("cpu_divided_by_2", ITEM_CPU2);
-		registerItem("cpu_divided_by_4", ITEM_CPU4);
-		registerItem("cpu_divided_by_6", ITEM_CPU6);
-		registerItem("gpu", ITEM_GPU);
-		registerItem("ordering_tablet", ITEM_TABLET);
-		registerItem("package", ITEM_PACKAGE);
+    public static void registerItems(RegisterEvent.RegisterHelper<Item> helper) {
+        reg(helper, "pc_case_sidepanel", PC_CASE_SIDEPANEL);
+        reg(helper, "pc_case", PC_CASE);
+        reg(helper, "motherboard", ITEM_MOTHERBOARD);
+        reg(helper, "motherboard64", ITEM_MOTHERBOARD64);
+        reg(helper, "walltv", ITEM_WALLTV);
+        reg(helper, "flatscreen", ITEM_FLATSCREEN);
+        reg(helper, "crtscreen", ITEM_CRTSCREEN);
+        reg(helper, "harddrive", ITEM_HARDDRIVE);
+        reg(helper, "keyboard", ITEM_KEYBOARD);
+        reg(helper, "mouse", ITEM_MOUSE);
+        reg(helper, "ram64m", ITEM_RAM64M);
+        reg(helper, "ram128m", ITEM_RAM128M);
+        reg(helper, "ram256m", ITEM_RAM256M);
+        reg(helper, "ram512m", ITEM_RAM512M);
+        reg(helper, "ram1g", ITEM_RAM1G);
+        reg(helper, "ram2g", ITEM_RAM2G);
+        reg(helper, "ram4g", ITEM_RAM4G);
+        reg(helper, "cpu_divided_by_2", ITEM_CPU2);
+        reg(helper, "cpu_divided_by_4", ITEM_CPU4);
+        reg(helper, "cpu_divided_by_6", ITEM_CPU6);
+        reg(helper, "gpu", ITEM_GPU);
+        reg(helper, "ordering_tablet", ITEM_TABLET);
+        reg(helper, "package", ITEM_PACKAGE);
+        reg(helper, "pc_case_no_panel", PC_CASE_NO_PANEL);
+        reg(helper, "pc_case_only_panel", PC_CASE_ONLY_PANEL);
+        reg(helper, "pc_case_only_glass_sidepanel", PC_CASE_GLASS_PANEL);
+        reg(helper, "mouse_pad", ITEM_MOUSE_PAD);
+    }
 
+    public static void registerGroups(RegisterEvent.RegisterHelper<ItemGroup> helper) {
+        // Creative tabs — vanilla ItemGroup.Builder (same Yarn API, no Fabric wrapper needed)
+        MOD_ITEM_GROUP_PARTS = ItemGroup.create(ItemGroup.Row.TOP, 0)
+            .displayName(Text.translatable("itemGroup.mcvmcomputers.parts"))
+            .icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
+            .entries((ctx, e) -> {
+                e.add(PC_CASE_SIDEPANEL); e.add(PC_CASE);
+                e.add(ITEM_MOTHERBOARD); e.add(ITEM_MOTHERBOARD64);
+                e.add(ITEM_HARDDRIVE);
+                e.add(ITEM_RAM64M); e.add(ITEM_RAM128M); e.add(ITEM_RAM256M);
+                e.add(ITEM_RAM512M); e.add(ITEM_RAM1G); e.add(ITEM_RAM2G); e.add(ITEM_RAM4G);
+                e.add(ITEM_CPU2); e.add(ITEM_CPU4); e.add(ITEM_CPU6);
+                e.add(ITEM_GPU);
+            })
+            .build();
+        helper.register(new Identifier("mcvmcomputers", "parts"), MOD_ITEM_GROUP_PARTS);
 
-		registerItem("pc_case_no_panel", PC_CASE_NO_PANEL);
-		registerItem("pc_case_only_panel", PC_CASE_ONLY_PANEL);
-		registerItem("pc_case_only_glass_sidepanel", PC_CASE_GLASS_PANEL);
+        MOD_ITEM_GROUP_PERIPHERALS = ItemGroup.create(ItemGroup.Row.TOP, 1)
+            .displayName(Text.translatable("itemGroup.mcvmcomputers.peripherals"))
+            .icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
+            .entries((ctx, e) -> {
+                e.add(ITEM_FLATSCREEN); e.add(ITEM_WALLTV); e.add(ITEM_CRTSCREEN);
+                e.add(ITEM_KEYBOARD); e.add(ITEM_MOUSE);
+            })
+            .build();
+        helper.register(new Identifier("mcvmcomputers", "peripherals"), MOD_ITEM_GROUP_PERIPHERALS);
 
+        MOD_ITEM_GROUP_OTHERS = ItemGroup.create(ItemGroup.Row.TOP, 2)
+            .displayName(Text.translatable("itemGroup.mcvmcomputers.others"))
+            .icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
+            .entries((ctx, e) -> e.add(ITEM_TABLET))
+            .build();
+        helper.register(new Identifier("mcvmcomputers", "others"), MOD_ITEM_GROUP_OTHERS);
+    }
 
-		ItemGroupEvents.modifyEntriesEvent(PARTS_KEY).register(content -> {
-			content.add(PC_CASE_SIDEPANEL);
-			content.add(PC_CASE);
-			content.add(ITEM_MOTHERBOARD);
-			content.add(ITEM_MOTHERBOARD64);
-			content.add(ITEM_HARDDRIVE);
-			content.add(ITEM_RAM64M);
-			content.add(ITEM_RAM128M);
-			content.add(ITEM_RAM256M);
-			content.add(ITEM_RAM512M);
-			content.add(ITEM_RAM1G);
-			content.add(ITEM_RAM2G);
-			content.add(ITEM_RAM4G);
-			content.add(ITEM_CPU2);
-			content.add(ITEM_CPU4);
-			content.add(ITEM_CPU6);
-			content.add(ITEM_GPU);
-		});
-
-		ItemGroupEvents.modifyEntriesEvent(PERIPHERALS_KEY).register(content -> {
-			content.add(ITEM_FLATSCREEN);
-			content.add(ITEM_WALLTV);
-			content.add(ITEM_CRTSCREEN);
-			content.add(ITEM_KEYBOARD);
-			content.add(ITEM_MOUSE);
-		});
-
-		ItemGroupEvents.modifyEntriesEvent(OTHERS_KEY).register(content -> {
-			content.add(ITEM_TABLET);
-		});
-	}
-
-	private static Item registerItem(String id, Item it) {
-		Registry.register(Registries.ITEM, new Identifier("mcvmcomputers", id), it);
-		return it;
-	}
+    private static void reg(RegisterEvent.RegisterHelper<Item> helper, String id, Item item) {
+        helper.register(new Identifier("mcvmcomputers", id), item);
+    }
 }

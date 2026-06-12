@@ -13,11 +13,6 @@ import net.minecraft.util.Identifier;
  * server (ordering, VM screen streaming, power on/off and PC part install/remove),
  * plus helper methods that drop installed parts back into the world.
  */
-/**
- * Central registry of network packet identifiers exchanged between client and
- * server (ordering, VM screen streaming, power on/off and PC part install/remove),
- * plus helper methods that drop installed parts back into the world.
- */
 public class PacketList {
 
 	public static final Identifier C2S_ORDER = new Identifier("mcvmcomputers", "c2s_order");

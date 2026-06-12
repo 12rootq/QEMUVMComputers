@@ -15,14 +15,6 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-/**
- * Orderable item that also places an entity when used (screens, keyboard, mouse).
- * The wallTV flag offsets placement so the TV sits flush against a wall.
- */
-/**
- * Orderable item that also places an entity when used (screens, keyboard, mouse).
- * The wallTV flag offsets placement so the TV sits flush against a wall.
- */
 public class PlacableOrderableItem extends OrderableItem{
 	private Constructor<? extends Entity> constructor;
 	private SoundEvent placeSound;

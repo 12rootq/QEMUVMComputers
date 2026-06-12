@@ -16,12 +16,6 @@ import net.minecraft.client.Keyboard;
 import net.minecraft.client.MinecraftClient;
 
 @Mixin(Keyboard.class)
-/**
- * Mixin into the client keyboard handler. While the focus screen is open it
- * captures key press/repeat/release events and queues PS/2 scancodes for the
- * VM update thread, and while in the setup page it lets the user rebind the
- * unfocus combination.
- */
 public class KeyboardMixin {
 	@Inject(at = @At("HEAD"), method = "onKey")
 	public void onKey(long window, int key, int scancode, int i, int j, CallbackInfo ci) {

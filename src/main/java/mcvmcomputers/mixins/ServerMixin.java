@@ -10,14 +10,14 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import mcvmcomputers.networking.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.entities.EntityDeliveryChest;
 import mcvmcomputers.item.OrderableItem;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.TabletOrder;
 import mcvmcomputers.utils.TabletOrder.OrderStatus;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import mcvmcomputers.networking.ServerPlayNetworking;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketByteBuf;
@@ -27,11 +27,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 @Mixin(MinecraftServer.class)
-/**
- * Mixin into the dedicated/integrated server. Drives the order state machine
- * (chest arrival timers, payment/order chest spawning, finishing) and pushes
- * order-status updates to the owning player every server tick.
- */
 public class ServerMixin {
 	private static final Logger LOGGER = LogManager.getLogger();
 

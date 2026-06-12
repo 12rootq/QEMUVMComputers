@@ -20,10 +20,6 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-/**
- * The PC case item. Placing it spawns an EntityPC carrying over any saved
- * hardware NBT; its tooltip and name reflect the installed components.
- */
 public class ItemPCCase extends OrderableItem{
 	public ItemPCCase(Settings settings) {
 		super(settings, 2);

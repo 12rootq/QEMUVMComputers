@@ -19,18 +19,6 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-/**
- * Variant of the PC case that spawns an EntityPC with a glass side panel, so the
- * installed hardware is visible from the outside.
- */
-/**
- * Variant of the PC case that spawns an EntityPC with a glass side panel, so the
- * installed hardware is visible from the outside.
- */
-/**
- * Variant of the PC case that spawns an EntityPC with a glass side panel, so the
- * installed hardware is visible from the outside.
- */
 public class ItemPCCaseSidepanel extends OrderableItem{
 	public ItemPCCaseSidepanel(Settings settings) {
 		super(settings, 6);

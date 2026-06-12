@@ -15,10 +15,6 @@ import net.minecraft.util.TypedActionResult;
 import net.minecraft.registry.Registries;
 import net.minecraft.world.World;
 
-/**
- * The delivery package item. Stores a single packaged item id in NBT and
- * unpacks it (gives the player the original item) on right-click.
- */
 public class ItemPackage extends Item{
 
 	public ItemPackage(Settings settings) {

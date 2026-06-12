@@ -21,7 +21,7 @@ import org.lwjgl.glfw.GLFW;
 
 import mcvmcomputers.client.utils.VBoxManage;
 
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import mcvmcomputers.networking.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.client.entities.render.CRTScreenRender;
 import mcvmcomputers.client.entities.render.DeliveryChestRender;
@@ -47,12 +47,10 @@ import mcvmcomputers.entities.EntityWallTV;
 import mcvmcomputers.item.OrderableItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import mcvmcomputers.networking.ClientPlayNetworking;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.TabletOrder;
 import mcvmcomputers.utils.TabletOrder.OrderStatus;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
@@ -60,14 +58,24 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.screen.TitleScreen;
+import mcvmcomputers.client.gui.setup.GuiSetup;
+import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.ScreenEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
- * Client mod entry point. Registers entity renderers and client-side packet
- * handlers, and stores all client-only VM state: the running VirtualBox handle,
- * the live screen textures streamed from the guest, mouse/keyboard input buffers
- * and the unfocus key bindings.
+ * Client-side helper. Registers entity renderers via EntityRenderersEvent and
+ * client packet handlers on the Forge event bus, shows the first-run setup screen,
+ * and stores all client-only VM state: the running VirtualBox handle, the live
+ * screen textures streamed from the guest, mouse/keyboard input buffers and the
+ * unfocus key bindings.
  */
-public class ClientMod implements ClientModInitializer{
+public class ClientMod {
+	// Shows the first-run setup screen exactly once, replacing the first TitleScreen.
+	private static boolean setupShown = false;
+
 	public static final OutputStream discardAllBytes = new OutputStream() { @Override public void write(int b) throws IOException {} };
 	public static Map<UUID, Identifier> vmScreenTextures;
 	public static Map<UUID, NativeImage> vmScreenTextureNI;
@@ -342,8 +350,7 @@ public class ClientMod implements ClientModInitializer{
 		});
 	}
 
-	@Override
-	public void onInitializeClient() {
+	public static void init(IEventBus modBus) {
 		MainMod.pcOpenGui = new Runnable() {
 			@Override
 			public void run() {
@@ -377,14 +384,27 @@ public class ClientMod implements ClientModInitializer{
 		vmScreenTextureNI = new HashMap<UUID, NativeImage>();
 		vmScreenTextureNIBT = new HashMap<UUID, NativeImageBackedTexture>();
 
-		EntityRendererRegistry.register(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
-		EntityRendererRegistry.register(EntityList.KEYBOARD, KeyboardRender::new);
-		EntityRendererRegistry.register(EntityList.MOUSE, MouseRender::new);
-		EntityRendererRegistry.register(EntityList.CRT_SCREEN, CRTScreenRender::new);
-		EntityRendererRegistry.register(EntityList.FLATSCREEN, FlatScreenRender::new);
-		EntityRendererRegistry.register(EntityList.WALLTV, WallTVRender::new);
-		EntityRendererRegistry.register(EntityList.PC, PCRender::new);
-		EntityRendererRegistry.register(EntityList.DELIVERY_CHEST, DeliveryChestRender::new);
+		modBus.addListener((EntityRenderersEvent.RegisterRenderers event) -> {
+			event.registerEntityRenderer(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
+			event.registerEntityRenderer(EntityList.KEYBOARD, KeyboardRender::new);
+			event.registerEntityRenderer(EntityList.MOUSE, MouseRender::new);
+			event.registerEntityRenderer(EntityList.CRT_SCREEN, CRTScreenRender::new);
+			event.registerEntityRenderer(EntityList.FLATSCREEN, FlatScreenRender::new);
+			event.registerEntityRenderer(EntityList.WALLTV, WallTVRender::new);
+			event.registerEntityRenderer(EntityList.PC, PCRender::new);
+			event.registerEntityRenderer(EntityList.DELIVERY_CHEST, DeliveryChestRender::new);
+			event.registerEntityRenderer(EntityList.MOUSE_PAD, mcvmcomputers.client.entities.render.MousePadRender::new);
+		});
+
+		// On Forge the mod-loading screen and TitleScreen are opened after the game
+		// starts, so we can't force the setup screen from the mixin. Instead, when the
+		// first TitleScreen would open, redirect it to GuiSetup once.
+		MinecraftForge.EVENT_BUS.addListener((ScreenEvent.Opening event) -> {
+			if (!setupShown && event.getNewScreen() instanceof TitleScreen) {
+				setupShown = true;
+				event.setNewScreen(new GuiSetup());
+			}
+		});
 	}
 
 }

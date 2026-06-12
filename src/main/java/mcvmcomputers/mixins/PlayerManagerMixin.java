@@ -7,22 +7,17 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import mcvmcomputers.networking.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.entities.EntityPC;
 import mcvmcomputers.networking.PacketList;
-import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import mcvmcomputers.networking.PlayerLookup;
+import mcvmcomputers.networking.ServerPlayNetworking;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 @Mixin(PlayerManager.class)
-/**
- * Mixin into the server PlayerManager. When a player disconnects, drops their
- * pending order and tells everyone tracking their PC to stop displaying its
- * VM screen so stale textures don't linger.
- */
 public class PlayerManagerMixin {
 	@Inject(at = @At("HEAD"), method = "remove")
 	public void remove(ServerPlayerEntity player, CallbackInfo ci) {

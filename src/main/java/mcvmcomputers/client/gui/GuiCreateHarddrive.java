@@ -12,7 +12,7 @@ import io.netty.buffer.Unpooled;
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.MVCUtils;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import mcvmcomputers.networking.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;

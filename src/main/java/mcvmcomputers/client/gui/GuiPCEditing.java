@@ -11,14 +11,14 @@ import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import mcvmcomputers.networking.PacketByteBufs;
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.entities.EntityPC;
 import mcvmcomputers.item.ItemHarddrive;
 import mcvmcomputers.item.ItemList;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.MVCUtils;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import mcvmcomputers.networking.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -37,11 +37,6 @@ import net.minecraft.util.Language;
 import net.minecraft.util.math.RotationAxis;
 import org.joml.Quaternionf;
 
-/**
- * The PC case editing screen. Opens when the owner clicks their computer; lets
- * them install/remove parts (motherboard, CPU, RAM, GPU, hard drive), insert/eject
- * an ISO and power the VM on or off. The case open/close animation is purely visual.
- */
 public class GuiPCEditing extends Screen{
 	private float introScale;
 	private float panelX;

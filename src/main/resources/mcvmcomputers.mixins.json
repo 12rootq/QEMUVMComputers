@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "mcvmcomputers.mixins",
   "compatibilityLevel": "JAVA_17",
+  "refmap": "mcvmcomputers.refmap.json",
   "mixins": [
     "ServerMixin",
     "PlayerManagerMixin"

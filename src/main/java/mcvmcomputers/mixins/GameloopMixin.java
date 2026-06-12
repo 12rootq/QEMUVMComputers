@@ -60,7 +60,9 @@ public class GameloopMixin {
 	@Inject(at = @At("HEAD"), method = "run")
 	private void run(CallbackInfo info) {
 		MinecraftClient mcc = MinecraftClient.getInstance();
-		mcc.setScreen(new GuiSetup());
+		// NOTE: do not setScreen here on Forge — the mod-loading screen and the
+		// TitleScreen are opened afterwards and would override it. The setup screen
+		// is shown via ClientMod's ScreenEvent.Opening handler instead.
 		vhdDirectory = new File(mcc.runDirectory, "vm_computers/vhds");
 		vhdDirectory.mkdirs();
 		isoDirectory = new File(mcc.runDirectory, "vm_computers/isos");
