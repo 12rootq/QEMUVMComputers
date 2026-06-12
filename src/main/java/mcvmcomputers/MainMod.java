@@ -36,6 +36,11 @@ import net.minecraft.util.collection.DefaultedList;
 
 import static mcvmcomputers.networking.PacketList.*;
 
+/**
+ * Common (client + server) mod entry point. Initialises the item, entity and
+ * sound registries, registers the server-side networking packet handlers and
+ * holds the global state shared between sides (active orders and computers).
+ */
 public class MainMod implements ModInitializer {
 	private static final org.apache.logging.log4j.Logger LOGGER = org.apache.logging.log4j.LogManager.getLogger();
 	public static Map<UUID, TabletOrder> orders;

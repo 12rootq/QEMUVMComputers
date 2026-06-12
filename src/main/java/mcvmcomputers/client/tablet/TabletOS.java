@@ -41,6 +41,11 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Identifier;
 
+/**
+ * Renders the ordering tablet's on-screen "OS": the satellite-search radar,
+ * the animated VMcorp store front and the order-status display. Each frame is
+ * drawn into an offscreen BufferedImage and uploaded as a dynamic texture.
+ */
 public class TabletOS {
 
 	public NativeImage renderedImage;

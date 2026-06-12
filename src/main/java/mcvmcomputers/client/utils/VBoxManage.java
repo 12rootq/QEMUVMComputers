@@ -103,6 +103,7 @@ public class VBoxManage {
     }
 
     public void startVm(String name) throws Exception {
+        webMouse.resetConnectionState();
         execute("startvm", name, "--type", "headless");
     }
 
@@ -297,6 +298,16 @@ public class VBoxManage {
         webMouse.disconnect();
     }
 
+    /**
+     * Forces the web-service mouse to drop any stale session and clears the
+     * one-shot failure latch, so the next mouse/keyboard/screenshot call will
+     * establish a fresh connection. Used when (re)entering a world so mouse
+     * capture recovers after a server reconnect even when the VM keeps running.
+     */
+    public void resetMouseConnection() {
+        webMouse.resetConnectionState();
+    }
+
     /** Stops the web-service mouse session and its helper process. */
     public void shutdownMouse() {
         webMouse.shutdown();
@@ -304,11 +315,15 @@ public class VBoxManage {
 
 
     public byte[] takeScreenshot(String vmName) {
+        // Use web service for speed - SOAP is much faster than CLI process spawn + file I/O
+        byte[] data = webMouse.takeScreenshotPNG();
+        if (data != null && data.length > 0) return data;
+
+        // Fallback to CLI
         try {
             execute("controlvm", vmName, "screenshotpng", screenshotFile.getAbsolutePath());
             if (screenshotFile.exists()) {
-                byte[] data = Files.readAllBytes(screenshotFile.toPath());
-                return data;
+                return Files.readAllBytes(screenshotFile.toPath());
             }
         } catch (Exception e) {}
         return null;

@@ -27,6 +27,11 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Language;
 
+/**
+ * First-run setup wizard. Walks the player through choosing the VirtualBox
+ * install directory, the mod data directory, unfocus key bindings and VM
+ * memory limits, then writes the resulting config to vm_computers/setup.json.
+ */
 public class GuiSetup extends Screen{
 	private List<SetupPage> setupPages;
 	private int setupIndex;

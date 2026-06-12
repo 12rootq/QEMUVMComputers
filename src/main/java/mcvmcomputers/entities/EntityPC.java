@@ -23,6 +23,12 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
+/**
+ * The buildable computer entity. Stores its installed hardware (motherboard,
+ * CPU, GPU, RAM sticks, hard drive, ISO) and its owner UUID in synchronised
+ * data-tracker fields, and handles right-click interaction to either open the
+ * editing GUI or pick the case back up as an item.
+ */
 public class EntityPC extends Entity{
 	private static final TrackedData<String> ISO_FILE_NAME =
 			DataTracker.registerData(EntityPC.class, TrackedDataHandlerRegistry.STRING);

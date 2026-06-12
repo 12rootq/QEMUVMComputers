@@ -24,6 +24,10 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Rarity;
 
+/**
+ * Declares and registers every item in the mod (PC parts, peripherals, screens,
+ * the ordering tablet and packages) and builds the three creative-tab item groups.
+ */
 public class ItemList {
 	public static final RegistryKey<ItemGroup> PARTS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("mcvmcomputers", "parts"));
 	public static final ItemGroup MOD_ITEM_GROUP_PARTS = FabricItemGroup.builder()

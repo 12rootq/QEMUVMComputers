@@ -10,6 +10,10 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.world.World;
 
+/**
+ * The hard-drive item. Right-clicking it opens the VHD-create / VHD-pick screen
+ * and the item's display name reflects the assigned VHD file (if any).
+ */
 public class ItemHarddrive extends OrderableItem{
 	public ItemHarddrive(Settings settings) {
 		super(settings, 6);

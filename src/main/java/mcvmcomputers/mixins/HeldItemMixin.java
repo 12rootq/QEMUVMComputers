@@ -23,6 +23,11 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 @Mixin(HeldItemRenderer.class)
+/**
+ * Mixin into the first-person item renderer that draws the ordering tablet's
+ * 3D model and live screen texture in place of the default item model when the
+ * player is holding the tablet.
+ */
 public class HeldItemMixin {
 	@Shadow
 	private void renderArm(MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, Arm arm) {}

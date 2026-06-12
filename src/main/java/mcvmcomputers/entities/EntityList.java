@@ -9,6 +9,11 @@ import net.minecraft.util.Identifier;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 
+/**
+ * Declares and registers every custom entity type (PC case, screens, keyboard,
+ * mouse, item preview and the delivery chest) together with their dimensions and
+ * tracking ranges.
+ */
 public class EntityList {
 	public static EntityType<EntityItemPreview> ITEM_PREVIEW;
 	public static EntityType<EntityKeyboard> KEYBOARD;

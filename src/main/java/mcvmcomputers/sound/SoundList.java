@@ -5,6 +5,14 @@ import net.minecraft.registry.Registry;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Identifier;
 
+/**
+ * Declares and registers the mod's custom sound events (radar ping, rocket and
+ * the shop intro/outro/music tracks).
+ */
+/**
+ * Declares and registers the mod's custom sound events (radar ping, rocket and
+ * the shop intro/outro/music tracks).
+ */
 public class SoundList {
 	public static SoundEvent RADAR_SOUND = SoundEvent.of(new Identifier("mcvmcomputers", "radar"));
 	public static SoundEvent ROCKET_SOUND = SoundEvent.of(new Identifier("mcvmcomputers", "rocket"));

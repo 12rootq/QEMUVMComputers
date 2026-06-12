@@ -8,6 +8,11 @@ import java.util.List;
 import mcvmcomputers.client.gui.GuiFocus;
 import net.minecraft.client.MinecraftClient;
 
+/**
+ * Background worker that drives the running VirtualBox VM at ~15 Hz: forwards
+ * the buffered mouse and keyboard input, takes a screenshot of the current
+ * framebuffer and stages it for upload as a Minecraft texture.
+ */
 public class VMRunnable implements Runnable {
 	@Override
 	public void run() {

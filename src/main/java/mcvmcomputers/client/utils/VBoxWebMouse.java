@@ -6,6 +6,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Base64;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +32,7 @@ import org.apache.commons.lang3.SystemUtils;
 public class VBoxWebMouse {
 
     private static final String NS = "http://www.virtualbox.org/";
-    private static final String HOST = "localhost";
+    private static final String HOST = "127.0.0.1";
     private static final int PORT = 18083;
     private static final String URL = "http://" + HOST + ":" + PORT + "/";
 
@@ -45,7 +47,12 @@ public class VBoxWebMouse {
     private volatile String vboxRef;
     private volatile String sessionRef;
     private volatile String mouseRef;
+    private volatile String keyboardRef;
+    private volatile String displayRef;
+    private volatile String consoleRef;
     private volatile boolean connected;
+    private volatile boolean webServiceFailed;
+    private boolean wasConnectedOnce;
 
     public VBoxWebMouse(String vboxDirectory) {
         this.vboxDirectory = vboxDirectory;
@@ -66,10 +73,9 @@ public class VBoxWebMouse {
      * @param buttonState bit mask of pressed buttons (1=left, 2=right, 4=middle)
      */
     public synchronized void putMouseEvent(int dx, int dy, int dz, int buttonState) {
+        if (webServiceFailed) return;
         if (!connected) {
-            if (!connect()) {
-                return;
-            }
+            if (!connect()) return;
         }
         try {
             String r = soap("<vbox:IMouse_putMouseEvent><_this>" + mouseRef + "</_this>"
@@ -77,11 +83,66 @@ public class VBoxWebMouse {
                     + "<dw>0</dw><buttonState>" + buttonState + "</buttonState>"
                     + "</vbox:IMouse_putMouseEvent>");
             if (isFault(r)) {
-                // Session likely went stale (VM restarted, etc.) - drop and retry next time.
                 connected = false;
             }
         } catch (Exception e) {
             connected = false;
+        }
+    }
+
+    /**
+     * Sends keyboard scancodes via web service.
+     * Much faster than spawning VBoxManage.exe CLI for each batch.
+     */
+    public synchronized void putScancodes(List<Integer> scancodes) {
+        if (scancodes == null || scancodes.isEmpty()) return;
+        if (webServiceFailed) return;
+        if (!connected) {
+            if (!connect()) return;
+        }
+        try {
+            StringBuilder hex = new StringBuilder();
+            for (int sc : scancodes) {
+                if (hex.length() > 0) hex.append(" ");
+                hex.append(String.format("%02x", sc));
+            }
+            String r = soap("<vbox:IKeyboard_putScancodes><_this>" + keyboardRef + "</_this>"
+                    + "<scancodes>" + hex.toString() + "</scancodes>"
+                    + "<codesStored>" + scancodes.size() + "</codesStored>"
+                    + "</vbox:IKeyboard_putScancodes>");
+            if (isFault(r)) {
+                System.err.println("[VM Computers] VBoxWebMouse: putScancodes fault, reconnecting");
+                connected = false;
+            }
+        } catch (Exception e) {
+            System.err.println("[VM Computers] VBoxWebMouse: putScancodes error: " + e.getMessage());
+            connected = false;
+        }
+    }
+
+    /**
+     * Takes a PNG screenshot via web service. Much faster than CLI.
+     * width/height=0 means current VM resolution.
+     *
+     * @return PNG bytes or null on failure
+     */
+    public synchronized byte[] takeScreenshotPNG() {
+        if (webServiceFailed) return null;
+        if (!connected) {
+            if (!connect()) return null;
+        }
+        try {
+            String r = soap("<vbox:IDisplay_takeScreenShotPNGToArray><_this>" + displayRef + "</_this>"
+                    + "<width>0</width><height>0</height><screenId>0</screenId>"
+                    + "</vbox:IDisplay_takeScreenShotPNGToArray>");
+            if (isFault(r)) {
+                return null;
+            }
+            String b64 = extract(r, "returnval");
+            if (b64 == null || b64.isEmpty()) return null;
+            return Base64.getDecoder().decode(b64);
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -94,6 +155,7 @@ public class VBoxWebMouse {
     private boolean connect() {
         try {
             if (!ensureWebServiceRunning()) {
+                System.err.println("[VM Computers] VBoxWebMouse: web service not running");
                 return false;
             }
 
@@ -124,7 +186,7 @@ public class VBoxWebMouse {
             // 5. console
             r = soap("<vbox:ISession_getConsole><_this>" + sessionRef + "</_this>"
                     + "</vbox:ISession_getConsole>");
-            String consoleRef = extract(r, "returnval");
+            consoleRef = extract(r, "returnval");
             if (consoleRef == null) return false;
 
             // 6. mouse
@@ -133,7 +195,23 @@ public class VBoxWebMouse {
             mouseRef = extract(r, "returnval");
             if (mouseRef == null) return false;
 
+            // 7. keyboard
+            r = soap("<vbox:IConsole_getKeyboard><_this>" + consoleRef + "</_this>"
+                    + "</vbox:IConsole_getKeyboard>");
+            keyboardRef = extract(r, "returnval");
+            if (keyboardRef == null) return false;
+
+            // 8. display
+            r = soap("<vbox:IConsole_getDisplay><_this>" + consoleRef + "</_this>"
+                    + "</vbox:IConsole_getDisplay>");
+            displayRef = extract(r, "returnval");
+            if (displayRef == null) return false;
+
             connected = true;
+            if (!wasConnectedOnce) {
+                wasConnectedOnce = true;
+                System.out.println("[VM Computers] VBoxWebMouse connected OK");
+            }
             return true;
         } catch (Exception e) {
             connected = false;
@@ -161,7 +239,20 @@ public class VBoxWebMouse {
             vboxRef = null;
             sessionRef = null;
             mouseRef = null;
+            keyboardRef = null;
+            displayRef = null;
+            consoleRef = null;
         }
+    }
+
+    /**
+     * Resets the connection state so that the next mouse/keyboard/screenshot call
+     * will attempt a fresh connection to the web service. Call this when the VM is
+     * being (re)started to clear any previous failure state.
+     */
+    public synchronized void resetConnectionState() {
+        disconnect();
+        webServiceFailed = false;
     }
 
     /** Stops the web service process if this instance started it. */
@@ -181,20 +272,25 @@ public class VBoxWebMouse {
      * logon a few times to give the freshly-started service time to bind.
      */
     private boolean ensureWebServiceRunning() {
-        if (pingLogon()) {
-            return true;
-        }
+        if (webServiceFailed) return false;
+        if (pingLogon()) return true;
         startWebService();
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 40; i++) {
             try {
-                Thread.sleep(150);
+                Thread.sleep(250);
             } catch (InterruptedException e) {
                 return false;
             }
+            if (i == 4 && webSrvProcess != null && !webSrvProcess.isAlive()) {
+                System.err.println("[VM Computers] VBoxWebSrv.exe died immediately, check log above");
+            }
             if (pingLogon()) {
+                System.out.println("[VM Computers] Web service ready after " + (i * 250) + "ms");
                 return true;
             }
         }
+        webServiceFailed = true;
+        System.err.println("[VM Computers] VBoxWebMouse: giving up - VBoxWebSrv didn't respond in 10s");
         return false;
     }
 
@@ -205,40 +301,57 @@ public class VBoxWebMouse {
                     + "<password></password></vbox:IWebsessionManager_logon>");
             String ref = extract(r, "returnval");
             if (ref != null) {
-                // Don't leak this probe session.
                 soap("<vbox:IWebsessionManager_logoff><refIVirtualBox>" + ref
                         + "</refIVirtualBox></vbox:IWebsessionManager_logoff>");
                 return true;
             }
-        } catch (Exception ignored) {
+            System.err.println("[VM Computers] pingLogon: no returnval in response. First 300 chars: " + r.substring(0, Math.min(300, r.length())));
+        } catch (Exception e) {
+            System.err.println("[VM Computers] pingLogon SOAP error: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
         return false;
     }
 
     private void startWebService() {
         try {
-            String exe;
-            if (SystemUtils.IS_OS_WINDOWS) {
-                exe = vboxDirectory + "\\VBoxWebSrv.exe";
-            } else if (SystemUtils.IS_OS_MAC) {
-                exe = vboxDirectory + "/vboxwebsrv";
-            } else {
-                exe = "vboxwebsrv";
-            }
-            // On non-Windows the binary may not be at vboxDirectory; fall back to PATH.
-            if (!SystemUtils.IS_OS_LINUX && !new File(exe).exists()) {
+            String exe = findVBoxWebSrv();
+            if (exe == null) {
+                System.err.println("[VM Computers] VBoxWebSrv.exe not found (looked in: " + vboxDirectory + ", C:\\Program Files\\Oracle\\VirtualBox)");
                 return;
             }
+            System.out.println("[VM Computers] Starting web service: " + exe);
             ProcessBuilder pb = new ProcessBuilder(exe,
-                    "--host", HOST,
+                    "--host", "127.0.0.1",
                     "--port", String.valueOf(PORT),
-                    "--authentication", "null");
+                    "-A", "null");
             pb.redirectErrorStream(true);
-            pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+            File logFile = new File(System.getProperty("java.io.tmpdir"), "vboxwebsrv.log");
+            pb.redirectOutput(ProcessBuilder.Redirect.to(logFile));
             webSrvProcess = pb.start();
         } catch (Exception e) {
+            System.err.println("[VM Computers] Failed to start VBoxWebSrv: " + e.getMessage());
             webSrvProcess = null;
         }
+    }
+
+    private String findVBoxWebSrv() {
+        String[] candidates;
+        if (SystemUtils.IS_OS_WINDOWS) {
+            candidates = new String[] {
+                vboxDirectory + "\\VBoxWebSrv.exe",
+                vboxDirectory + "VBoxWebSrv.exe",
+                "C:\\Program Files\\Oracle\\VirtualBox\\VBoxWebSrv.exe",
+                vboxDirectory + "\\vboxwebsrv.exe",
+            };
+        } else if (SystemUtils.IS_OS_MAC) {
+            candidates = new String[] { vboxDirectory + "/vboxwebsrv" };
+        } else {
+            candidates = new String[] { "vboxwebsrv" };
+        }
+        for (String path : candidates) {
+            if (new File(path).exists()) return path;
+        }
+        return SystemUtils.IS_OS_LINUX ? "vboxwebsrv" : null;
     }
 
     // ---------------------------------------------------------------------

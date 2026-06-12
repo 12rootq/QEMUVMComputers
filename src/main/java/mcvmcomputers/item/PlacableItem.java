@@ -16,6 +16,10 @@ import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
+/**
+ * An item that, when used, spawns a configured entity at the player's crosshair
+ * (used for peripherals such as the keyboard and mouse) and plays a placement sound.
+ */
 public class PlacableItem extends Item{
 	private Constructor<? extends Entity> constructor;
 	private SoundEvent placeSound;

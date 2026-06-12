@@ -61,6 +61,12 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 
+/**
+ * Client mod entry point. Registers entity renderers and client-side packet
+ * handlers, and stores all client-only VM state: the running VirtualBox handle,
+ * the live screen textures streamed from the guest, mouse/keyboard input buffers
+ * and the unfocus key bindings.
+ */
 public class ClientMod implements ClientModInitializer{
 	public static final OutputStream discardAllBytes = new OutputStream() { @Override public void write(int b) throws IOException {} };
 	public static Map<UUID, Identifier> vmScreenTextures;

@@ -27,6 +27,11 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 @Mixin(MinecraftServer.class)
+/**
+ * Mixin into the dedicated/integrated server. Drives the order state machine
+ * (chest arrival timers, payment/order chest spawning, finishing) and pushes
+ * order-status updates to the owning player every server tick.
+ */
 public class ServerMixin {
 	private static final Logger LOGGER = LogManager.getLogger();
 

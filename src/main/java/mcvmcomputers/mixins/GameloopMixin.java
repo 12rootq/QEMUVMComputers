@@ -55,6 +55,8 @@ public class GameloopMixin {
 	@Shadow
 	private RenderTickCounter renderTickCounter;
 
+	private boolean wasInWorld = false;
+
 	@Inject(at = @At("HEAD"), method = "run")
 	private void run(CallbackInfo info) {
 		MinecraftClient mcc = MinecraftClient.getInstance();
@@ -77,6 +79,16 @@ public class GameloopMixin {
 
 	@Inject(at = @At("HEAD"), method = "render")
 	private void render(CallbackInfo info) {
+		// Detect (re)entering a world. After a server reconnect the previous
+		// VirtualBox web-service session is stale, so force a fresh connection on
+		// the next mouse/keyboard call. This recovers mouse capture without having
+		// to manually restart the VM.
+		boolean inWorld = this.player != null && this.world != null;
+		if (inWorld && !wasInWorld && vbox != null) {
+			vbox.resetMouseConnection();
+		}
+		wasInWorld = inWorld;
+
 		if(lastDeltaTimeTime == 0) {
 			lastDeltaTimeTime = System.currentTimeMillis();
 		}else {

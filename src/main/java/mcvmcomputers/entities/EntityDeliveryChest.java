@@ -28,6 +28,11 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.registry.Registries;
 import net.minecraft.world.World;
 
+/**
+ * The rocket-powered delivery chest entity. It flies in to drop off the
+ * player's ordered items or to collect their iron-ingot payment, then takes off
+ * again. Drives its own animation (legs, opening, fire) and rocket sound.
+ */
 public class EntityDeliveryChest extends Entity{
 	private static final TrackedData<Float> TARGET_X =
 			DataTracker.registerData(EntityDeliveryChest.class, TrackedDataHandlerRegistry.FLOAT);
