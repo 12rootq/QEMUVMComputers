@@ -100,9 +100,9 @@ public class TabletOS {
 		radarSound = new TabletSoundInstance(SoundList.RADAR_SOUND);
 		shopIntroSound = new TabletSoundInstance(SoundList.SHOPINTRO_SOUND);
 		shopOutroSound = new TabletSoundInstance(SoundList.SHOPOUTRO_SOUND);
-		shopMusicSound = PositionedSoundInstance.master(SoundEvents.MUSIC_DISC_FAR, 0.6f, 0.2f);
-		displayOrderMusicSound = PositionedSoundInstance.master(SoundEvents.MUSIC_DISC_STRAD, 0.6f, 0.2f);
-		font = Font.createFont(Font.PLAIN, mcc.getResourceManager().getResource(new Identifier("mcvmcomputers", "font/tabletfont.ttf")).get().getInputStream());
+		shopMusicSound = PositionedSoundInstance.master(SoundEvents.MUSIC_DISC_FAR.value(), 0.6f, 0.2f);
+		displayOrderMusicSound = PositionedSoundInstance.master(SoundEvents.MUSIC_DISC_STRAD.value(), 0.6f, 0.2f);
+		font = Font.createFont(Font.PLAIN, mcc.getResourceManager().getResource(Identifier.of("mcvmcomputers", "font/tabletfont.ttf")).get().getInputStream());
 		radarRadius = new ArrayList<Float>();
 	}
 
@@ -600,7 +600,7 @@ public class TabletOS {
 
 
 		if(tabletOn) {
-			orderingTabletModel.setButtons(pressed(GLFW.GLFW_KEY_UP), pressed(GLFW.GLFW_KEY_DOWN), pressed(GLFW.GLFW_KEY_LEFT), pressed(GLFW.GLFW_KEY_RIGHT), pressed(GLFW.GLFW_KEY_ENTER), mcc.getTickDelta());
+			orderingTabletModel.setButtons(pressed(GLFW.GLFW_KEY_UP), pressed(GLFW.GLFW_KEY_DOWN), pressed(GLFW.GLFW_KEY_LEFT), pressed(GLFW.GLFW_KEY_RIGHT), pressed(GLFW.GLFW_KEY_ENTER), this.deltaTime);
 			if(tabletState == State.LOOKING_FOR_SATELLITE && satelliteVisible) {
 				if(pressed(GLFW.GLFW_KEY_ENTER)) {
 					totalTimeRadar = 0;
@@ -718,9 +718,9 @@ public class TabletOS {
 									PacketByteBuf p = PacketByteBufs.create();
 									p.writeInt(shoppingCart.size());
 									for(OrderableItem i : shoppingCart) {
-										p.writeItemStack(new ItemStack(i));
+										p.writeString(net.minecraft.registry.Registries.ITEM.getId(i).toString());
 									}
-									ClientPlayNetworking.send(PacketList.C2S_ORDER, p);
+									ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ORDER, p));
 
 									tabletState = State.SHOP_OUTRO;
 									totalTimeRadar = 0;

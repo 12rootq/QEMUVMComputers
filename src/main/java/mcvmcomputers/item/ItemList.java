@@ -29,17 +29,17 @@ import net.minecraft.util.Rarity;
  * the ordering tablet and packages) and builds the three creative-tab item groups.
  */
 public class ItemList {
-	public static final RegistryKey<ItemGroup> PARTS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("mcvmcomputers", "parts"));
+	public static final RegistryKey<ItemGroup> PARTS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, Identifier.of("mcvmcomputers", "parts"));
 	public static final ItemGroup MOD_ITEM_GROUP_PARTS = FabricItemGroup.builder()
 		.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
 		.displayName(Text.translatable("itemGroup.mcvmcomputers.parts"))
 		.build();
-	public static final RegistryKey<ItemGroup> PERIPHERALS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("mcvmcomputers", "peripherals"));
+	public static final RegistryKey<ItemGroup> PERIPHERALS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, Identifier.of("mcvmcomputers", "peripherals"));
 	public static final ItemGroup MOD_ITEM_GROUP_PERIPHERALS = FabricItemGroup.builder()
 		.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
 		.displayName(Text.translatable("itemGroup.mcvmcomputers.peripherals"))
 		.build();
-	public static final RegistryKey<ItemGroup> OTHERS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, new Identifier("mcvmcomputers", "others"));
+	public static final RegistryKey<ItemGroup> OTHERS_KEY = RegistryKey.of(RegistryKeys.ITEM_GROUP, Identifier.of("mcvmcomputers", "others"));
 	public static final ItemGroup MOD_ITEM_GROUP_OTHERS = FabricItemGroup.builder()
 		.icon(() -> new ItemStack(Blocks.WHITE_STAINED_GLASS))
 		.displayName(Text.translatable("itemGroup.mcvmcomputers.others"))
@@ -141,7 +141,7 @@ public class ItemList {
 	}
 
 	private static Item registerItem(String id, Item it) {
-		Registry.register(Registries.ITEM, new Identifier("mcvmcomputers", id), it);
+		Registry.register(Registries.ITEM, Identifier.of("mcvmcomputers", id), it);
 		return it;
 	}
 }

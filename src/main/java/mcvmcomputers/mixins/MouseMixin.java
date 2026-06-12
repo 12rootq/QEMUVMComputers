@@ -9,11 +9,6 @@ import mcvmcomputers.client.ClientMod;
 import net.minecraft.client.Mouse;
 
 @Mixin(Mouse.class)
-/**
- * Mixin into the client mouse handler. Captures scroll deltas and button
- * press/release events into the VM input buffers (with a press latch so a fast
- * click within a single VM tick is never lost).
- */
 public class MouseMixin {
 	@Inject(at = @At("TAIL"), method = "onMouseScroll")
 	private void onMouseScroll(long window, double horizontal, double vertical, CallbackInfo ci) {

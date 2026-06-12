@@ -18,11 +18,6 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 @Mixin(PlayerManager.class)
-/**
- * Mixin into the server PlayerManager. When a player disconnects, drops their
- * pending order and tells everyone tracking their PC to stop displaying its
- * VM screen so stale textures don't linger.
- */
 public class PlayerManagerMixin {
 	@Inject(at = @At("HEAD"), method = "remove")
 	public void remove(ServerPlayerEntity player, CallbackInfo ci) {
@@ -33,7 +28,7 @@ public class PlayerManagerMixin {
 			PacketByteBuf b = PacketByteBufs.create();
 			b.writeUuid(player.getUuid());
 			watchingPlayers.forEach((p) -> {
-				ServerPlayNetworking.send(p, PacketList.S2C_STOP_SCREEN, b);
+				ServerPlayNetworking.send(p, new PacketList.RawBytesPayload(PacketList.S2C_STOP_SCREEN, b));
 			});
 		}
 	}

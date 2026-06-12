@@ -2,7 +2,9 @@ package mcvmcomputers.item;
 
 import java.util.List;
 
-import net.minecraft.client.item.TooltipContext;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -15,10 +17,6 @@ import net.minecraft.util.TypedActionResult;
 import net.minecraft.registry.Registries;
 import net.minecraft.world.World;
 
-/**
- * The delivery package item. Stores a single packaged item id in NBT and
- * unpacks it (gives the player the original item) on right-click.
- */
 public class ItemPackage extends Item{
 
 	public ItemPackage(Settings settings) {
@@ -29,10 +27,12 @@ public class ItemPackage extends Item{
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
 		if(!world.isClient){
 			ItemStack is = user.getStackInHand(hand);
-			if(is.getNbt() != null) {
-				if(is.getNbt().contains("packaged_item")) {
+			NbtComponent nbtComp = is.get(DataComponentTypes.CUSTOM_DATA);
+			if (nbtComp != null) {
+				NbtCompound ct = nbtComp.copyNbt();
+				if (ct.contains("packaged_item")) {
 					is.decrement(1);
-					user.giveItemStack(new ItemStack(Registries.ITEM.get(new Identifier(is.getNbt().getString("packaged_item")))));
+					user.giveItemStack(new ItemStack(Registries.ITEM.get(Identifier.of(ct.getString("packaged_item")))));
 				}
 			}
 		}
@@ -41,23 +41,26 @@ public class ItemPackage extends Item{
 
 	@Override
 	public Text getName(ItemStack stack) {
-		if(stack.getNbt() != null) {
-			if(stack.getNbt().contains("packaged_item")) {
-				return Text.translatable("mcvmcomputers.packaged").formatted(Formatting.GRAY).append(Text.translatable(Registries.ITEM.get(new Identifier(stack.getNbt().getString("packaged_item"))).getTranslationKey()).formatted(Formatting.GREEN));
+		NbtComponent nbtComp = stack.get(DataComponentTypes.CUSTOM_DATA);
+		if (nbtComp != null) {
+			NbtCompound ct = nbtComp.copyNbt();
+			if (ct.contains("packaged_item")) {
+				return Text.translatable("mcvmcomputers.packaged").formatted(Formatting.GRAY).append(Text.translatable(Registries.ITEM.get(Identifier.of(ct.getString("packaged_item"))).getTranslationKey()).formatted(Formatting.GREEN));
 			}
 		}
 		return Text.translatable("mcvmcomputers.invalid_package").formatted(Formatting.RED);
 	}
 
 	@Override
-	public void appendTooltip(ItemStack stack, World world, List<Text> tooltip, TooltipContext context) {
+	public void appendTooltip(ItemStack stack, Item.TooltipContext context, List<Text> tooltip, TooltipType type) {
 		tooltip.add(Text.translatable("mcvmcomputers.open_with_right_click").formatted(Formatting.GRAY));
 	}
 
 	public static ItemStack createPackage(Identifier id) {
 		ItemStack is = new ItemStack(ItemList.ITEM_PACKAGE);
-		NbtCompound ct = is.getOrCreateNbt();
+		NbtCompound ct = new NbtCompound();
 		ct.putString("packaged_item", id.toString());
+		is.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(ct));
 		return is;
 	}
 

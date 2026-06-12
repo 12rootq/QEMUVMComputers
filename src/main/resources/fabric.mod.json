@@ -3,7 +3,7 @@
   "id": "mcvmcomputers",
   "version": "${version}",
   "name": "New VM Computers",
-  "description": "Build computers that actually work using the VirtualBox API!, Now in MC 1.20.1",
+  "description": "Build computers that actually work using the VirtualBox API!, Now in MC 1.21.1",
   "authors": [
     "DeltaTwoForce",
     "FB527"
@@ -28,10 +28,10 @@
     "mcvmcomputers.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.14.0",
-    "fabric": ">=0.87.0",
-    "minecraft": "~1.20.1",
-    "java": ">=17"
+    "fabricloader": ">=0.16.0",
+    "fabric": ">=0.102.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
   },
   "suggests": {
     "flamingo": "*"

@@ -217,12 +217,12 @@ public class ClientMod implements ClientModInitializer{
 
 			if(sz > 32766) {
 				if(!failedSend){
-					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_too_big_mp").formatted(Formatting.RED), false);
+					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_too_big_mp").formatted(Formatting.RED));
 					failedSend = true;
 				}
 			}else {
 				if(failedSend) {
-					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_ok_mp").formatted(Formatting.GREEN), false);
+					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_ok_mp").formatted(Formatting.GREEN));
 					failedSend = false;
 				}
 
@@ -230,7 +230,7 @@ public class ClientMod implements ClientModInitializer{
 				p.writeByteArray(Arrays.copyOfRange(deflated, 0, sz));
 				p.writeInt(sz);
 				p.writeInt(localTextureBytesSize);
-				ClientPlayNetworking.send(PacketList.C2S_SCREEN, p);
+				ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_SCREEN, p));
 			}
 
 			NativeImage ni = null;
@@ -257,13 +257,14 @@ public class ClientMod implements ClientModInitializer{
 	}
 
 	public static void registerClientPackets() {
-		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_SCREEN, (client, handler, attachedData, responseSender) -> {
+		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_SCREEN), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
+			PacketByteBuf attachedData = payload.data();
 			byte[] screen = attachedData.readByteArray();
 			int compressedDataSize = attachedData.readInt();
 			int dataSize = attachedData.readInt();
 			UUID pcOwner = attachedData.readUuid();
 
-			client.execute(() -> {
+			context.client().execute(() -> {
 				MinecraftClient mcc = MinecraftClient.getInstance();
 				if(!pcOwner.equals(mcc.player.getUuid())) {
 					if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
@@ -296,10 +297,11 @@ public class ClientMod implements ClientModInitializer{
 			});
 		});
 
-		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_STOP_SCREEN, (client, handler, attachedData, responseSender) -> {
+		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_STOP_SCREEN), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
+			PacketByteBuf attachedData = payload.data();
 			UUID pcOwner = attachedData.readUuid();
 
-			client.execute(() -> {
+			context.client().execute(() -> {
 				MinecraftClient mcc = MinecraftClient.getInstance();
 				if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
 					mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
@@ -316,27 +318,26 @@ public class ClientMod implements ClientModInitializer{
 			});
 		});
 
-		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_SYNC_ORDER, (client, handler, attachedData, responseSender) -> {
+		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_SYNC_ORDER), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
+			PacketByteBuf attachedData = payload.data();
 			int arraySize = attachedData.readInt();
-			OrderableItem[] arr = new OrderableItem[arraySize];
-			for(int i = 0;i<arraySize;i++) {
-				Item readItem = attachedData.readItemStack().getItem();
-				if (readItem instanceof OrderableItem) {
-					arr[i] = (OrderableItem) readItem;
-				} else {
-					arr[i] = null;
-				}
-			}
+			java.util.List<OrderableItem> arr = new java.util.ArrayList<>();
+for (int i = 0; i < arraySize; i++) {
+	Item readItem = net.minecraft.registry.Registries.ITEM.get(net.minecraft.util.Identifier.of(attachedData.readString()));
+	if (readItem instanceof OrderableItem oi) {
+		arr.add(oi);
+	}
+}
 			int price = attachedData.readInt();
 			OrderStatus status = OrderStatus.values()[attachedData.readInt()];
 
-			client.execute(() -> {
+			context.client().execute(() -> {
 				if(ClientMod.myOrder == null) {
 					ClientMod.myOrder = new TabletOrder();
 				}
 				ClientMod.myOrder.price = price;
-				ClientMod.myOrder.items = Arrays.asList(arr);
-				ClientMod.myOrder.orderUUID = client.player.getUuid().toString();
+				ClientMod.myOrder.items = arr;
+				ClientMod.myOrder.orderUUID = context.client().player.getUuid().toString();
 				ClientMod.myOrder.currentStatus = status;
 			});
 		});

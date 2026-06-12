@@ -26,36 +26,38 @@ public class EntityList {
 
 	public static void init() {
 		ITEM_PREVIEW = Registry.register(Registries.ENTITY_TYPE,
-						new Identifier("mcvmcomputers", "item_preview"),
+						Identifier.of("mcvmcomputers", "item_preview"),
 						FabricEntityTypeBuilder.<EntityItemPreview>create(SpawnGroup.MISC, EntityItemPreview::new)
-						.dimensions(new EntityDimensions(1,1, true)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+						.dimensions(EntityDimensions.fixed(1,1)).trackRangeBlocks(60).trackedUpdateRate(2).build());
 		KEYBOARD = Registry.register(Registries.ENTITY_TYPE,
-					new Identifier("mcvmcomputers", "keyboard"),
+					Identifier.of("mcvmcomputers", "keyboard"),
 					FabricEntityTypeBuilder.<EntityKeyboard>create(SpawnGroup.MISC, EntityKeyboard::new)
-					.dimensions(new EntityDimensions(0.5f, 0.0625f, true)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+					.dimensions(EntityDimensions.fixed(0.5f, 0.0625f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
 		MOUSE = Registry.register(Registries.ENTITY_TYPE,
-				new Identifier("mcvmcomputers", "mouse"),
+				Identifier.of("mcvmcomputers", "mouse"),
 				FabricEntityTypeBuilder.<EntityMouse>create(SpawnGroup.MISC, EntityMouse::new)
-				.dimensions(new EntityDimensions(0.25f, 0.0625f, true)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+				.dimensions(EntityDimensions.fixed(0.25f, 0.0625f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
 		CRT_SCREEN = Registry.register(Registries.ENTITY_TYPE,
-						new Identifier("mcvmcomputers", "crt_screen"),
+						Identifier.of("mcvmcomputers", "crt_screen"),
 						FabricEntityTypeBuilder.<EntityCRTScreen>create(SpawnGroup.MISC, EntityCRTScreen::new)
-						.dimensions(new EntityDimensions(0.8f, 0.8f, true)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+						.dimensions(EntityDimensions.fixed(0.8f, 0.8f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
 		FLATSCREEN = Registry.register(Registries.ENTITY_TYPE,
-						new Identifier("mcvmcomputers", "flat_screen"),
+						Identifier.of("mcvmcomputers", "flat_screen"),
 						FabricEntityTypeBuilder.<EntityFlatScreen>create(SpawnGroup.MISC, EntityFlatScreen::new)
-						.dimensions(new EntityDimensions(0.8f, 0.8f, true)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+						.dimensions(EntityDimensions.fixed(0.8f, 0.8f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
 		WALLTV = Registry.register(Registries.ENTITY_TYPE,
-								new Identifier("mcvmcomputers", "walltv"),
+								Identifier.of("mcvmcomputers", "walltv"),
 								FabricEntityTypeBuilder.<EntityWallTV>create(SpawnGroup.MISC, EntityWallTV::new)
-								.dimensions(new EntityDimensions(1f, 1.2f, true)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+								.dimensions(EntityDimensions.fixed(1f, 1.2f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
 		PC = Registry.register(Registries.ENTITY_TYPE,
-				new Identifier("mcvmcomputers", "pc"),
+				Identifier.of("mcvmcomputers", "pc"),
 				FabricEntityTypeBuilder.<EntityPC>create(SpawnGroup.MISC, EntityPC::new)
-				.dimensions(new EntityDimensions(0.375f, 0.6875f, true)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+				.dimensions(EntityDimensions.fixed(0.375f, 0.6875f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
 		DELIVERY_CHEST = Registry.register(Registries.ENTITY_TYPE,
-							new Identifier("mcvmcomputers", "delivery_chest"),
+							Identifier.of("mcvmcomputers", "delivery_chest"),
 							FabricEntityTypeBuilder.<EntityDeliveryChest>create(SpawnGroup.MISC, EntityDeliveryChest::new)
-							.dimensions(new EntityDimensions(1f, 2f, true)).trackRangeBlocks(600).trackedUpdateRate(40).build());
+							.dimensions(EntityDimensions.fixed(1f, 2f)).trackRangeBlocks(600).trackedUpdateRate(40).build());
 	}
 }
+
+

@@ -15,7 +15,6 @@ import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
@@ -123,20 +122,20 @@ public class EntityPC extends Entity{
 	}
 
 	@Override
-	protected void initDataTracker() {
-		this.getDataTracker().startTracking(HARD_DRIVE_FILE_NAME, "");
-		this.getDataTracker().startTracking(ISO_FILE_NAME, "");
-		this.getDataTracker().startTracking(OWNER_UUID, "");
-		this.getDataTracker().startTracking(LOOK_AT_POS_X, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Y, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Z, 0f);
-		this.getDataTracker().startTracking(GB_OF_RAM_IN_SLOT_0, 0);
-		this.getDataTracker().startTracking(GB_OF_RAM_IN_SLOT_1, 0);
-		this.getDataTracker().startTracking(CPU_DIVIDED_BY, 0);
-		this.getDataTracker().startTracking(GPU_IN_PCI_SLOT, false);
-		this.getDataTracker().startTracking(MOTHERBOARD_INSTALLED, false);
-		this.getDataTracker().startTracking(GLASS_SIDEPANEL, false);
-		this.getDataTracker().startTracking(SIXTY_FOUR_BIT, false);
+	protected void initDataTracker(DataTracker.Builder builder) {
+		builder.add(HARD_DRIVE_FILE_NAME, "");
+		builder.add(ISO_FILE_NAME, "");
+		builder.add(OWNER_UUID, "");
+		builder.add(LOOK_AT_POS_X, 0f);
+		builder.add(LOOK_AT_POS_Y, 0f);
+		builder.add(LOOK_AT_POS_Z, 0f);
+		builder.add(GB_OF_RAM_IN_SLOT_0, 0);
+		builder.add(GB_OF_RAM_IN_SLOT_1, 0);
+		builder.add(CPU_DIVIDED_BY, 0);
+		builder.add(GPU_IN_PCI_SLOT, false);
+		builder.add(MOTHERBOARD_INSTALLED, false);
+		builder.add(GLASS_SIDEPANEL, false);
+		builder.add(SIXTY_FOUR_BIT, false);
 	}
 	@Override
 	protected void readCustomDataFromNbt(NbtCompound tag) {
@@ -243,7 +242,7 @@ public class EntityPC extends Entity{
 					ClientMod.currentPC = this;
 					MainMod.pcOpenGui.run();
 				}else
-					player.sendMessage(Text.translatable("mcvmcomputers.not_your_computer").formatted(Formatting.RED),false);
+					player.sendMessage(Text.translatable("mcvmcomputers.not_your_computer").formatted(Formatting.RED));
 		}
 		return ActionResult.SUCCESS;
 	}

@@ -21,6 +21,7 @@ import mcvmcomputers.utils.TabletOrder;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
@@ -29,11 +30,14 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.collection.DefaultedList;
 
+import mcvmcomputers.networking.PacketList;
 import static mcvmcomputers.networking.PacketList.*;
 
 /**
@@ -77,97 +81,128 @@ public class MainMod implements ModInitializer {
 	}
 
 	public static void registerServerPackets() {
-		ServerPlayNetworking.registerGlobalReceiver(C2S_ORDER,
-				(server, player, handler, attachedData, responseSender) -> {
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ORDER), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_SCREEN), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_CHANGE_HDD), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_TURN_ON_PC), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_TURN_OFF_PC), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_MOBO), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_RAM), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_CPU), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_GPU), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_HARD_DRIVE), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_ISO), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_MOBO), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_RAM), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_CPU), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_GPU), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_HARD_DRIVE), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_ISO), RawBytesPayload.CODEC);
+
+		PayloadTypeRegistry.playS2C().register(new net.minecraft.network.packet.CustomPayload.Id<>(S2C_SCREEN), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(new net.minecraft.network.packet.CustomPayload.Id<>(S2C_STOP_SCREEN), RawBytesPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(new net.minecraft.network.packet.CustomPayload.Id<>(S2C_SYNC_ORDER), RawBytesPayload.CODEC);
+
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ORDER),
+				(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
 					int arraySize = attachedData.readInt();
-					OrderableItem[] items = new OrderableItem[arraySize];
-					int price = 0;
-					for (int i = 0; i < arraySize; i++) {
-						Item readItem = attachedData.readItemStack().getItem();
-					if (readItem instanceof OrderableItem) {
-						items[i] = (OrderableItem) readItem;
-					} else {
-						LOGGER.warn("C2S_ORDER: received non-OrderableItem, ignoring");
-						items[i] = null;
-					}
-						price += items[i].getPrice();
-					}
+java.util.List<OrderableItem> itemList = new java.util.ArrayList<>();
+int price = 0;
+for (int i = 0; i < arraySize; i++) {
+	Item readItem = net.minecraft.registry.Registries.ITEM.get(net.minecraft.util.Identifier.of(attachedData.readString()));
+	if (readItem instanceof OrderableItem oi) {
+		itemList.add(oi);
+		price += oi.getPrice();
+	} else {
+		LOGGER.warn("C2S_ORDER: received non-OrderableItem, ignoring");
+	}
+}
 
-					final int pr = price;
+final int pr = price;
+final java.util.List<OrderableItem> finalItems = new java.util.ArrayList<>(itemList);
 
-					server.execute(() -> {
-						TabletOrder to = new TabletOrder();
-						to.items = new ArrayList<>();
-						to.items.addAll(Arrays.asList(items));
-						to.price = pr;
-						to.orderUUID = player.getUuid().toString();
-						MainMod.orders.put(player.getUuid(), to);
-					});
+context.server().execute(() -> {
+	TabletOrder to = new TabletOrder();
+	to.items = finalItems;
+	to.price = pr;
+	to.orderUUID = context.player().getUuid().toString();
+	MainMod.orders.put(context.player().getUuid(), to);
+});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_SCREEN,
-				(server, player, handler, attachedData, responseSender) -> {
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_SCREEN),
+				(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
 					byte[] screen = attachedData.readByteArray();
 					int compressedDataSize = attachedData.readInt();
 					int dataSize = attachedData.readInt();
 
-					server.execute(() -> {
-						if (MainMod.computers.containsKey(player.getUuid())) {
+					context.server().execute(() -> {
+						if (MainMod.computers.containsKey(context.player().getUuid())) {
 							PacketByteBuf b = PacketByteBufs.create();
 							b.writeByteArray(screen);
 							b.writeInt(compressedDataSize);
 							b.writeInt(dataSize);
-							b.writeUuid(player.getUuid());
+							b.writeUuid(context.player().getUuid());
 							for (ServerPlayerEntity watcher : PlayerLookup
-									.tracking(MainMod.computers.get(player.getUuid()))) {
-								ServerPlayNetworking.send(watcher, S2C_SCREEN, b);
+									.tracking(MainMod.computers.get(context.player().getUuid()))) {
+								ServerPlayNetworking.send(watcher, new PacketList.RawBytesPayload(S2C_SCREEN, b));
 							}
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_TURN_ON_PC,
-				(server, player, handler, attachedData, responseSender) -> {
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_TURN_ON_PC),
+				(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
 					int pcEntityId = attachedData.readInt();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(pcEntityId);
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(pcEntityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
-									MainMod.computers.put(player.getUuid(), (EntityPC) e);
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
+									MainMod.computers.put(context.player().getUuid(), (EntityPC) e);
 								}
 							}
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_TURN_OFF_PC,
-				(server, player, handler, attachedData, responseSender) -> {
-					server.execute(() -> {
-						if (MainMod.computers.containsKey(player.getUuid())) {
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_TURN_OFF_PC),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+				context.server().execute(() -> {
+					if (MainMod.computers.containsKey(context.player().getUuid())) {
 							PacketByteBuf b = PacketByteBufs.create();
-							b.writeUuid(player.getUuid());
+							b.writeUuid(context.player().getUuid());
 							for (ServerPlayerEntity watcher : PlayerLookup
-									.tracking(MainMod.computers.get(player.getUuid()))) {
-								ServerPlayNetworking.send(watcher, S2C_STOP_SCREEN, b);
+									.tracking(MainMod.computers.get(context.player().getUuid()))) {
+								ServerPlayNetworking.send(watcher, new PacketList.RawBytesPayload(S2C_STOP_SCREEN, b));
 							}
-							MainMod.computers.remove(player.getUuid());
+							MainMod.computers.remove(context.player().getUuid());
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_CHANGE_HDD,
-				(server, player, handler, attachedData, responseSender) -> {
-					String newHddName = attachedData.readString(32767);
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_CHANGE_HDD),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
 
-					server.execute(() -> {
-						for (ItemStack is : player.getHandItems()) {
+				String newHddName = attachedData.readString(32767);
+
+					context.server().execute(() -> {
+						for (ItemStack is : context.player().getHandItems()) {
 							if (is != null) {
 								if (is.getItem() instanceof ItemHarddrive) {
-									NbtCompound ct = is.getOrCreateNbt();
+									NbtCompound ct = new NbtCompound();
 									ct.putString("vhdfile", newHddName);
+									is.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(ct));
 									break;
 								}
 							}
@@ -175,26 +210,28 @@ public class MainMod implements ModInitializer {
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_ADD_MOBO,
-				(server, player, handler, attachedData, responseSender) -> {
-					boolean x64 = attachedData.readBoolean();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_MOBO),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
+				boolean x64 = attachedData.readBoolean();
 					int entityId = attachedData.readInt();
 
-					server.execute(() -> {
+					context.server().execute(() -> {
 						Item lookingFor = null;
 						if (x64) {
 							lookingFor = ItemList.ITEM_MOTHERBOARD64;
 						} else {
 							lookingFor = ItemList.ITEM_MOTHERBOARD;
 						}
-						if (player.getInventory().contains(new ItemStack(lookingFor))) {
-							Entity e = player.getWorld().getEntityById(entityId);
+						if (context.player().getInventory().contains(new ItemStack(lookingFor))) {
+							Entity e = context.player().getWorld().getEntityById(entityId);
 							if (e != null) {
 								if (e instanceof EntityPC) {
 									EntityPC pc = (EntityPC) e;
-									if (pc.getOwner().equals(player.getUuid().toString())) {
+									if (pc.getOwner().equals(context.player().getUuid().toString())) {
 										if (!pc.getMotherboardInstalled()) {
-											removeStck(player.getInventory(), new ItemStack(lookingFor));
+											removeStck(context.player().getInventory(), new ItemStack(lookingFor));
 											pc.setMotherboardInstalled(true);
 											pc.set64Bit(x64);
 										}
@@ -202,45 +239,48 @@ public class MainMod implements ModInitializer {
 								}
 							}
 						} else {
-							player.sendMessage(Text.translatable("mcvmcomputers.motherboard_not_present")
-									.formatted(Formatting.RED), false);
+							context.player().sendMessage(Text.translatable("mcvmcomputers.motherboard_not_present")
+									.formatted(Formatting.RED));
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_ADD_GPU,
-				(server, player, handler, attachedData, responseSender) -> {
-					int entityId = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_GPU),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
 
-					server.execute(() -> {
+				int entityId = attachedData.readInt();
+
+					context.server().execute(() -> {
 						Item lookingFor = ItemList.ITEM_GPU;
-						if (player.getInventory().contains(new ItemStack(lookingFor))) {
-							Entity e = player.getWorld().getEntityById(entityId);
+						if (context.player().getInventory().contains(new ItemStack(lookingFor))) {
+							Entity e = context.player().getWorld().getEntityById(entityId);
 							if (e != null) {
 								if (e instanceof EntityPC) {
 									EntityPC pc = (EntityPC) e;
-									if (pc.getOwner().equals(player.getUuid().toString())) {
+									if (pc.getOwner().equals(context.player().getUuid().toString())) {
 										if (!pc.getGpuInstalled()) {
-											removeStck(player.getInventory(), new ItemStack(lookingFor));
+											removeStck(context.player().getInventory(), new ItemStack(lookingFor));
 											pc.setGpuInstalled(true);
 										}
 									}
 								}
 							}
 						} else {
-							player.sendMessage(
-									Text.translatable("mcvmcomputers.gpu_not_present").formatted(Formatting.RED),
-									false);
+							context.player().sendMessage(
+									Text.translatable("mcvmcomputers.gpu_not_present").formatted(Formatting.RED));
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_ADD_CPU,
-				(server, player, handler, attachedData, responseSender) -> {
-					int dividedBy = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_CPU),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
+				int dividedBy = attachedData.readInt();
 					int entityId = attachedData.readInt();
 
-					server.execute(() -> {
+					context.server().execute(() -> {
 						Item lookingFor = null;
 						if (dividedBy == 2) {
 							lookingFor = ItemList.ITEM_CPU2;
@@ -249,33 +289,34 @@ public class MainMod implements ModInitializer {
 						} else if (dividedBy == 6) {
 							lookingFor = ItemList.ITEM_CPU6;
 						}
-						if (lookingFor != null && player.getInventory().contains(new ItemStack(lookingFor))) {
-							Entity e = player.getWorld().getEntityById(entityId);
+						if (lookingFor != null && context.player().getInventory().contains(new ItemStack(lookingFor))) {
+							Entity e = context.player().getWorld().getEntityById(entityId);
 							if (e != null) {
 								if (e instanceof EntityPC) {
 									EntityPC pc = (EntityPC) e;
-									if (pc.getOwner().equals(player.getUuid().toString())) {
+									if (pc.getOwner().equals(context.player().getUuid().toString())) {
 										if (pc.getCpuDividedBy() == 0) {
-											removeStck(player.getInventory(), new ItemStack(lookingFor));
+											removeStck(context.player().getInventory(), new ItemStack(lookingFor));
 											pc.setCpuDividedBy(dividedBy);
 										}
 									}
 								}
 							}
 						} else {
-							player.sendMessage(
-									Text.translatable("mcvmcomputers.ram_not_present").formatted(Formatting.RED),
-									false);
+							context.player().sendMessage(
+									Text.translatable("mcvmcomputers.ram_not_present").formatted(Formatting.RED));
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_ADD_RAM,
-				(server, player, handler, attachedData, responseSender) -> {
-					int mb = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_RAM),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
+				int mb = attachedData.readInt();
 					int entityId = attachedData.readInt();
 
-					server.execute(() -> {
+					context.server().execute(() -> {
 						Item lookingFor = null;
 						if (mb == 64) {
 							lookingFor = ItemList.ITEM_RAM64M;
@@ -292,68 +333,70 @@ public class MainMod implements ModInitializer {
 						} else if (mb == 4096) {
 							lookingFor = ItemList.ITEM_RAM4G;
 						}
-						if (lookingFor != null && player.getInventory().contains(new ItemStack(lookingFor))) {
-							Entity e = player.getWorld().getEntityById(entityId);
+						if (lookingFor != null && context.player().getInventory().contains(new ItemStack(lookingFor))) {
+							Entity e = context.player().getWorld().getEntityById(entityId);
 							if (e != null) {
 								if (e instanceof EntityPC) {
 									EntityPC pc = (EntityPC) e;
-									if (pc.getOwner().equals(player.getUuid().toString())) {
+									if (pc.getOwner().equals(context.player().getUuid().toString())) {
 										if (pc.getGigsOfRamInSlot0() == 0) {
-											removeStck(player.getInventory(), new ItemStack(lookingFor));
+											removeStck(context.player().getInventory(), new ItemStack(lookingFor));
 											pc.setGigsOfRamInSlot0(mb);
 										} else if (pc.getGigsOfRamInSlot1() == 0) {
-											removeStck(player.getInventory(), new ItemStack(lookingFor));
+											removeStck(context.player().getInventory(), new ItemStack(lookingFor));
 											pc.setGigsOfRamInSlot1(mb);
 										}
 									}
 								}
 							}
 						} else {
-							player.sendMessage(
-									Text.translatable("mcvmcomputers.hdd_not_present").formatted(Formatting.RED),
-									false);
+							context.player().sendMessage(
+									Text.translatable("mcvmcomputers.hdd_not_present").formatted(Formatting.RED));
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_ADD_HARD_DRIVE,
-				(server, player, handler, attachedData, responseSender) -> {
-					String vhdname = attachedData.readString(32767);
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_HARD_DRIVE),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
+				String vhdname = attachedData.readString(32767);
 					int entityId = attachedData.readInt();
 
-					server.execute(() -> {
+					context.server().execute(() -> {
 						ItemStack lookingFor = ItemHarddrive.createHardDrive(vhdname);
-						if (player.getInventory().contains(lookingFor)) {
-							Entity e = player.getWorld().getEntityById(entityId);
+						if (context.player().getInventory().contains(lookingFor)) {
+							Entity e = context.player().getWorld().getEntityById(entityId);
 							if (e != null) {
 								if (e instanceof EntityPC) {
 									EntityPC pc = (EntityPC) e;
-									if (pc.getOwner().equals(player.getUuid().toString())) {
+									if (pc.getOwner().equals(context.player().getUuid().toString())) {
 										if (pc.getHardDriveFileName().isEmpty()) {
-											removeStck(player.getInventory(), lookingFor);
+											removeStck(context.player().getInventory(), lookingFor);
 											pc.setHardDriveFileName(vhdname);
 										}
 									}
 								}
 							}
 						} else {
-							player.sendMessage(
-									Text.translatable("mcvmcomputers.hdd_not_present").formatted(Formatting.RED),
-									false);
+							context.player().sendMessage(
+									Text.translatable("mcvmcomputers.hdd_not_present").formatted(Formatting.RED));
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_REMOVE_MOBO,
-				(server, player, handler, attachedData, responseSender) -> {
-					int entityId = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_MOBO),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(entityId);
+				int entityId = attachedData.readInt();
+
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(entityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
 									if (pc.getMotherboardInstalled()) {
 										pc.setMotherboardInstalled(false);
 										if (pc.get64Bit()) {
@@ -365,7 +408,7 @@ public class MainMod implements ModInitializer {
 										}
 										removeCpu(pc);
 										removeGpu(pc);
-										removeHdd(pc, player.getUuid().toString());
+										removeHdd(pc, context.player().getUuid().toString());
 										removeRam(pc, 0);
 										removeRam(pc, 1);
 									}
@@ -375,16 +418,18 @@ public class MainMod implements ModInitializer {
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_REMOVE_GPU,
-				(server, player, handler, attachedData, responseSender) -> {
-					int entityId = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_GPU),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(entityId);
+				int entityId = attachedData.readInt();
+
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(entityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
 									removeGpu(pc);
 								}
 							}
@@ -392,33 +437,37 @@ public class MainMod implements ModInitializer {
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_REMOVE_HARD_DRIVE,
-				(server, player, handler, attachedData, responseSender) -> {
-					int entityId = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_HARD_DRIVE),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(entityId);
+				int entityId = attachedData.readInt();
+
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(entityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
-									removeHdd(pc, player.getUuid().toString());
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
+									removeHdd(pc, context.player().getUuid().toString());
 								}
 							}
 						}
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_REMOVE_CPU,
-				(server, player, handler, attachedData, responseSender) -> {
-					int entityId = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_CPU),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(entityId);
+				int entityId = attachedData.readInt();
+
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(entityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
 									removeCpu(pc);
 								}
 							}
@@ -426,17 +475,19 @@ public class MainMod implements ModInitializer {
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_REMOVE_RAM,
-				(server, player, handler, attachedData, responseSender) -> {
-					int slot = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_RAM),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
+				int slot = attachedData.readInt();
 					int entityId = attachedData.readInt();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(entityId);
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(entityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
 									removeRam(pc, slot);
 								}
 							}
@@ -444,17 +495,19 @@ public class MainMod implements ModInitializer {
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_ADD_ISO,
-				(server, player, handler, attachedData, responseSender) -> {
-					String isoName = attachedData.readString(32767);
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_ADD_ISO),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
+
+				String isoName = attachedData.readString(32767);
 					int entityId = attachedData.readInt();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(entityId);
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(entityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
 									if (pc.getIsoFileName().isEmpty()) {
 										pc.setIsoFileName(isoName);
 									}
@@ -464,16 +517,18 @@ public class MainMod implements ModInitializer {
 					});
 				});
 
-		ServerPlayNetworking.registerGlobalReceiver(C2S_REMOVE_ISO,
-				(server, player, handler, attachedData, responseSender) -> {
-					int entityId = attachedData.readInt();
+		ServerPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(C2S_REMOVE_ISO),
+			(PacketList.RawBytesPayload payload, ServerPlayNetworking.Context context) -> {
+					PacketByteBuf attachedData = payload.data();
 
-					server.execute(() -> {
-						Entity e = player.getWorld().getEntityById(entityId);
+				int entityId = attachedData.readInt();
+
+					context.server().execute(() -> {
+						Entity e = context.player().getWorld().getEntityById(entityId);
 						if (e != null) {
 							if (e instanceof EntityPC) {
 								EntityPC pc = (EntityPC) e;
-								if (pc.getOwner().equals(player.getUuid().toString())) {
+								if (pc.getOwner().equals(context.player().getUuid().toString())) {
 									if (!pc.getIsoFileName().isEmpty()) {
 										pc.setIsoFileName("");
 									}
@@ -484,19 +539,24 @@ public class MainMod implements ModInitializer {
 				});
 	}
 
+	private static NbtCompound getNbtSafe(ItemStack stack) {
+		NbtComponent comp = stack.get(DataComponentTypes.CUSTOM_DATA);
+		return comp != null ? comp.copyNbt() : null;
+	}
+
 	private static void removeStck(PlayerInventory inv, ItemStack is) {
 		UnmodifiableIterator<DefaultedList<ItemStack>> var2 = ImmutableList.of(inv.main, inv.armor, inv.offHand)
 				.iterator();
 
 
-		if (is.getNbt() != null) {
+		if (getNbtSafe(is) != null) {
 			while (var2.hasNext()) {
 				List<ItemStack> list = (List<ItemStack>) var2.next();
 				Iterator<ItemStack> var4 = list.iterator();
 
 				while (var4.hasNext()) {
 					ItemStack itemStack = (ItemStack) var4.next();
-					if (!itemStack.isEmpty() && itemStack.isOf(is.getItem()) && Objects.equals(itemStack.getNbt(), is.getNbt())) {
+					if (!itemStack.isEmpty() && itemStack.isOf(is.getItem()) && Objects.equals(getNbtSafe(itemStack), getNbtSafe(is))) {
 						itemStack.decrement(1);
 						return;
 					}

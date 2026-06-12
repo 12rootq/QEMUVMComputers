@@ -47,7 +47,7 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 
 	public DeliveryChestModel(ModelPart root) throws IOException {
 		this.mcc = MinecraftClient.getInstance();
-		this.baseTexture = NativeImage.read(mcc.getResourceManager().getResourceOrThrow(new Identifier("mcvmcomputers", "textures/entity/delivery_chest.png")).getInputStream());
+		this.baseTexture = NativeImage.read(mcc.getResourceManager().getResourceOrThrow(Identifier.of("mcvmcomputers", "textures/entity/delivery_chest.png")).getInputStream());
 
 		this.model = root.getChild("model");
 		this.opening = this.model.getChild("opening");
@@ -181,13 +181,13 @@ public class DeliveryChestModel extends EntityModel<Entity> {
 	}
 
 	@Override
-	public void render(MatrixStack matrixStack, VertexConsumer buffer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha){
-		model.render(matrixStack, buffer, packedLight, packedOverlay);
+	public void render(MatrixStack matrixStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color){
+		model.render(matrixStack, buffer, packedLight, packedOverlay, -1);
 	}
 
 	public void render(MatrixStack matrixStack, VertexConsumerProvider provider, int packedLight, int packedOverlay){
 		this.generateTexture();
-		model.render(matrixStack, provider.getBuffer(RenderLayer.getEntityCutout(texId)), packedLight, packedOverlay);
+		model.render(matrixStack, provider.getBuffer(RenderLayer.getEntityCutout(texId)), packedLight, packedOverlay, -1);
 	}
 
 	public void setRotationAngle(ModelPart modelRenderer, float x, float y, float z) {
