@@ -21,7 +21,7 @@ import org.lwjgl.glfw.GLFW;
 
 import mcvmcomputers.client.utils.VBoxManage;
 
-import mcvmcomputers.networking.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.client.entities.render.CRTScreenRender;
 import mcvmcomputers.client.entities.render.DeliveryChestRender;
@@ -47,10 +47,12 @@ import mcvmcomputers.entities.EntityWallTV;
 import mcvmcomputers.item.OrderableItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import mcvmcomputers.networking.ClientPlayNetworking;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.TabletOrder;
 import mcvmcomputers.utils.TabletOrder.OrderStatus;
+import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
@@ -58,24 +60,14 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
-import net.minecraft.client.gui.screen.TitleScreen;
-import mcvmcomputers.client.gui.setup.GuiSetup;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.IEventBus;
 
 /**
- * Client-side helper. Registers entity renderers via EntityRenderersEvent and
- * client packet handlers on the Forge event bus, shows the first-run setup screen,
- * and stores all client-only VM state: the running VirtualBox handle, the live
- * screen textures streamed from the guest, mouse/keyboard input buffers and the
- * unfocus key bindings.
+ * Client mod entry point. Registers entity renderers and client-side packet
+ * handlers, and stores all client-only VM state: the running VirtualBox handle,
+ * the live screen textures streamed from the guest, mouse/keyboard input buffers
+ * and the unfocus key bindings.
  */
-public class ClientMod {
-	// Shows the first-run setup screen exactly once, replacing the first TitleScreen.
-	private static boolean setupShown = false;
-
+public class ClientMod implements ClientModInitializer{
 	public static final OutputStream discardAllBytes = new OutputStream() { @Override public void write(int b) throws IOException {} };
 	public static Map<UUID, Identifier> vmScreenTextures;
 	public static Map<UUID, NativeImage> vmScreenTextureNI;
@@ -225,12 +217,12 @@ public class ClientMod {
 
 			if(sz > 32766) {
 				if(!failedSend){
-					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_too_big_mp").formatted(Formatting.RED), false);
+					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_too_big_mp").formatted(Formatting.RED));
 					failedSend = true;
 				}
 			}else {
 				if(failedSend) {
-					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_ok_mp").formatted(Formatting.GREEN), false);
+					mcc.player.sendMessage(Text.translatable("mcvmcomputers.screen_ok_mp").formatted(Formatting.GREEN));
 					failedSend = false;
 				}
 
@@ -238,7 +230,7 @@ public class ClientMod {
 				p.writeByteArray(Arrays.copyOfRange(deflated, 0, sz));
 				p.writeInt(sz);
 				p.writeInt(localTextureBytesSize);
-				ClientPlayNetworking.send(PacketList.C2S_SCREEN, p);
+				ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_SCREEN, p));
 			}
 
 			NativeImage ni = null;
@@ -265,13 +257,14 @@ public class ClientMod {
 	}
 
 	public static void registerClientPackets() {
-		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_SCREEN, (client, handler, attachedData, responseSender) -> {
+		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_SCREEN), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
+			PacketByteBuf attachedData = payload.data();
 			byte[] screen = attachedData.readByteArray();
 			int compressedDataSize = attachedData.readInt();
 			int dataSize = attachedData.readInt();
 			UUID pcOwner = attachedData.readUuid();
 
-			client.execute(() -> {
+			context.client().execute(() -> {
 				MinecraftClient mcc = MinecraftClient.getInstance();
 				if(!pcOwner.equals(mcc.player.getUuid())) {
 					if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
@@ -304,10 +297,11 @@ public class ClientMod {
 			});
 		});
 
-		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_STOP_SCREEN, (client, handler, attachedData, responseSender) -> {
+		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_STOP_SCREEN), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
+			PacketByteBuf attachedData = payload.data();
 			UUID pcOwner = attachedData.readUuid();
 
-			client.execute(() -> {
+			context.client().execute(() -> {
 				MinecraftClient mcc = MinecraftClient.getInstance();
 				if(ClientMod.vmScreenTextures.containsKey(pcOwner)) {
 					mcc.getTextureManager().destroyTexture(ClientMod.vmScreenTextures.get(pcOwner));
@@ -324,33 +318,33 @@ public class ClientMod {
 			});
 		});
 
-		ClientPlayNetworking.registerGlobalReceiver(PacketList.S2C_SYNC_ORDER, (client, handler, attachedData, responseSender) -> {
+		ClientPlayNetworking.registerGlobalReceiver(new net.minecraft.network.packet.CustomPayload.Id<>(PacketList.S2C_SYNC_ORDER), (PacketList.RawBytesPayload payload, ClientPlayNetworking.Context context) -> {
+			PacketByteBuf attachedData = payload.data();
 			int arraySize = attachedData.readInt();
-			OrderableItem[] arr = new OrderableItem[arraySize];
-			for(int i = 0;i<arraySize;i++) {
-				Item readItem = attachedData.readItemStack().getItem();
-				if (readItem instanceof OrderableItem) {
-					arr[i] = (OrderableItem) readItem;
-				} else {
-					arr[i] = null;
-				}
-			}
+			java.util.List<OrderableItem> arr = new java.util.ArrayList<>();
+for (int i = 0; i < arraySize; i++) {
+	Item readItem = net.minecraft.registry.Registries.ITEM.get(net.minecraft.util.Identifier.of(attachedData.readString()));
+	if (readItem instanceof OrderableItem oi) {
+		arr.add(oi);
+	}
+}
 			int price = attachedData.readInt();
 			OrderStatus status = OrderStatus.values()[attachedData.readInt()];
 
-			client.execute(() -> {
+			context.client().execute(() -> {
 				if(ClientMod.myOrder == null) {
 					ClientMod.myOrder = new TabletOrder();
 				}
 				ClientMod.myOrder.price = price;
-				ClientMod.myOrder.items = Arrays.asList(arr);
-				ClientMod.myOrder.orderUUID = client.player.getUuid().toString();
+				ClientMod.myOrder.items = arr;
+				ClientMod.myOrder.orderUUID = context.client().player.getUuid().toString();
 				ClientMod.myOrder.currentStatus = status;
 			});
 		});
 	}
 
-	public static void init(IEventBus modBus) {
+	@Override
+	public void onInitializeClient() {
 		MainMod.pcOpenGui = new Runnable() {
 			@Override
 			public void run() {
@@ -384,27 +378,14 @@ public class ClientMod {
 		vmScreenTextureNI = new HashMap<UUID, NativeImage>();
 		vmScreenTextureNIBT = new HashMap<UUID, NativeImageBackedTexture>();
 
-		modBus.addListener((EntityRenderersEvent.RegisterRenderers event) -> {
-			event.registerEntityRenderer(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
-			event.registerEntityRenderer(EntityList.KEYBOARD, KeyboardRender::new);
-			event.registerEntityRenderer(EntityList.MOUSE, MouseRender::new);
-			event.registerEntityRenderer(EntityList.CRT_SCREEN, CRTScreenRender::new);
-			event.registerEntityRenderer(EntityList.FLATSCREEN, FlatScreenRender::new);
-			event.registerEntityRenderer(EntityList.WALLTV, WallTVRender::new);
-			event.registerEntityRenderer(EntityList.PC, PCRender::new);
-			event.registerEntityRenderer(EntityList.DELIVERY_CHEST, DeliveryChestRender::new);
-			event.registerEntityRenderer(EntityList.MOUSE_PAD, mcvmcomputers.client.entities.render.MousePadRender::new);
-		});
-
-		// On Forge the mod-loading screen and TitleScreen are opened after the game
-		// starts, so we can't force the setup screen from the mixin. Instead, when the
-		// first TitleScreen would open, redirect it to GuiSetup once.
-		MinecraftForge.EVENT_BUS.addListener((ScreenEvent.Opening event) -> {
-			if (!setupShown && event.getNewScreen() instanceof TitleScreen) {
-				setupShown = true;
-				event.setNewScreen(new GuiSetup());
-			}
-		});
+		EntityRendererRegistry.register(EntityList.ITEM_PREVIEW, ItemPreviewRender::new);
+		EntityRendererRegistry.register(EntityList.KEYBOARD, KeyboardRender::new);
+		EntityRendererRegistry.register(EntityList.MOUSE, MouseRender::new);
+		EntityRendererRegistry.register(EntityList.CRT_SCREEN, CRTScreenRender::new);
+		EntityRendererRegistry.register(EntityList.FLATSCREEN, FlatScreenRender::new);
+		EntityRendererRegistry.register(EntityList.WALLTV, WallTVRender::new);
+		EntityRendererRegistry.register(EntityList.PC, PCRender::new);
+		EntityRendererRegistry.register(EntityList.DELIVERY_CHEST, DeliveryChestRender::new);
 	}
 
 }

@@ -23,7 +23,6 @@ import mcvmcomputers.item.ItemOrderingTablet;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.world.ClientWorld;
@@ -46,50 +45,59 @@ public class GameloopMixin {
 	@Shadow
 	public Screen currentScreen;
 
-	@Shadow
-	private boolean paused;
-
-	@Shadow
-	private float pausedTickDelta;
-
-	@Shadow
-	private RenderTickCounter renderTickCounter;
+	private boolean vmInitDone = false;
 
 	private boolean wasInWorld = false;
 
-	@Inject(at = @At("HEAD"), method = "run")
-	private void run(CallbackInfo info) {
-		MinecraftClient mcc = MinecraftClient.getInstance();
-		// NOTE: do not setScreen here on Forge — the mod-loading screen and the
-		// TitleScreen are opened afterwards and would override it. The setup screen
-		// is shown via ClientMod's ScreenEvent.Opening handler instead.
-		vhdDirectory = new File(mcc.runDirectory, "vm_computers/vhds");
-		vhdDirectory.mkdirs();
-		isoDirectory = new File(mcc.runDirectory, "vm_computers/isos");
-		isoDirectory.mkdirs();
-
-		File num = new File(vhdDirectory.getParentFile(), "vhdnum");
-		if(num.exists()) {
-			try {
-				List<String> lines = Files.readAllLines(num.toPath());
-				latestVHDNum = Integer.parseInt(lines.get(0));
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-	}
-
 	@Inject(at = @At("HEAD"), method = "render")
 	private void render(CallbackInfo info) {
-		// Detect (re)entering a world. After a server reconnect the previous
-		// VirtualBox web-service session is stale, so force a fresh connection on
-		// the next mouse/keyboard call. This recovers mouse capture without having
-		// to manually restart the VM.
-		boolean inWorld = this.player != null && this.world != null;
-		if (inWorld && !wasInWorld && vbox != null) {
-			vbox.resetMouseConnection();
+		MinecraftClient mcc = MinecraftClient.getInstance();
+
+		if (!vmInitDone) {
+			vmInitDone = true;
+			vhdDirectory = new File(mcc.runDirectory, "vm_computers/vhds");
+			vhdDirectory.mkdirs();
+			isoDirectory = new File(mcc.runDirectory, "vm_computers/isos");
+			isoDirectory.mkdirs();
+
+			File num = new File(vhdDirectory.getParentFile(), "vhdnum");
+			if(num.exists()) {
+				try {
+					List<String> lines = Files.readAllLines(num.toPath());
+					latestVHDNum = Integer.parseInt(lines.get(0));
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
+
+
+                if(vbox == null && !(this.currentScreen instanceof GuiSetup)) {
+                        MinecraftClient.getInstance().execute(() -> {
+                                if (vbox == null && !(MinecraftClient.getInstance().currentScreen instanceof GuiSetup)) {
+                                        MinecraftClient.getInstance().setScreen(new GuiSetup());
+                                }
+                        });
+                }
+
+		// VirtualBox web-service mouse session is stale, so force a fresh connection
+
+		// on the next mouse call. This recovers mouse capture without manually
+
+		// restarting the VM, even when the VM keeps running across the reconnect
+
+		// (in which case startVm() - which also resets - is not called).
+
+		boolean inWorld = this.player != null && this.world != null;
+
+		if(inWorld && !wasInWorld && vbox != null) {
+
+			vbox.resetMouseConnection();
+
+		}
+
 		wasInWorld = inWorld;
+
 
 		if(lastDeltaTimeTime == 0) {
 			lastDeltaTimeTime = System.currentTimeMillis();
@@ -152,7 +160,6 @@ public class GameloopMixin {
 		}
 
 		if(player != null) {
-			if(player.getActiveItem() != null) {
 				boolean tabletOut = false;
 				for(ItemStack is : player.getHandItems()) {
 					if(is.getItem() != null) {
@@ -188,7 +195,7 @@ public class GameloopMixin {
 								if(crosshairTarget != null) {
 									Vec3d hit = crosshairTarget.getPos();
 									thePreviewEntity = new EntityItemPreview(world, hit.x, hit.y, hit.z, is);
-									this.world.addEntity(thePreviewEntity.getId(), thePreviewEntity);
+									this.world.addEntity(thePreviewEntity);
 								}
 							}
 						}else {
@@ -203,7 +210,6 @@ public class GameloopMixin {
 					thePreviewEntity.kill();
 					thePreviewEntity = null;
 				}
-			}
 		}
 	}
 

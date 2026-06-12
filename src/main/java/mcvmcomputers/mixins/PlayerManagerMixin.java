@@ -7,12 +7,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import mcvmcomputers.networking.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.entities.EntityPC;
 import mcvmcomputers.networking.PacketList;
-import mcvmcomputers.networking.PlayerLookup;
-import mcvmcomputers.networking.ServerPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -28,7 +28,7 @@ public class PlayerManagerMixin {
 			PacketByteBuf b = PacketByteBufs.create();
 			b.writeUuid(player.getUuid());
 			watchingPlayers.forEach((p) -> {
-				ServerPlayNetworking.send(p, PacketList.S2C_STOP_SCREEN, b);
+				ServerPlayNetworking.send(p, new PacketList.RawBytesPayload(PacketList.S2C_STOP_SCREEN, b));
 			});
 		}
 	}

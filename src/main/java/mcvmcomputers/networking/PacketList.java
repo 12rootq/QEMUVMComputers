@@ -6,6 +6,10 @@ import mcvmcomputers.item.ItemList;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.RegistryByteBuf;
+import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.util.Identifier;
 
 /**
@@ -14,31 +18,51 @@ import net.minecraft.util.Identifier;
  * plus helper methods that drop installed parts back into the world.
  */
 public class PacketList {
+	public record RawBytesPayload(Identifier id, PacketByteBuf data) implements CustomPayload {
+	public static final PacketCodec<RegistryByteBuf, RawBytesPayload> CODEC = new PacketCodec<>() {
+		@Override
+		public void encode(RegistryByteBuf buf, RawBytesPayload value) {
+			buf.writeIdentifier(value.id);
+			buf.writeBytes(value.data.copy());
+		}
+		@Override
+		public RawBytesPayload decode(RegistryByteBuf buf) {
+			Identifier id = buf.readIdentifier();
+			byte[] bytes = new byte[buf.readableBytes()];
+			buf.readBytes(bytes);
+			return new RawBytesPayload(id, new PacketByteBuf(io.netty.buffer.Unpooled.wrappedBuffer(bytes)));
+		}
+	};
 
-	public static final Identifier C2S_ORDER = new Identifier("mcvmcomputers", "c2s_order");
-	public static final Identifier C2S_SCREEN = new Identifier("mcvmcomputers", "c2s_screen");
-	public static final Identifier C2S_CHANGE_HDD = new Identifier("mcvmcomputers", "c2s_change_hdd");
-	public static final Identifier C2S_TURN_ON_PC = new Identifier("mcvmcomputers", "c2s_turn_on_pc");
-	public static final Identifier C2S_TURN_OFF_PC = new Identifier("mcvmcomputers", "c2s_turn_off_pc");
+		@Override
+		public Id<RawBytesPayload> getId() {
+			return new Id<>(id);
+		}
+	}
+	public static final Identifier C2S_ORDER = Identifier.of("mcvmcomputers", "c2s_order");
+	public static final Identifier C2S_SCREEN = Identifier.of("mcvmcomputers", "c2s_screen");
+	public static final Identifier C2S_CHANGE_HDD = Identifier.of("mcvmcomputers", "c2s_change_hdd");
+	public static final Identifier C2S_TURN_ON_PC = Identifier.of("mcvmcomputers", "c2s_turn_on_pc");
+	public static final Identifier C2S_TURN_OFF_PC = Identifier.of("mcvmcomputers", "c2s_turn_off_pc");
 
-	public static final Identifier C2S_ADD_MOBO = new Identifier("mcvmcomputers", "c2s_add_mobo");
-	public static final Identifier C2S_ADD_RAM = new Identifier("mcvmcomputers", "c2s_add_ram");
-	public static final Identifier C2S_ADD_CPU = new Identifier("mcvmcomputers", "c2s_add_cpu");
-	public static final Identifier C2S_ADD_GPU = new Identifier("mcvmcomputers", "c2s_add_gpu");
-	public static final Identifier C2S_ADD_HARD_DRIVE = new Identifier("mcvmcomputers", "c2s_add_hard_drive");
-	public static final Identifier C2S_ADD_ISO = new Identifier("mcvmcomputers", "c2s_add_iso");
+	public static final Identifier C2S_ADD_MOBO = Identifier.of("mcvmcomputers", "c2s_add_mobo");
+	public static final Identifier C2S_ADD_RAM = Identifier.of("mcvmcomputers", "c2s_add_ram");
+	public static final Identifier C2S_ADD_CPU = Identifier.of("mcvmcomputers", "c2s_add_cpu");
+	public static final Identifier C2S_ADD_GPU = Identifier.of("mcvmcomputers", "c2s_add_gpu");
+	public static final Identifier C2S_ADD_HARD_DRIVE = Identifier.of("mcvmcomputers", "c2s_add_hard_drive");
+	public static final Identifier C2S_ADD_ISO = Identifier.of("mcvmcomputers", "c2s_add_iso");
 
-	public static final Identifier C2S_REMOVE_MOBO = new Identifier("mcvmcomputers", "c2s_remove_mobo");
-	public static final Identifier C2S_REMOVE_RAM = new Identifier("mcvmcomputers", "c2s_remove_ram");
-	public static final Identifier C2S_REMOVE_CPU = new Identifier("mcvmcomputers", "c2s_remove_cpu");
-	public static final Identifier C2S_REMOVE_GPU = new Identifier("mcvmcomputers", "c2s_remove_gpu");
-	public static final Identifier C2S_REMOVE_HARD_DRIVE = new Identifier("mcvmcomputers", "c2s_remove_hard_drive");
-	public static final Identifier C2S_REMOVE_ISO = new Identifier("mcvmcomputers", "c2s_remove_iso");
+	public static final Identifier C2S_REMOVE_MOBO = Identifier.of("mcvmcomputers", "c2s_remove_mobo");
+	public static final Identifier C2S_REMOVE_RAM = Identifier.of("mcvmcomputers", "c2s_remove_ram");
+	public static final Identifier C2S_REMOVE_CPU = Identifier.of("mcvmcomputers", "c2s_remove_cpu");
+	public static final Identifier C2S_REMOVE_GPU = Identifier.of("mcvmcomputers", "c2s_remove_gpu");
+	public static final Identifier C2S_REMOVE_HARD_DRIVE = Identifier.of("mcvmcomputers", "c2s_remove_hard_drive");
+	public static final Identifier C2S_REMOVE_ISO = Identifier.of("mcvmcomputers", "c2s_remove_iso");
 
 
-	public static final Identifier S2C_SCREEN = new Identifier("mcvmcomputers", "s2c_screen");
-	public static final Identifier S2C_STOP_SCREEN = new Identifier("mcvmcomputers", "s2c_stop_screen");
-	public static final Identifier S2C_SYNC_ORDER = new Identifier("mcvmcomputers", "s2c_sync_order");
+	public static final Identifier S2C_SCREEN = Identifier.of("mcvmcomputers", "s2c_screen");
+	public static final Identifier S2C_STOP_SCREEN = Identifier.of("mcvmcomputers", "s2c_stop_screen");
+	public static final Identifier S2C_SYNC_ORDER = Identifier.of("mcvmcomputers", "s2c_sync_order");
 
 	public static void removeGpu(EntityPC pc) {
 		if(pc.getGpuInstalled()) {

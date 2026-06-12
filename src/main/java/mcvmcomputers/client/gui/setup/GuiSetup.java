@@ -28,6 +28,11 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Language;
 
 public class GuiSetup extends Screen{
+	@Override
+	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+		context.fillGradient(0, 0, this.width, this.height, 0xff404040, 0xff404040);
+	}
+
 	private List<SetupPage> setupPages;
 	private int setupIndex;
 	private SetupPage currentSetupPage;
@@ -43,15 +48,19 @@ public class GuiSetup extends Screen{
 	}
 
 	public <T extends Element & Selectable> void addElement(T e) {
-		this.addSelectableChild(e);
+		this.addDrawableChild((net.minecraft.client.gui.widget.ClickableWidget) e);
 	}
 
 	public void clearElements() {
-		this.clearChildren();
+		for(Element e : new java.util.ArrayList<>(this.children())) {
+			this.remove(e);
+		}
 	}
 
 	public void clearButtons() {
-		this.clearChildren();
+		for(Element e : new java.util.ArrayList<>(this.children())) {
+			this.remove(e);
+		}
 	}
 
 	public void addButton(ButtonWidget bw) {
@@ -83,7 +92,9 @@ public class GuiSetup extends Screen{
 	}
 
 	public void firstPage() {
-		this.clearChildren();
+		for(Element e : new java.util.ArrayList<>(this.children())) {
+			this.remove(e);
+		}
 		setupIndex = 0;
 		currentSetupPage = setupPages.get(0);
 		this.init();
@@ -133,13 +144,15 @@ public class GuiSetup extends Screen{
 			currentSetupPage = setupPages.get(0);
 			initialized = true;
 		}
-		this.clearChildren();
+		for(Element e : new java.util.ArrayList<>(this.children())) {
+			this.remove(e);
+		}
 		currentSetupPage.init();
 	}
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		this.renderBackground(context);
+		this.renderBackground(context, mouseX, mouseY, delta);
 		String title = translation("mcvmcomputers.setup.title");
 		context.drawTextWithShadow(this.textRenderer, title, this.width/2 - this.textRenderer.getWidth(title)/2, 20, -1);
 		String s = translation("mcvmcomputers.setup.page").replaceFirst("%s", ""+(setupIndex+1)).replaceFirst("%s", ""+setupPages.size());

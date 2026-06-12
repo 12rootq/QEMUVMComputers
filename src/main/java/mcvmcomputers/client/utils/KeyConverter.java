@@ -5,7 +5,25 @@ import java.util.List;
 
 import static org.lwjgl.glfw.GLFW.*;
 
+/**
+ * Converts GLFW keys (Minecraft) into VirtualBox PS/2 set-1 scancodes.
+ *
+ * <p>The guest OS in the VM expects raw PS/2 scancodes, not GLFW codes. This class
+ * maps between them: {@link #toVBKey(int, int)} builds the list of codes for
+ * press/repeat/release (release codes add {@code 0x80} - the "break" code), and
+ * {@link #scancodeFromGLFWKey(int)} returns the "make" codes (extended keys are
+ * prefixed with {@code 0xe0}). The result is fed into the
+ * {@code ClientMod.vmKeyboardScancodes} queue.</p>
+ */
 public class KeyConverter {
+	/**
+	 * Converts a GLFW key event into a sequence of VirtualBox scancodes.
+	 *
+	 * @param key    the GLFW key code
+	 * @param action {@code GLFW_PRESS}/{@code GLFW_REPEAT} (make codes) or
+	 *               {@code GLFW_RELEASE} (break codes, +0x80)
+	 * @return the list of scancodes (empty for unknown keys/actions)
+	 */
 	public static List<Integer> toVBKey(int key, int action) {
 		List<Integer> ints = new ArrayList<>();
 		int[] sck = scancodeFromGLFWKey(key);

@@ -84,7 +84,7 @@
     "mcvmcomputers.focus.lose": "按%s来解除输入锁定",
     "mcvmcomputers.setup.title": "虚拟机:%cl设置",
     "mcvmcomputers.setup.page": "第%s/%s页",
-    "mcvmcomputers.setup.intro_message": "您需要安装 VirtualBox (6.1.* 版本) 才能使这个Mod正常工作。\n如果您尚未安装，请从 VirtualBox.org 或应用商店下载安装。\n如果您的计算机需要重新启动，请在重新启动后再使用本Mod。\n\n警告！ 这可能令 VirtualBox 出错，导致您需要重置其设置。\n(如果发生了这种情况，请自行搜寻如何重置)",
+    "mcvmcomputers.setup.intro_message": "您需要安装 VirtualBox (最新版本) 才能使这个Mod正常工作。\n如果您尚未安装，请从 VirtualBox.org 或应用商店下载安装。\n如果您的计算机需要重新启动，请在重新启动后再使用本Mod。\n\n警告！ 这可能令 VirtualBox 出错，导致您需要重置其设置。\n(如果发生了这种情况，请自行搜寻如何重置)",
     "mcvmcomputers.setup.max_ram_input": "虚拟机最多可使用的内存容量︰",
     "mcvmcomputers.setup.vram_input": "虚拟机显存容量︰",
     "mcvmcomputers.setup.ram_input_help": "请以MB为单位输入。1GB=1024MB。NaN=不是数字。",

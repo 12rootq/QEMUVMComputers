@@ -5,11 +5,14 @@ import java.util.List;
 import mcvmcomputers.MainMod;
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.entities.EntityPC;
-import net.minecraft.client.item.TooltipContext;
+import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -25,10 +28,15 @@ public class ItemPCCase extends OrderableItem{
 		super(settings, 2);
 	}
 
+	private static NbtCompound getNbtSafe(ItemStack stack) {
+		NbtComponent comp = stack.get(DataComponentTypes.CUSTOM_DATA);
+		return comp != null ? comp.copyNbt() : null;
+	}
+
 	@Override
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
 		if(!world.isClient && hand == Hand.MAIN_HAND) {
-			NbtCompound tag = user.getStackInHand(hand).getNbt();
+			NbtCompound tag = getNbtSafe(user.getStackInHand(hand));
 			user.getStackInHand(hand).decrement(1);
 			HitResult hr = user.raycast(10, 0f, false);
 			EntityPC ek = new EntityPC(world,
@@ -54,31 +62,32 @@ public class ItemPCCase extends OrderableItem{
 	}
 
 	@Override
-	public void appendTooltip(ItemStack stack, World world, List<Text> tooltip, TooltipContext context) {
-		if(stack.getNbt() != null) {
-			if (stack.getNbt().contains("MotherboardInstalled")) {
-				if(stack.getNbt().getBoolean("MotherboardInstalled")) {
-					tooltip.add(Text.translatable(stack.getNbt().getBoolean("X64") ? "item.mcvmcomputers.motherboard64" : "item.mcvmcomputers.motherboard").formatted(Formatting.GRAY));
-					if(stack.getNbt().getBoolean("GpuInstalled"))
+	public void appendTooltip(ItemStack stack, Item.TooltipContext context, List<Text> tooltip, TooltipType type) {
+		NbtCompound n = getNbtSafe(stack);
+		if(n != null) {
+			if (n.contains("MotherboardInstalled")) {
+				if(n.getBoolean("MotherboardInstalled")) {
+					tooltip.add(Text.translatable(n.getBoolean("X64") ? "item.mcvmcomputers.motherboard64" : "item.mcvmcomputers.motherboard").formatted(Formatting.GRAY));
+					if(n.getBoolean("GpuInstalled"))
 						tooltip.add(Text.translatable("mcvmcomputers.pc_item_gpu").formatted(Formatting.GRAY));
-					if(stack.getNbt().getInt("CpuDividedBy") > 0)
-						tooltip.add(Text.translatable("mcvmcomputers.pc_item_cpu", stack.getNbt().getInt("CpuDividedBy")).formatted(Formatting.GRAY));
-					if(stack.getNbt().getInt("GbRamSlot0") > 0) {
-						if((stack.getNbt().getInt("GbRamSlot0") / 1024) < 1) {
-							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot0Mb", stack.getNbt().getInt("GbRamSlot0")).formatted(Formatting.GRAY));
-						} else if((stack.getNbt().getInt("GbRamSlot0") / 1024) >= 1) {
-							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot0", (stack.getNbt().getInt("GbRamSlot0") / 1024)).formatted(Formatting.GRAY));
+					if(n.getInt("CpuDividedBy") > 0)
+						tooltip.add(Text.translatable("mcvmcomputers.pc_item_cpu", n.getInt("CpuDividedBy")).formatted(Formatting.GRAY));
+					if(n.getInt("GbRamSlot0") > 0) {
+						if((n.getInt("GbRamSlot0") / 1024) < 1) {
+							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot0Mb", n.getInt("GbRamSlot0")).formatted(Formatting.GRAY));
+						} else if((n.getInt("GbRamSlot0") / 1024) >= 1) {
+							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot0", (n.getInt("GbRamSlot0") / 1024)).formatted(Formatting.GRAY));
 					}}
-					if(stack.getNbt().getInt("GbRamSlot1") > 0) {
-						if((stack.getNbt().getInt("GbRamSlot1") / 1024) < 1) {
-							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot1Mb", stack.getNbt().getInt("GbRamSlot1")).formatted(Formatting.GRAY));
-						} else if((stack.getNbt().getInt("GbRamSlot1") / 1024) >= 1) {
-							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot1", (stack.getNbt().getInt("GbRamSlot1") / 1024)).formatted(Formatting.GRAY));
+					if(n.getInt("GbRamSlot1") > 0) {
+						if((n.getInt("GbRamSlot1") / 1024) < 1) {
+							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot1Mb", n.getInt("GbRamSlot1")).formatted(Formatting.GRAY));
+						} else if((n.getInt("GbRamSlot1") / 1024) >= 1) {
+							tooltip.add(Text.translatable("mcvmcomputers.pc_item_ramSlot1", (n.getInt("GbRamSlot1") / 1024)).formatted(Formatting.GRAY));
 					}}
-					if(!stack.getNbt().getString("HardDriveFileName").isEmpty())
-						tooltip.add(Text.translatable("mcvmcomputers.pc_item_hdd", stack.getNbt().getString("HardDriveFileName")).formatted(Formatting.GRAY));
-					if(!stack.getNbt().getString("IsoFileName").isEmpty())
-						tooltip.add(Text.translatable("mcvmcomputers.pc_item_iso", stack.getNbt().getString("IsoFileName")).formatted(Formatting.GRAY));
+					if(!n.getString("HardDriveFileName").isEmpty())
+						tooltip.add(Text.translatable("mcvmcomputers.pc_item_hdd", n.getString("HardDriveFileName")).formatted(Formatting.GRAY));
+					if(!n.getString("IsoFileName").isEmpty())
+						tooltip.add(Text.translatable("mcvmcomputers.pc_item_iso", n.getString("IsoFileName")).formatted(Formatting.GRAY));
 				}
 			}
 		}
@@ -86,9 +95,10 @@ public class ItemPCCase extends OrderableItem{
 
 	@Override
 	public Text getName(ItemStack stack) {
-		if(stack.getNbt() != null) {
-			if (stack.getNbt().contains("MotherboardInstalled")) {
-				if(stack.getNbt().getBoolean("MotherboardInstalled")) {
+		NbtCompound n = getNbtSafe(stack);
+		if(n != null) {
+			if (n.contains("MotherboardInstalled")) {
+				if(n.getBoolean("MotherboardInstalled")) {
 					return Text.translatable("mcvmcomputers.pc_item_built");
 				}
 			}
@@ -99,7 +109,7 @@ public class ItemPCCase extends OrderableItem{
 	public static ItemStack createPCStackByEntity(EntityPC pc) {
 		ItemStack is = new ItemStack(ItemList.PC_CASE);
 		if(pc.getMotherboardInstalled()) {
-			NbtCompound ct = is.getOrCreateNbt();
+			NbtCompound ct = new NbtCompound();
 			ct.putBoolean("X64", pc.get64Bit());
 			ct.putBoolean("MotherboardInstalled", pc.getMotherboardInstalled());
 			ct.putBoolean("GpuInstalled", pc.getGpuInstalled());
@@ -108,6 +118,7 @@ public class ItemPCCase extends OrderableItem{
 			ct.putInt("GbRamSlot1", pc.getGigsOfRamInSlot1());
 			ct.putString("HardDriveFileName", pc.getHardDriveFileName());
 			ct.putString("IsoFileName", pc.getIsoFileName());
+			is.set(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(ct));
 		}
 		return is;
 	}

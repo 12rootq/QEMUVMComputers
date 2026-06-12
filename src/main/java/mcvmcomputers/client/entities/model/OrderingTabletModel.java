@@ -77,8 +77,8 @@ public class OrderingTabletModel extends EntityModel<Entity> {
 	}
 
 	@Override
-	public void render(MatrixStack matrixStack, VertexConsumer buffer, int packedLight, int packedOverlay, float red, float green, float blue, float alpha){
-		tablet.render(matrixStack, buffer, packedLight, packedOverlay);
+	public void render(MatrixStack matrixStack, VertexConsumer buffer, int packedLight, int packedOverlay, int color){
+		tablet.render(matrixStack, buffer, packedLight, packedOverlay, -1);
 	}
 
 	public void setRotationAngle(ModelPart modelRenderer, float x, float y, float z) {

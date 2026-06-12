@@ -11,7 +11,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Vec3d;
@@ -47,10 +46,10 @@ public class EntityKeyboard extends Entity{
 	}
 
 	@Override
-	protected void initDataTracker() {
-		this.getDataTracker().startTracking(LOOK_AT_POS_X, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Y, 0f);
-		this.getDataTracker().startTracking(LOOK_AT_POS_Z, 0f);
+	protected void initDataTracker(DataTracker.Builder builder) {
+		builder.add(LOOK_AT_POS_X, 0f);
+		builder.add(LOOK_AT_POS_Y, 0f);
+		builder.add(LOOK_AT_POS_Z, 0f);
 	}
 	@Override
 	protected void readCustomDataFromNbt(NbtCompound tag) {

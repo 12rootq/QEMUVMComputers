@@ -1,81 +1,63 @@
 package mcvmcomputers.entities;
 
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.util.Identifier;
-import net.minecraftforge.registries.RegisterEvent;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 
 /**
  * Declares and registers every custom entity type (PC case, screens, keyboard,
- * mouse, item preview, mouse pad and the delivery chest) with their dimensions
- * and tracking ranges, using Forge's RegisterEvent.
+ * mouse, item preview and the delivery chest) together with their dimensions and
+ * tracking ranges.
  */
 public class EntityList {
-    public static EntityType<EntityItemPreview> ITEM_PREVIEW;
-    public static EntityType<EntityKeyboard>    KEYBOARD;
-    public static EntityType<EntityMouse>       MOUSE;
-    public static EntityType<EntityCRTScreen>   CRT_SCREEN;
-    public static EntityType<EntityFlatScreen>  FLATSCREEN;
-    public static EntityType<EntityWallTV>      WALLTV;
-    public static EntityType<EntityPC>          PC;
-    public static EntityType<EntityDeliveryChest> DELIVERY_CHEST;
-    public static EntityType<EntityMousePad>    MOUSE_PAD;
+	public static EntityType<EntityItemPreview> ITEM_PREVIEW;
+	public static EntityType<EntityKeyboard> KEYBOARD;
+	public static EntityType<EntityMouse> MOUSE;
+	public static EntityType<EntityCRTScreen> CRT_SCREEN;
+	public static EntityType<EntityFlatScreen> FLATSCREEN;
+	public static EntityType<EntityWallTV> WALLTV;
+	public static EntityType<EntityPC> PC;
+	public static EntityType<EntityDeliveryChest> DELIVERY_CHEST;
 
-    private static RegisterEvent.RegisterHelper<EntityType<?>> HELPER;
-
-    public static void init(RegisterEvent.RegisterHelper<EntityType<?>> helper) {
-        HELPER = helper;
-
-        ITEM_PREVIEW = reg("item_preview",
-            EntityType.Builder.<EntityItemPreview>create(EntityItemPreview::new, SpawnGroup.MISC)
-                .setDimensions(1f, 1f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-
-        KEYBOARD = reg("keyboard",
-            EntityType.Builder.<EntityKeyboard>create(EntityKeyboard::new, SpawnGroup.MISC)
-                .setDimensions(0.5f, 0.0625f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-
-        MOUSE = reg("mouse",
-            EntityType.Builder.<EntityMouse>create(EntityMouse::new, SpawnGroup.MISC)
-                .setDimensions(0.25f, 0.0625f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-
-        CRT_SCREEN = reg("crt_screen",
-            EntityType.Builder.<EntityCRTScreen>create(EntityCRTScreen::new, SpawnGroup.MISC)
-                .setDimensions(0.8f, 0.8f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-
-        FLATSCREEN = reg("flat_screen",
-            EntityType.Builder.<EntityFlatScreen>create(EntityFlatScreen::new, SpawnGroup.MISC)
-                .setDimensions(0.8f, 0.8f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-
-        WALLTV = reg("walltv",
-            EntityType.Builder.<EntityWallTV>create(EntityWallTV::new, SpawnGroup.MISC)
-                .setDimensions(1f, 1.2f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-
-        PC = reg("pc",
-            EntityType.Builder.<EntityPC>create(EntityPC::new, SpawnGroup.MISC)
-                .setDimensions(0.375f, 0.6875f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-
-        DELIVERY_CHEST = reg("delivery_chest",
-            EntityType.Builder.<EntityDeliveryChest>create(EntityDeliveryChest::new, SpawnGroup.MISC)
-                .setDimensions(1f, 2f)
-                .maxTrackingRange(600).trackingTickInterval(40));
-
-        MOUSE_PAD = reg("mouse_pad",
-            EntityType.Builder.<EntityMousePad>create(EntityMousePad::new, SpawnGroup.MISC)
-                .setDimensions(1f, 0.0625f)
-                .maxTrackingRange(60).trackingTickInterval(2));
-    }
-
-    private static <T extends net.minecraft.entity.Entity> EntityType<T> reg(String id, EntityType.Builder<T> builder) {
-        EntityType<T> type = builder.build(id);
-        HELPER.register(new Identifier("mcvmcomputers", id), type);
-        return type;
-    }
+	public static void init() {
+		ITEM_PREVIEW = Registry.register(Registries.ENTITY_TYPE,
+						Identifier.of("mcvmcomputers", "item_preview"),
+						FabricEntityTypeBuilder.<EntityItemPreview>create(SpawnGroup.MISC, EntityItemPreview::new)
+						.dimensions(EntityDimensions.fixed(1,1)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+		KEYBOARD = Registry.register(Registries.ENTITY_TYPE,
+					Identifier.of("mcvmcomputers", "keyboard"),
+					FabricEntityTypeBuilder.<EntityKeyboard>create(SpawnGroup.MISC, EntityKeyboard::new)
+					.dimensions(EntityDimensions.fixed(0.5f, 0.0625f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+		MOUSE = Registry.register(Registries.ENTITY_TYPE,
+				Identifier.of("mcvmcomputers", "mouse"),
+				FabricEntityTypeBuilder.<EntityMouse>create(SpawnGroup.MISC, EntityMouse::new)
+				.dimensions(EntityDimensions.fixed(0.25f, 0.0625f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+		CRT_SCREEN = Registry.register(Registries.ENTITY_TYPE,
+						Identifier.of("mcvmcomputers", "crt_screen"),
+						FabricEntityTypeBuilder.<EntityCRTScreen>create(SpawnGroup.MISC, EntityCRTScreen::new)
+						.dimensions(EntityDimensions.fixed(0.8f, 0.8f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+		FLATSCREEN = Registry.register(Registries.ENTITY_TYPE,
+						Identifier.of("mcvmcomputers", "flat_screen"),
+						FabricEntityTypeBuilder.<EntityFlatScreen>create(SpawnGroup.MISC, EntityFlatScreen::new)
+						.dimensions(EntityDimensions.fixed(0.8f, 0.8f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+		WALLTV = Registry.register(Registries.ENTITY_TYPE,
+								Identifier.of("mcvmcomputers", "walltv"),
+								FabricEntityTypeBuilder.<EntityWallTV>create(SpawnGroup.MISC, EntityWallTV::new)
+								.dimensions(EntityDimensions.fixed(1f, 1.2f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+		PC = Registry.register(Registries.ENTITY_TYPE,
+				Identifier.of("mcvmcomputers", "pc"),
+				FabricEntityTypeBuilder.<EntityPC>create(SpawnGroup.MISC, EntityPC::new)
+				.dimensions(EntityDimensions.fixed(0.375f, 0.6875f)).trackRangeBlocks(60).trackedUpdateRate(2).build());
+		DELIVERY_CHEST = Registry.register(Registries.ENTITY_TYPE,
+							Identifier.of("mcvmcomputers", "delivery_chest"),
+							FabricEntityTypeBuilder.<EntityDeliveryChest>create(SpawnGroup.MISC, EntityDeliveryChest::new)
+							.dimensions(EntityDimensions.fixed(1f, 2f)).trackRangeBlocks(600).trackedUpdateRate(40).build());
+	}
 }
+
+

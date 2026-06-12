@@ -12,7 +12,7 @@ import io.netty.buffer.Unpooled;
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.MVCUtils;
-import mcvmcomputers.networking.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -23,6 +23,9 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Language;
 
 public class GuiCreateHarddrive extends Screen{
+	@Override
+	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+	}
 	private TextFieldWidget hddSize;
 	private String status;
 	private State currentState = State.MENU;
@@ -125,7 +128,7 @@ public class GuiCreateHarddrive extends Screen{
 		String fileName = sepIdx >= 0 ? buttonText.substring(0, sepIdx) : buttonText;
 		PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
 		pb.writeString(fileName);
-		ClientPlayNetworking.send(PacketList.C2S_CHANGE_HDD, pb);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_CHANGE_HDD, pb));
 		minecraft.setScreen(null);
 	}
 
@@ -158,7 +161,7 @@ public class GuiCreateHarddrive extends Screen{
 
 			PacketByteBuf pb = new PacketByteBuf(Unpooled.buffer());
 			pb.writeString(vhd.getName());
-			ClientPlayNetworking.send(PacketList.C2S_CHANGE_HDD, pb);
+			ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_CHANGE_HDD, pb));
 			minecraft.setScreen(null);
 		}
 	}
@@ -202,7 +205,7 @@ public class GuiCreateHarddrive extends Screen{
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		this.renderBackground(context);
+		this.renderBackground(context, mouseX, mouseY, delta);
 		if(currentState == State.CREATE_NEW) {
 			context.drawTextWithShadow(this.textRenderer, status, this.width/2-150, this.height/2+13, -1);
 			context.drawTextWithShadow(this.textRenderer, translation("mcvmcomputers.vhd_setup.vhdsize"), this.width/2-150, this.height/2-20, -1);

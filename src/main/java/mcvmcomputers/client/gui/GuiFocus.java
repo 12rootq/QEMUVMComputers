@@ -70,6 +70,10 @@ public class GuiFocus extends Screen{
 	}
 
 	@Override
+	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+	}
+
+	@Override
 	public void render(DrawContext context, int wmouseX, int wmouseY, float delta) {
 		long window = minecraft.getWindow().getHandle();
 		DoubleBuffer mX = BufferUtils.createDoubleBuffer(1);

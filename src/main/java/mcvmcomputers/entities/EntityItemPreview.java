@@ -10,7 +10,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.world.World;
 
 public class EntityItemPreview extends Entity{
@@ -52,20 +51,20 @@ public class EntityItemPreview extends Entity{
 	}
 
 	@Override
-	protected void initDataTracker() {
-		this.getDataTracker().startTracking(PREVIEWED_STACK, new ItemStack(Items.REDSTONE_BLOCK));
+	protected void initDataTracker(DataTracker.Builder builder) {
+		builder.add(PREVIEWED_STACK, new ItemStack(Items.REDSTONE_BLOCK));
 	}
 
 	@Override
 	protected void readCustomDataFromNbt(NbtCompound tag) {
 		if(tag.contains("Item")) {
-			this.getDataTracker().set(PREVIEWED_STACK, ItemStack.fromNbt(tag.getCompound("Item")));
+			this.getDataTracker().set(PREVIEWED_STACK, ItemStack.fromNbt(this.getWorld().getRegistryManager(), tag.getCompound("Item")).orElse(ItemStack.EMPTY));
 		}
 	}
 
 	@Override
 	protected void writeCustomDataToNbt(NbtCompound tag) {
-		tag.put("Item", this.getDataTracker().get(PREVIEWED_STACK).writeNbt(new NbtCompound()));
+		tag.put("Item", this.getDataTracker().get(PREVIEWED_STACK).encode(this.getWorld().getRegistryManager()));
 	}
 
 

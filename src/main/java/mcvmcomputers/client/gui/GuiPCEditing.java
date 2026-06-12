@@ -11,25 +11,27 @@ import org.lwjgl.glfw.GLFW;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 
-import mcvmcomputers.networking.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import mcvmcomputers.client.ClientMod;
 import mcvmcomputers.entities.EntityPC;
 import mcvmcomputers.item.ItemHarddrive;
 import mcvmcomputers.item.ItemList;
 import mcvmcomputers.networking.PacketList;
 import mcvmcomputers.utils.MVCUtils;
-import mcvmcomputers.networking.ClientPlayNetworking;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.render.DiffuseLighting;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.json.ModelTransformationMode;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.NbtComponent;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -38,6 +40,10 @@ import net.minecraft.util.math.RotationAxis;
 import org.joml.Quaternionf;
 
 public class GuiPCEditing extends Screen{
+	@Override
+	public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+	}
+
 	private float introScale;
 	private float panelX;
 	private EntityPC pc_case;
@@ -141,15 +147,8 @@ public class GuiPCEditing extends Screen{
 	private void renderItem(ItemStack stack, DrawContext context) {
 		BakedModel mdll = minecraft.getItemRenderer().getModel(stack, null, null, 0);
 		VertexConsumerProvider.Immediate immediatee = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-		boolean ble = !mdll.isSideLit();
-		if (ble) {
-			DiffuseLighting.disableGuiDepthLighting();
-		}
 		this.minecraft.getItemRenderer().renderItem(stack, ModelTransformationMode.NONE, false, context.getMatrices(), immediatee, 15728640, OverlayTexture.DEFAULT_UV, mdll);
 		immediatee.draw();
-		if (ble) {
-			DiffuseLighting.enableGuiDepthLighting();
-		}
 	}
 
 
@@ -157,58 +156,58 @@ public class GuiPCEditing extends Screen{
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeBoolean(sixtyFour);
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_ADD_MOBO, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ADD_MOBO, b));
 	}
 
 	private void removeMotherboard() {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_REMOVE_MOBO, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_REMOVE_MOBO, b));
 	}
 
 	private void addCPU(Item cpuItem, int dividedBy) {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(dividedBy);
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_ADD_CPU, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ADD_CPU, b));
 	}
 
 	private void addGPU() {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_ADD_GPU, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ADD_GPU, b));
 	}
 
 	private void addHardDrive(String fileName) {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeString(fileName);
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_ADD_HARD_DRIVE, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ADD_HARD_DRIVE, b));
 	}
 
 	private void removeHardDrive() {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_REMOVE_HARD_DRIVE, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_REMOVE_HARD_DRIVE, b));
 	}
 
 	private void addRamStick(Item ramItem, int megs) {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(megs);
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_ADD_RAM, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ADD_RAM, b));
 	}
 
 	private void removeRamStick(int slot) {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(slot);
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_REMOVE_RAM, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_REMOVE_RAM, b));
 	}
 	private void removeCPU() {
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_REMOVE_CPU, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_REMOVE_CPU, b));
 	}
 
 	@Override
@@ -303,9 +302,11 @@ public class GuiPCEditing extends Screen{
 						RenderSystem.enableDepthTest();
 						for(ItemStack is : minecraft.player.getInventory().main) {
 							if(is.getItem() instanceof ItemHarddrive) {
-								if(is.getNbt() != null){
-									if(is.getNbt().contains("vhdfile")) {
-		    							String file = is.getNbt().getString("vhdfile");
+								NbtComponent nbtComp = is.get(DataComponentTypes.CUSTOM_DATA);
+								if(nbtComp != null){
+									NbtCompound nbt = nbtComp.copyNbt();
+									if(nbt.contains("vhdfile")) {
+		    							String file = nbt.getString("vhdfile");
 		    							if(new File(ClientMod.vhdDirectory, file).exists()) {
 		    								int w = Math.max(50, this.textRenderer.getWidth(file)+4);
 		    								this.addDrawableChild(ButtonWidget.builder(Text.literal(file), (btn) -> this.addHardDrive(file)).dimensions(this.width/2 + 20 + lastXOffset, this.height / 2 + 40 + lastYOffset, Math.max(50, this.textRenderer.getWidth(file)+4), 12).build());
@@ -500,7 +501,7 @@ public class GuiPCEditing extends Screen{
 		}
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_REMOVE_ISO, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_REMOVE_ISO, b));
 	}
 
 	private void insertISO(String name) {
@@ -509,7 +510,7 @@ public class GuiPCEditing extends Screen{
 			ClientMod.vbox.mountMedium("VmComputersVm", "IDE Controller", 1, 0, isoPath);
 		}
 		if(ClientMod.vmTurningOn && ClientMod.vmEntityID == pc_case.getId()) {
-			minecraft.player.sendMessage(Text.translatable("mcvmcomputers.waitingforvmtostart").formatted(Formatting.YELLOW), false);
+			minecraft.player.sendMessage(Text.translatable("mcvmcomputers.waitingforvmtostart").formatted(Formatting.YELLOW));
 			synchronized (ClientMod.VM_TURNING_ON_LOCK) {
 				try {
 					while(ClientMod.vmTurningOn && ClientMod.vmEntityID == pc_case.getId()) {
@@ -522,14 +523,14 @@ public class GuiPCEditing extends Screen{
 		PacketByteBuf b = PacketByteBufs.create();
 		b.writeString(name);
 		b.writeInt(this.pc_case.getId());
-		ClientPlayNetworking.send(PacketList.C2S_ADD_ISO, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_ADD_ISO, b));
 	}
 
 	public void turnOffPC(ButtonWidget wdgt) {
 		ClientMod.vmTurningOff = true;
 		ClientMod.vmTurnedOn = false;
 		PacketByteBuf b = PacketByteBufs.create();
-		ClientPlayNetworking.send(PacketList.C2S_TURN_OFF_PC, b);
+		ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_TURN_OFF_PC, b));
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -553,13 +554,13 @@ public class GuiPCEditing extends Screen{
 		if(pc_case.getCpuDividedBy() > 0 && pc_case.getGpuInstalled() && pc_case.getMotherboardInstalled() && (pc_case.getGigsOfRamInSlot0() + pc_case.getGigsOfRamInSlot1()) >= 1) {
 			if(!pc_case.getHardDriveFileName().isEmpty()) {
 				if(!new File(ClientMod.vhdDirectory, pc_case.getHardDriveFileName()).exists()) {
-					minecraft.player.sendMessage(Text.translatable("mcvmcomputers.hdd_doesnt_exist").formatted(Formatting.RED), false);
+					minecraft.player.sendMessage(Text.translatable("mcvmcomputers.hdd_doesnt_exist").formatted(Formatting.RED));
 					return;
 				}
 			}
 			if(!pc_case.getIsoFileName().isEmpty()) {
 				if(!pc_case.getIsoFileName().equals("Additions") && !new File(ClientMod.isoDirectory, pc_case.getIsoFileName()).exists()) {
-					minecraft.player.sendMessage(Text.translatable("mcvmcomputers.iso_doesnt_exist").formatted(Formatting.RED), false);
+					minecraft.player.sendMessage(Text.translatable("mcvmcomputers.iso_doesnt_exist").formatted(Formatting.RED));
 					return;
 				}
 			}
@@ -571,7 +572,7 @@ public class GuiPCEditing extends Screen{
 			ClientMod.vmEntityID = pc_case.getId();
 			PacketByteBuf b = PacketByteBufs.create();
 			b.writeInt(pc_case.getId());
-			ClientPlayNetworking.send(PacketList.C2S_TURN_ON_PC, b);
+			ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_TURN_ON_PC, b));
 			new Thread(new Runnable() {
 				@Override
 				public void run() {
@@ -681,13 +682,13 @@ public class GuiPCEditing extends Screen{
 						}
 					}catch(Exception ex) {
 						ex.printStackTrace();
-						minecraft.player.sendMessage(Text.translatable("mcvmcomputers.failed_to_start", ex.getMessage()).formatted(Formatting.RED), false);
-						minecraft.player.sendMessage(Text.translatable("mcvmcomputers.contact_me").formatted(Formatting.RED), false);
+						minecraft.player.sendMessage(Text.translatable("mcvmcomputers.failed_to_start", ex.getMessage()).formatted(Formatting.RED));
+						minecraft.player.sendMessage(Text.translatable("mcvmcomputers.contact_me").formatted(Formatting.RED));
 						ClientMod.vmTurningOn = false;
 						ClientMod.vmTurnedOn = false;
 
 						PacketByteBuf b = PacketByteBufs.create();
-						ClientPlayNetworking.send(PacketList.C2S_TURN_OFF_PC, b);
+						ClientPlayNetworking.send(new PacketList.RawBytesPayload(PacketList.C2S_TURN_OFF_PC, b));
 					}
 				}
 			}, "Turn on PC").start();

@@ -19,7 +19,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
@@ -84,12 +83,12 @@ public class EntityDeliveryChest extends Entity{
 	}
 
 	@Override
-	protected void initDataTracker() {
-		this.getDataTracker().startTracking(TARGET_X, 0f);
-		this.getDataTracker().startTracking(TARGET_Y, 0f);
-		this.getDataTracker().startTracking(TARGET_Z, 0f);
-		this.getDataTracker().startTracking(DELIVERY_UUID, "");
-		this.getDataTracker().startTracking(TAKING_OFF, false);
+	protected void initDataTracker(DataTracker.Builder builder) {
+		builder.add(TARGET_X, 0f);
+		builder.add(TARGET_Y, 0f);
+		builder.add(TARGET_Z, 0f);
+		builder.add(DELIVERY_UUID, "");
+		builder.add(TAKING_OFF, false);
 	}
 
 	@Override
@@ -120,7 +119,7 @@ public class EntityDeliveryChest extends Entity{
 				TabletOrder to = MainMod.orders.get(UUID.fromString(getDeliveryUUID()));
 				if(to.currentStatus == OrderStatus.PAYMENT_CHEST_RECEIVING || to.currentStatus == OrderStatus.ORDER_CHEST_RECEIVED) {
 					this.getDataTracker().set(TAKING_OFF, true);
-					takeOffTime += this.getServer().getTickTime() / 1000f;
+					takeOffTime += 0.05f;
 					if(takeOffTime > 0.5f) {
 						this.kill();
 						to.entitySpawned = false;
@@ -158,7 +157,7 @@ public class EntityDeliveryChest extends Entity{
 				}
 
 				if(!flag) {
-					player.sendMessage(Text.translatable("mcvmcomputers.click_with_ingots").formatted(Formatting.RED), false);
+					player.sendMessage(Text.translatable("mcvmcomputers.click_with_ingots").formatted(Formatting.RED));
 				}else {
 					if(to.price < 0) {
 
