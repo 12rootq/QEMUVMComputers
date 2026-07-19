@@ -1,28 +1,24 @@
-# THIS IS A FAN MADE PORT OF VM COMPUTERS BY Delta2Force  
-Transfers VM Computers to modern Minecraft version **(1.20.1)**
+# THIS IS A FAN MADE PORT OF VM COMPUTERS BY rootq
+Moves to QEMU instead of VirtualBox
 
 ## Original Mod
 Check out the original **VM Computers** mod by Delta2Force:  
 https://www.curseforge.com/minecraft/mc-mods/vm-computers
 
+## Original mod 2.0
+Check out the fork of the original mod **New VM Computers** by FasterBranch527:
+https://github.com/FasterBranch527/new-vm-computers
+
 If you have problems with this port, please submit them to my GitHub.
-<p align="center"><img src="https://raw.githubusercontent.com/FasterBranch527/new-vm-computers/1.20.1-fabric/icon.png" height="320"></p>
-
-<a href="https://discord.gg/gNgaxZa4yX">Join the vmcomputers Discord Server!</a>
-
-<details>
-	<summary>Donate to the original creator (<a href="https://github.com/Delta2Force">Delta2Force</a>)<br><sub><i>Note: Only accepts Bitcoin and BitcoinCash</i></sub></summary>
-<i>BTC:</i> <code>3GubEkHV69gCkjWhRgRWYqWqyjcWW3gxFF</code><br><i>BCH:</i> <code>bitcoincash:qq6jttzlvgj68lvecnh75pt3znezj4vx6sysfvj3j5</code>
-</details><hr>
 
 <h3>Dependencies</h3>
 <ul>
-	<li>Minecraft 1.20.1</li>
+	<li>Minecraft 1.21.1</li>
 	<ul>
-		<li><a href="https://fabricmc.net/use">Fabric</a></li>
-		<li><a href="https://modrinth.com/mod/fabric-api/version/0.92.7+1.20.1">Fabric API <i>(0.92.7+1.20.1)</i></a></li>
+		<li><a href="https://neoforged.net/">NeoForge</a></li>
 	</ul>
-	<li><a href="https://www.virtualbox.org/wiki/Download_Old_Builds_6_1">VirtualBox 6.1</a></li>
+	<li><a href="https://qemu.org">QEMU</a></li>
+	<li>Linux</li>
 </ul>
 
 <h2>How to use</h2>
