@@ -62,22 +62,4 @@ If you have problems with this port, please submit them to my GitHub.
 
 <h2>Contributing</h2>
 <p>If you'd like to contribute to this project, please fork the master branch, make your changes and create a pull request to have the changes reviewed. If you plan to contribute larger changes, please create a issue to discuss the major changes that you were planning to make.</p>
-<p>I don't like rules, but to keep consistency and readability of the code please follow these guidelines:</p>
-<ol>
-	<li>Use lambda expressions when appropriate</li>
-	<ul>
-		<li>You'll find that it is faster to write <code>() -> {}</code>, just saying :)</li>
-	</ul>
-	<li>Try to follow the code style of the project</li>
-	<ul>
-		<li>Makes everyone's life so much easier when it comes to making changes and understanding the code</li>
-	</ul>
-	<li>Commit messages should describe the change well without being too short</li>
-	<ul>
-		<li>Where it says <i>'Update [insert file name here]'</i> should be replaced with a short overview of what was changed. Use the optional extended description to explain the specific changes that were made.</li>
-	</ul>
-	<li>When making a pull request, make sure that you have made all of the changes you have wanted to before posting the pull request.</li>
-	<ul>
-		<li>It gets messy when you create a pull request and continue to make changes after the fact.</li>
-	</ul>
-</ol>
+
